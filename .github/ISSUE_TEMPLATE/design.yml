@@ -1,0 +1,23 @@
+name: 디자인 반영
+description: 디자인 시안을 반영하여 UI/UX를 구현할 때 사용합니다.
+title: "Design: "
+labels: ["Design"]
+body:
+  - type: textarea
+    id: design-goal
+    attributes:
+      label: 반영 목표
+      description: 디자인 반영 내용 작성
+      placeholder:
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 📋 작업 항목
+      value: "- [ ] "
+      placeholder: |
+        - [ ]
+    validations:
+      required: true

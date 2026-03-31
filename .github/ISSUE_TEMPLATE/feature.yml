@@ -1,0 +1,22 @@
+name: 기능 추가
+description: 구현하고 싶은 기능이 있다면 적어주세요.
+title: "Feature: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 요약
+      placeholder: 기능 요약
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 할 일
+      value: "- [ ] "
+      placeholder: |
+        - [ ] 
+    validations:
+      required: false

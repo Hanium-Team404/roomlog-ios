@@ -1,0 +1,20 @@
+name: 버그 수정
+description: 발견한 문제를 빠르게 메모해두세요!
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제 설명
+      placeholder: 문제 설명
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: 수정할 내용
+      placeholder: 수정 계획
+    validations:
+      required: false
