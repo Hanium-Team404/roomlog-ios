@@ -56,6 +56,28 @@ extension DIContainer {
         let container = DIContainer()
         container.register(UseCaseProvider.self) { UseCaseProvider() }
         
+        
+        // MARK: - Token Store
+        container.register(TokenStore.self) {
+            KeychainTokenStore()
+        }
+
+        // MARK: - Network
+        container.register(NetworkClient.self) {
+            AuthSystemFactory.makeNetworkClient(
+                baseURL: URL(string: Config.baseURL)!,
+                tokenStore: container.resolve(TokenStore.self)
+            )
+        }
+        
+        container.register(MoyaNetworkAdapter.self) {
+            MoyaNetworkAdapter(
+                networkClient: container.resolve(NetworkClient.self),
+                baseURL: URL(string: Config.baseURL)!
+            )
+        }
+        
+        
         return container
     }
 }
