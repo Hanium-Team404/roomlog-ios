@@ -9,5 +9,5 @@ import Foundation
 
 /// 방 상세 정보 업데이트 UseCaseProtocol
 protocol UpdateRoomUseCaseProtocol {
-    func execute(roomId: Int) async throws -> UpdatedRoomDetail
+    func execute(request: UpdatedRoomDetail) async throws -> UpdatedRoomDetail
 }
