@@ -9,7 +9,7 @@ Xcode를 통해 빌드 및 실행하며, `RoomLog/RoomLog.xcodeproj` 파일을 �
 
 ## 폴더 구조
 
-```
+```text
 RoomLog/RoomLog/
 ├── App/                  — 엔트리 포인트 (RoomLogApp, ContentView)
 ├── Core/
