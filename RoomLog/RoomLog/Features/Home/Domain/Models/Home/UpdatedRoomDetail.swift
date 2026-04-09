@@ -13,7 +13,7 @@ struct UpdatedRoomDetail: Codable {
     let roomId: Int
     let name: String
     let address: String
-    let moveInDate: String
-    let moveOutDate: String
+    let moveInDate: Date
+    let moveOutDate: Date
     let thumbnailURL: String?
 }

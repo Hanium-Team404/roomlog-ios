@@ -21,9 +21,9 @@ struct RoomSummary: Codable, Identifiable {
     let address: String
     let thumbnailURL: String?
     let latestScan: LatestScan?
-    let moveInDate: Data?
-    let moveOutDate: Data?
-    let recentScanDate: Data?
+    let moveInDate: Date?
+    let moveOutDate: Date?
+    let recentScanDate: Date?
     let latestScanStatus: String?
 }
 
