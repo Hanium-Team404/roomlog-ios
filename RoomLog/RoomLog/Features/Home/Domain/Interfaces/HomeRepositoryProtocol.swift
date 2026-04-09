@@ -13,5 +13,9 @@ protocol HomeRepositoryProtocol {
     /// 선택한 방 정보 조회
     func getRoomDetail(roomId: Int) async throws -> RoomDetail
     /// 선택한 방 정보 업데이트
-    func patchRoom(roomId: Int) async throws -> UpdatedRoomDetail
+    func patchRoom(request: UpdatedRoomDetail) async throws -> UpdatedRoomDetail
+    /// 선택한 방 삭제
+    func deleteRoom(roomId: Int) async throws
+    /// 대표 방 설정
+    func patchMainRoom(roomId: Int) async throws
 }
