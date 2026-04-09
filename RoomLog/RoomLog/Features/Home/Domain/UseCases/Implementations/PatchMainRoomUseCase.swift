@@ -1,5 +1,5 @@
 //
-//  SetMainRoomUseCase.swift
+//  PatchMainRoomUseCase.swift
 //  RoomLog
 //
 //  Created by 김도연 on 4/9/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class SetMainRoomUseCase: SetMainRoomUseCaseProtocol {
+final class PatchMainRoomUseCase: PatchMainRoomUseCaseProtocol {
     // MARK: - Property
     private let repository: HomeRepositoryProtocol
 
@@ -18,6 +18,6 @@ final class SetMainRoomUseCase: SetMainRoomUseCaseProtocol {
 
     // MARK: - Function
     func execute(roomId: Int) async throws {
-        try await repository.setMainRoom(roomId: roomId)
+        try await repository.patchMainRoom(roomId: roomId)
     }
 }
