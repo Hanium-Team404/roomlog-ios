@@ -89,12 +89,12 @@ extension MoyaNetworkAdapter {
             request.httpBody = try Data(contentsOf: fileURL)
 
         case .uploadMultipart(let multipartData):
-            let (body, boundary) = buildMultipartBody(multipartData)
+            let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         case .uploadCompositeMultipart(let multipartData, let urlParameters):
-            let (body, boundary) = buildMultipartBody(multipartData)
+            let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request = try encodeURLParameters(request, parameters: urlParameters)
@@ -106,7 +106,7 @@ extension MoyaNetworkAdapter {
         return request
     }
     
-    private func buildMultipartBody(_ parts: [Moya.MultipartFormData]) -> (Data, String) {
+    private func buildMultipartBody(_ parts: [Moya.MultipartFormData]) throws -> (Data, String) {
         let boundary = "Boundary-\(UUID().uuidString)"
         var body = Data()
         let crlf = "\r\n"
@@ -130,15 +130,20 @@ extension MoyaNetworkAdapter {
             case .data(let data):
                 body.append(data)
             case .file(let fileURL):
-                body.append((try? Data(contentsOf: fileURL)) ?? Data())
+                body.append(try Data(contentsOf: fileURL))
             case .stream(let stream, let length):
-                var streamData = Data(capacity: Int(length))
-                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(length))
+                let bufferSize = 65536
+                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
                 defer { buffer.deallocate() }
+                var streamData = Data(capacity: Int(length))
                 stream.open()
-                let read = stream.read(buffer, maxLength: Int(length))
-                if read > 0 { streamData.append(buffer, count: read) }
-                stream.close()
+                defer { stream.close() }
+                while stream.hasBytesAvailable {
+                    let read = stream.read(buffer, maxLength: bufferSize)
+                    if read < 0 { throw MoyaAdapterError.streamReadFailed }
+                    if read == 0 { break }
+                    streamData.append(buffer, count: read)
+                }
                 body.append(streamData)
             }
 
@@ -169,6 +174,7 @@ extension MoyaNetworkAdapter {
 
 enum MoyaAdapterError: Error {
     case unsupportedTask(Moya.Task)
+    case streamReadFailed
 }
 
 // MARK: - AnyEncodable
