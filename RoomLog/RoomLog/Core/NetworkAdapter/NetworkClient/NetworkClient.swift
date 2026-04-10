@@ -40,7 +40,6 @@ actor NetworkClient {
     
     // MARK: - Public API Request
     
-    // TODO: throws Error 처리 추가
     /// API 요청을 실행하고 데이터와 HTTP 응답을 반환
     func request(_ urlRequest: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await performRequest(urlRequest, retryCount: 0)
@@ -87,24 +86,23 @@ extension NetworkClient {
         
         // HTTPURLResponse로 변환
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+            throw NetworkError.invalidResponse
         }
-        
+
         // 401 에러 응답 처리
         if authPolicy.isUnauthorizedResponse(httpResponse) {
             guard retryCount < maxRetryCount else {
-                throw URLError(.userAuthenticationRequired)
+                throw NetworkError.unauthorized
             }
-            
+
             _ = try await refreshToken(force: true)
-            
+
             return try await performRequest(urlRequest, retryCount: retryCount + 1)
         }
-        
+
         // 성공 응답 확인
         guard (200...299).contains(httpResponse.statusCode) else {
-            // TODO: Error throws 추가
-            throw URLError(.badServerResponse)
+            throw NetworkError.httpError(statusCode: httpResponse.statusCode, data: data)
         }
         
         return (data, httpResponse)
@@ -125,7 +123,7 @@ extension NetworkClient {
             
             // refreshToken 존재 확인
             guard let refreshToken = await tokenStore.getRefreshToken() else {
-                throw URLError(.userAuthenticationRequired)
+                throw NetworkError.unauthorized
             }
             
             do {
