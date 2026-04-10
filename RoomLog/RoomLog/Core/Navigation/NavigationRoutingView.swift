@@ -10,7 +10,7 @@ import SwiftUI
 struct NavigationRoutingView: View {
     @Environment(\.di) var di: DIContainer
     
-    @State var destination: NavigationDestination
+    let destination: NavigationDestination
     
     var body: some View {
         switch destination {

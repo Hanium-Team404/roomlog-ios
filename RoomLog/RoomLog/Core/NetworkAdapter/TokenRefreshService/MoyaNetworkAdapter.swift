@@ -75,17 +75,85 @@ extension MoyaNetworkAdapter {
             request = try encodeParameters(request, parameters: bodyParameters, encoding: bodyEncoding)
             request = try encodeURLParameters(request, parameters: urlParameters)
             
-        case .uploadMultipart(let datas):
-            // TODO: .ply 업로드 로직 (MultipartFormData 구성 필요)
-            break
+        case .requestData(let data):
+            request.httpBody = data
 
-        default:
-            fatalError("(\(target.task)) MoyaNetworkAdapter에 추가 이후 사용")
+        case .requestCustomJSONEncodable(let encodable, let encoder):
+            request.httpBody = try encoder.encode(AnyEncodable(encodable))
+
+        case .requestCompositeData(let bodyData, let urlParameters):
+            request.httpBody = bodyData
+            request = try encodeURLParameters(request, parameters: urlParameters)
+
+        case .uploadFile(let fileURL):
+            request.httpBody = try Data(contentsOf: fileURL)
+
+        case .uploadMultipart(let multipartData):
+            let (body, boundary) = try buildMultipartBody(multipartData)
+            request.httpBody = body
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        case .uploadCompositeMultipart(let multipartData, let urlParameters):
+            let (body, boundary) = try buildMultipartBody(multipartData)
+            request.httpBody = body
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            request = try encodeURLParameters(request, parameters: urlParameters)
+
+        case .downloadDestination, .downloadParameters:
+            throw MoyaAdapterError.unsupportedTask(target.task)
         }
 
         return request
     }
     
+    private func buildMultipartBody(_ parts: [Moya.MultipartFormData]) throws -> (Data, String) {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        let crlf = "\r\n"
+
+        for part in parts {
+            body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+
+            var disposition = "Content-Disposition: form-data; name=\"\(part.name)\""
+            if let fileName = part.fileName {
+                disposition += "; filename=\"\(fileName)\""
+            }
+            body.append("\(disposition)\(crlf)".data(using: .utf8)!)
+
+            if let mimeType = part.mimeType {
+                body.append("Content-Type: \(mimeType)\(crlf)".data(using: .utf8)!)
+            }
+
+            body.append(crlf.data(using: .utf8)!)
+
+            switch part.provider {
+            case .data(let data):
+                body.append(data)
+            case .file(let fileURL):
+                body.append(try Data(contentsOf: fileURL))
+            case .stream(let stream, let length):
+                let bufferSize = 65536
+                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+                defer { buffer.deallocate() }
+                var streamData = Data(capacity: Int(length))
+                stream.open()
+                defer { stream.close() }
+                while stream.hasBytesAvailable {
+                    let read = stream.read(buffer, maxLength: bufferSize)
+                    if read < 0 { throw MoyaAdapterError.streamReadFailed }
+                    if read == 0 { break }
+                    streamData.append(buffer, count: read)
+                }
+                body.append(streamData)
+            }
+
+            body.append(crlf.data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)--\(crlf)".data(using: .utf8)!)
+        return (body, boundary)
+    }
+
     private func encodeParameters(
         _ request: URLRequest,
         parameters: [String: Any],
@@ -100,6 +168,13 @@ extension MoyaNetworkAdapter {
     ) throws -> URLRequest {
         try URLEncoding.queryString.encode(request, with: parameters)
     }
+}
+
+// MARK: - MoyaAdapterError
+
+enum MoyaAdapterError: Error {
+    case unsupportedTask(Moya.Task)
+    case streamReadFailed
 }
 
 // MARK: - AnyEncodable
