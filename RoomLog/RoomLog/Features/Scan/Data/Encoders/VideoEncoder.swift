@@ -71,7 +71,10 @@ final class VideoEncoder {
                 sourcePixelBufferAttributes: nil
             )
 
-            guard writer.canAdd(input) else { return }
+            guard writer.canAdd(input) else {
+                status = .error
+                return
+            }
             writer.add(input)
             videoWriterInput = input
             videoAdapter = adapter
@@ -80,6 +83,7 @@ final class VideoEncoder {
             writer.startSession(atSourceTime: .zero)
         } catch {
             print("VideoEncoder: AVAssetWriter 생성 실패. \(error.localizedDescription)")
+            status = .error
         }
     }
 
@@ -92,15 +96,16 @@ final class VideoEncoder {
     }
 
     private func doneRecording() async {
-        guard videoWriter?.status != .failed else {
+        guard let writer = videoWriter else { return }
+        guard writer.status != .failed else {
             print("VideoEncoder: 인코딩 중 오류 발생.")
             status = .error
             return
         }
         videoWriterInput?.markAsFinished()
         await withCheckedContinuation { continuation in
-            videoWriter?.finishWriting { [weak self] in
-                if self?.videoWriter?.status == .failed { self?.status = .error }
+            writer.finishWriting { [weak self] in
+                if writer.status == .failed { self?.status = .error }
                 self?.videoWriter = nil
                 self?.videoWriterInput = nil
                 self?.videoAdapter = nil
