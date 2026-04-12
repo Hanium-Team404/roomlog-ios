@@ -21,6 +21,7 @@ final class VideoEncoder: @unchecked Sendable {
     private var videoWriterInput: AVAssetWriterInput?
     private var videoAdapter: AVAssetWriterInputPixelBufferAdaptor?
     private let timeScale = CMTimeScale(600)
+    private var firstFrameTime: TimeInterval?
 
     let width: CGFloat
     let height: CGFloat
@@ -88,7 +89,9 @@ final class VideoEncoder: @unchecked Sendable {
     }
 
     private func encode(frame: VideoEncoderInput) {
-        let time = CMTime(seconds: frame.time, preferredTimescale: timeScale)
+        let anchor = firstFrameTime ?? frame.time
+        if firstFrameTime == nil { firstFrameTime = frame.time }
+        let time = CMTime(seconds: frame.time - anchor, preferredTimescale: timeScale)
         if videoAdapter?.append(frame.buffer, withPresentationTime: time) == false {
             print("VideoEncoder: pixel buffer append 실패.")
             status = .error
