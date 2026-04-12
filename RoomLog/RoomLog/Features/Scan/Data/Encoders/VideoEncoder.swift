@@ -20,8 +20,7 @@ final class VideoEncoder {
     private var videoWriter: AVAssetWriter?
     private var videoWriterInput: AVAssetWriterInput?
     private var videoAdapter: AVAssetWriterInputPixelBufferAdaptor?
-    private let timeScale = CMTimeScale(60)
-    private var previousFrame: Int = -1
+    private let timeScale = CMTimeScale(600)
 
     let width: CGFloat
     let height: CGFloat
@@ -39,8 +38,7 @@ final class VideoEncoder {
         await doneRecording()
     }
 
-    func add(frame: VideoEncoderInput, currentFrame: Int) async {
-        previousFrame = currentFrame
+    func add(frame: VideoEncoderInput) async {
         var spinCount = 0
         while !(videoWriterInput?.isReadyForMoreMediaData ?? false) {
             if videoWriter?.status == .failed || spinCount > 500 {
@@ -50,7 +48,7 @@ final class VideoEncoder {
             spinCount += 1
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
-        encode(frame: frame, frameNumber: currentFrame)
+        encode(frame: frame)
     }
 
     // MARK: - Private
@@ -85,8 +83,8 @@ final class VideoEncoder {
         }
     }
 
-    private func encode(frame: VideoEncoderInput, frameNumber: Int) {
-        let time = CMTime(value: Int64(frameNumber), timescale: timeScale)
+    private func encode(frame: VideoEncoderInput) {
+        let time = CMTime(seconds: frame.time, preferredTimescale: timeScale)
         if videoAdapter?.append(frame.buffer, withPresentationTime: time) == false {
             print("VideoEncoder: pixel buffer append 실패.")
             status = .error
