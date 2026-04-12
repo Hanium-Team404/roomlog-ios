@@ -26,6 +26,7 @@ final class DatasetEncoder {
     private var dispatchGroup = DispatchGroup()
     private let queue: DispatchQueue
     private let frameInterval: Int
+    private let imuLock = NSLock()
     private var currentFrame: Int = -1
     private var savedFrames: Int = 0
     private var lastFrame: ARFrame?
@@ -42,15 +43,23 @@ final class DatasetEncoder {
     let imuPath: URL
     var status: Status = .allGood
 
-    init(arConfiguration: ARWorldTrackingConfiguration, fpsDivider: Int = 1) {
-        self.frameInterval = fpsDivider
+    init(arConfiguration: ARWorldTrackingConfiguration, fpsDivider: Int = 1) throws {
+        self.frameInterval = max(1, fpsDivider)
         self.queue = DispatchQueue(label: "com.roomlog.encoderQueue")
 
         let width = arConfiguration.videoFormat.imageResolution.width
         let height = arConfiguration.videoFormat.imageResolution.height
 
         var theId = UUID()
-        let directory = DatasetEncoder.createDirectory(id: &theId)
+        let directory: URL
+        do {
+            directory = try DatasetEncoder.createDirectory(id: &theId)
+        } catch {
+            self.status = .directoryCreationError
+            let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(theId.uuidString, isDirectory: true)
+            try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            directory = tempDir
+        }
         self.id = theId
         self.datasetDirectory = directory
         self.datasetDirectoryURL = directory
@@ -69,7 +78,7 @@ final class DatasetEncoder {
         self.odometryEncoder = OdometryEncoder(url: odometryPath)
 
         self.imuPath = directory.appendingPathComponent("imu.csv")
-        self.imuEncoder = IMUEncoder(url: imuPath)
+        self.imuEncoder = try IMUEncoder(url: imuPath)
     }
 
     func add(frame: ARFrame) {
@@ -103,20 +112,24 @@ final class DatasetEncoder {
     }
 
     func addRawAccelerometer(data: CMAccelerometerData) {
+        imuLock.lock()
+        defer { imuLock.unlock() }
         let acceleration = simd_double3(data.acceleration.x, data.acceleration.y, data.acceleration.z)
         latestAccelerometerData = (timestamp: data.timestamp, data: acceleration)
         tryWritingIMUData()
     }
 
     func addRawGyroscope(data: CMGyroData) {
+        imuLock.lock()
+        defer { imuLock.unlock() }
         let rotationRate = simd_double3(data.rotationRate.x, data.rotationRate.y, data.rotationRate.z)
         latestGyroscopeData = (timestamp: data.timestamp, data: rotationRate)
         tryWritingIMUData()
     }
 
-    func wrapUp() {
+    func wrapUp() async {
         dispatchGroup.wait()
-        rgbEncoder.finishEncoding()
+        await rgbEncoder.finishEncoding()
         imuEncoder.done()
         odometryEncoder.done()
         writeIntrinsics()
@@ -150,21 +163,17 @@ final class DatasetEncoder {
         }
     }
 
-    private static func createDirectory(id: inout UUID) -> URL {
+    private static func createDirectory(id: inout UUID) throws -> URL {
         let directoryName = hashUUID(id: id)
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let directory = documentsURL.appendingPathComponent(directoryName, isDirectory: true)
 
         if FileManager.default.fileExists(atPath: directory.path) {
             id = UUID()
-            return createDirectory(id: &id)
+            return try createDirectory(id: &id)
         }
 
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        } catch {
-            print("DatasetEncoder: could not create directory. \(error.localizedDescription)")
-        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
 

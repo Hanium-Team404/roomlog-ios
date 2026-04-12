@@ -26,7 +26,10 @@ final class DepthEncoder {
     }
 
     func encodeFrame(frame: CVPixelBuffer, frameNumber: Int) {
-        assert(CVPixelBufferGetPixelFormatType(frame) == kCVPixelFormatType_DepthFloat32)
+        guard CVPixelBufferGetPixelFormatType(frame) == kCVPixelFormatType_DepthFloat32 else {
+            status = .frameEncodingError
+            return
+        }
 
         let filename = String(format: "%06d.png", frameNumber)
         let framePath = baseDirectory.appendingPathComponent(filename)
@@ -49,6 +52,10 @@ final class DepthEncoder {
         var uint16Pixels = [UInt16](repeating: 0, count: width * height)
         for i in 0..<(width * height) {
             let mm = floatPtr[i] * 1000.0
+            guard mm.isFinite, mm >= 0 else {
+                uint16Pixels[i] = 0
+                continue
+            }
             uint16Pixels[i] = UInt16(clamping: Int(mm.rounded())).bigEndian
         }
 

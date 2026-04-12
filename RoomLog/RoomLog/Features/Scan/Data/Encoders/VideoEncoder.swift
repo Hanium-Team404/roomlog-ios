@@ -35,13 +35,19 @@ final class VideoEncoder {
         initializeFile()
     }
 
-    func finishEncoding() {
-        doneRecording()
+    func finishEncoding() async {
+        await doneRecording()
     }
 
     func add(frame: VideoEncoderInput, currentFrame: Int) {
         previousFrame = currentFrame
+        var spinCount = 0
         while !(videoWriterInput?.isReadyForMoreMediaData ?? false) {
+            if videoWriter?.status == .failed || spinCount > 500 {
+                status = .error
+                return
+            }
+            spinCount += 1
             Thread.sleep(until: Date() + 0.01)
         }
         encode(frame: frame, frameNumber: currentFrame)
@@ -82,20 +88,25 @@ final class VideoEncoder {
         let time = CMTime(value: Int64(frameNumber), timescale: timeScale)
         if videoAdapter?.append(frame.buffer, withPresentationTime: time) == false {
             print("VideoEncoder: pixel buffer append 실패.")
+            status = .error
         }
     }
 
-    private func doneRecording() {
+    private func doneRecording() async {
         guard videoWriter?.status != .failed else {
             print("VideoEncoder: 인코딩 중 오류 발생.")
             status = .error
             return
         }
         videoWriterInput?.markAsFinished()
-        videoWriter?.finishWriting { [weak self] in
-            self?.videoWriter = nil
-            self?.videoWriterInput = nil
-            self?.videoAdapter = nil
+        await withCheckedContinuation { continuation in
+            videoWriter?.finishWriting { [weak self] in
+                if self?.videoWriter?.status == .failed { self?.status = .error }
+                self?.videoWriter = nil
+                self?.videoWriterInput = nil
+                self?.videoAdapter = nil
+                continuation.resume()
+            }
         }
     }
 }

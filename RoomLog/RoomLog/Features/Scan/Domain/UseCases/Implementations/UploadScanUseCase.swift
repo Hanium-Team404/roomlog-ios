@@ -23,8 +23,10 @@ final class UploadScanUseCase: UploadScanUseCaseProtocol {
             .deletingLastPathComponent()
             .appendingPathComponent(datasetDirectory.lastPathComponent + ".zip")
 
-        // 1. 데이터셋 폴더 → zip 압축
-        try FileManager.default.zipItem(at: datasetDirectory, to: zipURL)
+        // 1. 데이터셋 폴더 → zip 압축 (백그라운드에서 실행)
+        try await Task.detached(priority: .utility) {
+            try FileManager.default.zipItem(at: datasetDirectory, to: zipURL)
+        }.value
 
         defer {
             // 3. 업로드 성공/실패 무관하게 zip 파일 정리

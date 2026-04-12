@@ -11,15 +11,11 @@ final class IMUEncoder {
     private let path: URL
     private let fileHandle: FileHandle
 
-    init(url: URL) {
+    init(url: URL) throws {
         self.path = url
-        do {
-            try "".write(to: url, atomically: true, encoding: .utf8)
-            self.fileHandle = try FileHandle(forWritingTo: url)
-            fileHandle.write("timestamp, a_x, a_y, a_z, alpha_x, alpha_y, alpha_z\n".data(using: .utf8)!)
-        } catch {
-            preconditionFailure("IMUEncoder: IMU 파일 열기 실패. \(error.localizedDescription)")
-        }
+        try "".write(to: url, atomically: true, encoding: .utf8)
+        self.fileHandle = try FileHandle(forWritingTo: url)
+        fileHandle.write("timestamp, a_x, a_y, a_z, alpha_x, alpha_y, alpha_z\n".data(using: .utf8)!)
     }
 
     func add(timestamp: Double, linear: simd_double3, angular: simd_double3) {
