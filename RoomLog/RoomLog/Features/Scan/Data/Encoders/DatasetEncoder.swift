@@ -82,6 +82,7 @@ final class DatasetEncoder {
 
     func add(frame: ARFrame) {
         guard !isFinalizing else { return }
+        guard case .normal = frame.camera.trackingState else { return }
         currentFrame += 1
         guard currentFrame % frameInterval == 0 else { return }
 
