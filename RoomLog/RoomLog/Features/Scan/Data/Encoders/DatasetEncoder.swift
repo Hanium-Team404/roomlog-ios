@@ -23,7 +23,7 @@ final class DatasetEncoder {
     private let odometryEncoder: OdometryEncoder
     private let imuEncoder: IMUEncoder
     private let datasetDirectory: URL
-    private var frameTasks: [Task<Void, Never>] = []
+    private var lastTask: Task<Void, Never>?
     private let frameInterval: Int
     private let imuLock = NSLock()
     private var currentFrame: Int = -1
@@ -87,7 +87,9 @@ final class DatasetEncoder {
         let totalFrames = currentFrame
         savedFrames += 1
 
-        let task = Task(priority: .utility) { [weak self] in
+        let previous = lastTask
+        lastTask = Task(priority: .utility) { [weak self] in
+            await previous?.value
             guard let self else { return }
             if let sceneDepth = frame.sceneDepth {
                 depthEncoder.encodeFrame(frame: sceneDepth.depthMap, frameNumber: frameNumber)
@@ -96,13 +98,11 @@ final class DatasetEncoder {
                 }
             }
             await rgbEncoder.add(
-                frame: VideoEncoderInput(buffer: frame.capturedImage, time: frame.timestamp),
-                currentFrame: totalFrames
+                frame: VideoEncoderInput(buffer: frame.capturedImage, time: frame.timestamp)
             )
             odometryEncoder.add(frame: frame, currentFrame: frameNumber)
             lastFrame = frame
         }
-        frameTasks.append(task)
     }
 
     func addRawAccelerometer(data: CMAccelerometerData) {
@@ -122,8 +122,8 @@ final class DatasetEncoder {
     }
 
     func wrapUp() async {
-        for task in frameTasks { await task.value }
-        frameTasks.removeAll()
+        await lastTask?.value
+        lastTask = nil
 
         await rgbEncoder.finishEncoding()
         try? imuEncoder.done()
