@@ -39,7 +39,7 @@ final class VideoEncoder {
         await doneRecording()
     }
 
-    func add(frame: VideoEncoderInput, currentFrame: Int) {
+    func add(frame: VideoEncoderInput, currentFrame: Int) async {
         previousFrame = currentFrame
         var spinCount = 0
         while !(videoWriterInput?.isReadyForMoreMediaData ?? false) {
@@ -48,7 +48,7 @@ final class VideoEncoder {
                 return
             }
             spinCount += 1
-            Thread.sleep(until: Date() + 0.01)
+            try? await Task.sleep(nanoseconds: 10_000_000)
         }
         encode(frame: frame, frameNumber: currentFrame)
     }
@@ -57,7 +57,7 @@ final class VideoEncoder {
 
     private func initializeFile() {
         do {
-            videoWriter = try AVAssetWriter(outputURL: filePath, fileType: .mp4)
+            let writer = try AVAssetWriter(outputURL: filePath, fileType: .mp4)
             let settings: [String: Any] = [
                 AVVideoCodecKey: AVVideoCodecType.hevc,
                 AVVideoWidthKey: width,
@@ -68,17 +68,18 @@ final class VideoEncoder {
             input.mediaTimeScale = timeScale
             input.performsMultiPassEncodingIfSupported = false
 
-            videoAdapter = AVAssetWriterInputPixelBufferAdaptor(
+            let adapter = AVAssetWriterInputPixelBufferAdaptor(
                 assetWriterInput: input,
                 sourcePixelBufferAttributes: nil
             )
 
-            if videoWriter!.canAdd(input) {
-                videoWriter!.add(input)
-                videoWriterInput = input
-                videoWriter!.startWriting()
-                videoWriter!.startSession(atSourceTime: .zero)
-            }
+            guard writer.canAdd(input) else { return }
+            writer.add(input)
+            videoWriterInput = input
+            videoAdapter = adapter
+            videoWriter = writer
+            writer.startWriting()
+            writer.startSession(atSourceTime: .zero)
         } catch {
             print("VideoEncoder: AVAssetWriter 생성 실패. \(error.localizedDescription)")
         }

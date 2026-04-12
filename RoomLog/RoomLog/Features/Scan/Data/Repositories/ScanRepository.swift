@@ -22,11 +22,7 @@ final class ScanRepository: ScanRepositoryProtocol {
     // MARK: - Function
     func uploadScan(roomId: Int, zipFileURL: URL) async throws -> ScanResult {
         let response = try await adapter.request(ScanTarget.uploadScan(roomId: roomId, zipFileURL: zipFileURL))
-        do {
-            let dto = try decoder.decode(APIResponse<ScanResultResponseDTO>.self, from: response.data)
-            return try dto.unwrap().toDomain()
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
+        let dto = try decoder.decode(APIResponse<ScanResultResponseDTO>.self, from: response.data)
+        return try dto.unwrap().toDomain()
     }
 }
