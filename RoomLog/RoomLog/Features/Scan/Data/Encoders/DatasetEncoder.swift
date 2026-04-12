@@ -169,6 +169,7 @@ final class DatasetEncoder {
             try csv.write(to: cameraMatrixPath, atomically: true, encoding: .utf8)
         } catch {
             print("DatasetEncoder: could not write camera matrix. \(error.localizedDescription)")
+            status = .videoEncodingError
         }
     }
 
