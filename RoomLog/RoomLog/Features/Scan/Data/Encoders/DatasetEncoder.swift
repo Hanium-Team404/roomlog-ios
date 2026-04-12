@@ -24,6 +24,7 @@ final class DatasetEncoder {
     private let imuEncoder: IMUEncoder
     private let datasetDirectory: URL
     private var lastTask: Task<Void, Never>?
+    private var isFinalizing = false
     private let frameInterval: Int
     private let imuLock = NSLock()
     private var currentFrame: Int = -1
@@ -80,6 +81,7 @@ final class DatasetEncoder {
     }
 
     func add(frame: ARFrame) {
+        guard !isFinalizing else { return }
         currentFrame += 1
         guard currentFrame % frameInterval == 0 else { return }
 
@@ -106,6 +108,7 @@ final class DatasetEncoder {
     }
 
     func addRawAccelerometer(data: CMAccelerometerData) {
+        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
         let acceleration = simd_double3(data.acceleration.x, data.acceleration.y, data.acceleration.z)
@@ -114,6 +117,7 @@ final class DatasetEncoder {
     }
 
     func addRawGyroscope(data: CMGyroData) {
+        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
         let rotationRate = simd_double3(data.rotationRate.x, data.rotationRate.y, data.rotationRate.z)
@@ -122,11 +126,20 @@ final class DatasetEncoder {
     }
 
     func wrapUp() async {
+        isFinalizing = true
+
         await lastTask?.value
         lastTask = nil
 
         await rgbEncoder.finishEncoding()
-        try? imuEncoder.done()
+
+        do {
+            try imuEncoder.done()
+        } catch {
+            print("DatasetEncoder: IMU 파일 닫기 실패. \(error.localizedDescription)")
+            status = .videoEncodingError
+        }
+
         odometryEncoder.done()
         writeIntrinsics()
 
