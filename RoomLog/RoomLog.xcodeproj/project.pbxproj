@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */; };
 		0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0BEFDD962F84FDF900CDE2A6 /* Moya */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */,
+				0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = RoomLog;
 			packageProductDependencies = (
 				0BEFDD962F84FDF900CDE2A6 /* Moya */,
+				0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */,
 			);
 			productName = RoomLog;
 			productReference = 0B1EC4402F7BB970001FE02F /* RoomLog.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */,
+				0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0B1EC4412F7BB970001FE02F /* Products */;
@@ -366,6 +370,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.20;
+			};
+		};
 		0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Moya/Moya";
@@ -377,6 +389,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
 		0BEFDD962F84FDF900CDE2A6 /* Moya */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */;
