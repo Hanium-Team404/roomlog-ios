@@ -23,8 +23,7 @@ final class DatasetEncoder {
     private let odometryEncoder: OdometryEncoder
     private let imuEncoder: IMUEncoder
     private let datasetDirectory: URL
-    private var dispatchGroup = DispatchGroup()
-    private let queue: DispatchQueue
+    private var frameTasks: [Task<Void, Never>] = []
     private let frameInterval: Int
     private let imuLock = NSLock()
     private var currentFrame: Int = -1
@@ -45,7 +44,6 @@ final class DatasetEncoder {
 
     init(arConfiguration: ARWorldTrackingConfiguration, fpsDivider: Int = 1) throws {
         self.frameInterval = max(1, fpsDivider)
-        self.queue = DispatchQueue(label: "com.roomlog.encoderQueue")
 
         let width = arConfiguration.videoFormat.imageResolution.width
         let height = arConfiguration.videoFormat.imageResolution.height
@@ -75,7 +73,7 @@ final class DatasetEncoder {
 
         self.cameraMatrixPath = directory.appendingPathComponent("camera_matrix.csv")
         self.odometryPath = directory.appendingPathComponent("odometry.csv")
-        self.odometryEncoder = OdometryEncoder(url: odometryPath)
+        self.odometryEncoder = try OdometryEncoder(url: odometryPath)
 
         self.imuPath = directory.appendingPathComponent("imu.csv")
         self.imuEncoder = try IMUEncoder(url: imuPath)
@@ -89,26 +87,22 @@ final class DatasetEncoder {
         let totalFrames = currentFrame
         savedFrames += 1
 
-        dispatchGroup.enter()
-        queue.async { [weak self] in
-            guard let self else {
-                self?.dispatchGroup.leave()
-                return
-            }
+        let task = Task(priority: .utility) { [weak self] in
+            guard let self else { return }
             if let sceneDepth = frame.sceneDepth {
-                self.depthEncoder.encodeFrame(frame: sceneDepth.depthMap, frameNumber: frameNumber)
+                depthEncoder.encodeFrame(frame: sceneDepth.depthMap, frameNumber: frameNumber)
                 if let confidence = sceneDepth.confidenceMap {
-                    self.confidenceEncoder.encodeFrame(frame: confidence, frameNumber: frameNumber)
+                    confidenceEncoder.encodeFrame(frame: confidence, frameNumber: frameNumber)
                 }
             }
-            self.rgbEncoder.add(
+            await rgbEncoder.add(
                 frame: VideoEncoderInput(buffer: frame.capturedImage, time: frame.timestamp),
                 currentFrame: totalFrames
             )
-            self.odometryEncoder.add(frame: frame, currentFrame: frameNumber)
-            self.lastFrame = frame
-            self.dispatchGroup.leave()
+            odometryEncoder.add(frame: frame, currentFrame: frameNumber)
+            lastFrame = frame
         }
+        frameTasks.append(task)
     }
 
     func addRawAccelerometer(data: CMAccelerometerData) {
@@ -128,9 +122,11 @@ final class DatasetEncoder {
     }
 
     func wrapUp() async {
-        dispatchGroup.wait()
+        for task in frameTasks { await task.value }
+        frameTasks.removeAll()
+
         await rgbEncoder.finishEncoding()
-        imuEncoder.done()
+        try? imuEncoder.done()
         odometryEncoder.done()
         writeIntrinsics()
 
@@ -179,7 +175,7 @@ final class DatasetEncoder {
 
     private static func hashUUID(id: UUID) -> String {
         var hasher = SHA256()
-        hasher.update(data: id.uuidString.data(using: .ascii)!)
+        hasher.update(data: Data(id.uuidString.utf8))
         let digest = hasher.finalize()
         return digest.prefix(5).map { String(format: "%02x", $0) }.joined()
     }

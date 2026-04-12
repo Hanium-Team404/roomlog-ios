@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import simd
 
 final class IMUEncoder {
     private let path: URL
@@ -15,19 +16,15 @@ final class IMUEncoder {
         self.path = url
         try "".write(to: url, atomically: true, encoding: .utf8)
         self.fileHandle = try FileHandle(forWritingTo: url)
-        fileHandle.write("timestamp, a_x, a_y, a_z, alpha_x, alpha_y, alpha_z\n".data(using: .utf8)!)
+        try fileHandle.write(contentsOf: Data("timestamp, a_x, a_y, a_z, alpha_x, alpha_y, alpha_z\n".utf8))
     }
 
     func add(timestamp: Double, linear: simd_double3, angular: simd_double3) {
         let line = "\(timestamp), \(linear.x), \(linear.y), \(linear.z), \(angular.x), \(angular.y), \(angular.z)\n"
-        fileHandle.write(line.data(using: .utf8)!)
+        try? fileHandle.write(contentsOf: Data(line.utf8))
     }
 
-    func done() {
-        do {
-            try fileHandle.close()
-        } catch {
-            print("IMUEncoder: 파일 닫기 실패. \(error.localizedDescription)")
-        }
+    func done() throws {
+        try fileHandle.close()
     }
 }
