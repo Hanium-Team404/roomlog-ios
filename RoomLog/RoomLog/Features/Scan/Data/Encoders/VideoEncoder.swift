@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
 import ARKit
 
 struct VideoEncoderInput {
@@ -14,7 +14,7 @@ struct VideoEncoderInput {
     let time: TimeInterval
 }
 
-final class VideoEncoder {
+final class VideoEncoder: @unchecked Sendable {
     enum EncodingStatus { case allGood, error }
 
     private var videoWriter: AVAssetWriter?
@@ -105,7 +105,7 @@ final class VideoEncoder {
         videoWriterInput?.markAsFinished()
         await withCheckedContinuation { continuation in
             writer.finishWriting { [weak self] in
-                if writer.status == .failed { self?.status = .error }
+                if self?.videoWriter?.status == .failed { self?.status = .error }
                 self?.videoWriter = nil
                 self?.videoWriterInput = nil
                 self?.videoAdapter = nil
