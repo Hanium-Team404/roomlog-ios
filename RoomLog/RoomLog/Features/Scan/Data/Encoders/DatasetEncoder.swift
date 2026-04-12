@@ -86,7 +86,6 @@ final class DatasetEncoder {
         guard currentFrame % frameInterval == 0 else { return }
 
         let frameNumber = savedFrames
-        let totalFrames = currentFrame
         savedFrames += 1
 
         let previous = lastTask
