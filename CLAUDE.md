@@ -115,7 +115,7 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 | merge | 브랜치 병합 |
 
 ### Example
-```
+```text
 feat: 하자 점검 화면 구현
 fix: 방 목록 조회 오류 수정
 refactor: DefectViewModel 구조 변경
