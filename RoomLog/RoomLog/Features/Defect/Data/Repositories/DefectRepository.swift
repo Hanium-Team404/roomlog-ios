@@ -22,19 +22,19 @@ final class DefectRepository: DefectRepositoryProtocol {
     // MARK: - Function
     func getDefectRoomData() async throws -> DefectRoomData {
         // TODO: DTO 확정 후 실제 디코딩 구현
-        let _ = try await adapter.request(DefectTarget.getDefectRoomData)
-        fatalError("getDefectRoomData: DTO 미구현")
+        let response = try await adapter.request(DefectTarget.getDefectRoomData)
+        throw RepositoryError.decodingError(detail: "getDefectRoomData DTO 미구현. status=\(response.statusCode), bytes=\(response.data.count)")
     }
 
     func getDefectReport(roomId: Int) async throws -> DefectReport {
         // TODO: DTO 확정 후 실제 디코딩 구현
-        let _ = try await adapter.request(DefectTarget.getDefectReport(roomId: roomId))
-        fatalError("getDefectReport: DTO 미구현")
+        let response = try await adapter.request(DefectTarget.getDefectReport(roomId: roomId))
+        throw RepositoryError.decodingError(detail: "getDefectReport DTO 미구현. status=\(response.statusCode), bytes=\(response.data.count)")
     }
 
     func getDefectReportDetail(roomId: Int, reportId: Int) async throws -> DefectReportDetail {
         // TODO: DTO 확정 후 실제 디코딩 구현
-        let _ = try await adapter.request(DefectTarget.getDefectReportDetail(roomId: roomId, reportId: reportId))
-        fatalError("getDefectReportDetail: DTO 미구현")
+        let response = try await adapter.request(DefectTarget.getDefectReportDetail(roomId: roomId, reportId: reportId))
+        throw RepositoryError.decodingError(detail: "getDefectReportDetail DTO 미구현. status=\(response.statusCode), bytes=\(response.data.count)")
     }
 }
