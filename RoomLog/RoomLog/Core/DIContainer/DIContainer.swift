@@ -54,9 +54,6 @@ final class DIContainer {
 extension DIContainer {
     static func configured() -> DIContainer {
         let container = DIContainer()
-        container.register(UseCaseProvider.self) { UseCaseProvider() }
-        
-        
         // MARK: - Token Store
         container.register(TokenStore.self) {
             KeychainTokenStore()
@@ -69,15 +66,19 @@ extension DIContainer {
                 tokenStore: container.resolve(TokenStore.self)
             )
         }
-        
+
         container.register(MoyaNetworkAdapter.self) {
             MoyaNetworkAdapter(
                 networkClient: container.resolve(NetworkClient.self),
                 baseURL: URL(string: Config.baseURL)!
             )
         }
-        
-        
+
+        // MARK: - UseCase Provider
+        container.register(UseCaseProvider.self) {
+            UseCaseProvider(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
         return container
     }
 }
