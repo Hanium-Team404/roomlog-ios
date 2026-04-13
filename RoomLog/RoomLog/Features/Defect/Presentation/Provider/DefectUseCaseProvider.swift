@@ -1,20 +1,20 @@
 //
-//  UsecaseProvider.swift
-//  Projects
+//  DefectUseCaseProvider.swift
+//  RoomLog
 //
-//  Created by 김도연 on 3/31/26.
+//  Created by 김도연 on 4/14/26.
 //
 
 import Foundation
 
-protocol UsecaseProvider {
+protocol DefectUseCaseProvider {
     func makeGetDefectRoomDataUseCase() -> GetDefectRoomDataUseCaseProtocol
     func makeGetDefectReportUseCase() -> GetDefectReportUseCaseProtocol
     func makeGetDefectReportDetailUseCase() -> GetDefectReportDetailUseCaseProtocol
 }
 
-class UseCaseProvider: UsecaseProvider {
-    // MARK: - Repository (같은 인스턴스를 각 UseCase에 공유)
+final class DefectUseCaseProviderImpl: DefectUseCaseProvider {
+    // MARK: - Repository
     private let defectRepository: DefectRepositoryProtocol
 
     // MARK: - Init

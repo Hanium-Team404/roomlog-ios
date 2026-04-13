@@ -74,9 +74,13 @@ extension DIContainer {
             )
         }
 
-        // MARK: - UseCase Provider
-        container.register(UseCaseProvider.self) {
-            UseCaseProvider(adapter: container.resolve(MoyaNetworkAdapter.self))
+        // MARK: - UseCase Providers
+        container.register(HomeUseCaseProvider.self) {
+            HomeUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
+        container.register(DefectUseCaseProvider.self) {
+            DefectUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
         return container
