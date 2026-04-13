@@ -4,6 +4,7 @@
 //
 //  Created by 송민교 on 4/12/26.
 //
+import Foundation
 
 struct DefectReportDetail {
     let id: String
@@ -19,5 +20,5 @@ struct DefectReportDetail {
 }
 
 enum Severity {
-    case hight, medium, low
+    case high, medium, low
 }
