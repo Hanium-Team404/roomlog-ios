@@ -16,12 +16,19 @@ struct RoomLogTab: View {
     
     // MARK: - Body
     var body: some View {
+        let pathStore = di.resolve(PathStore.self)
+        
         TabView {
             Tab("", systemImage: "house") {
                 Text("Home")
             }
             Tab("", systemImage: "wrench.and.screwdriver.fill") {
-                Text("Defect")
+                NavigationStack(path: Bindable(pathStore).defectPath) {
+                    ViewerView()
+                        .navigationDestination(for: NavigationDestination.self) {
+                            NavigationRoutingView(destination: $0)
+                        }
+                }
             }
             Tab("", systemImage: "person.fill", role: .search) {
                 Text("MyPage")
