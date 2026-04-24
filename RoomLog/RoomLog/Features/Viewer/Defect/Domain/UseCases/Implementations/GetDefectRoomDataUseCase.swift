@@ -17,7 +17,7 @@ final class GetDefectRoomDataUseCase: GetDefectRoomDataUseCaseProtocol {
     }
 
     // MARK: - Function
-    func execute() async throws -> DefectRoomData {
+    func execute() async throws -> [DefectRoomData] {
         try await repository.getDefectRoomData()
     }
 }
