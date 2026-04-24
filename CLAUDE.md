@@ -93,63 +93,8 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 
 `RepositoryError` (`Core/Error/RepositoryError.swift`): `serverError(code:message:)`와 `decodingError(detail:)` 두 케이스. `isRetryable` 프로퍼티로 재시도 여부 판단.
 
-## Conventions
-
-- 상태 및 라우터 클래스에는 `ObservableObject` 대신 **`@Observable`** 사용.
-- 새로운 기능은 `Features/[기능명]/Presentation/`에 위치시키며, 필요에 따라 `Domain/`, `Data/` 레이어를 추가합니다.
-
-### Commit Convention
-
-| Tag | Description |
-|-----|-------------|
-| feat | 새로운 기능 추가 |
-| fix | 버그 수정 |
-| design | UI 수정 |
-| typo | 오타 수정 |
-| mod | 폴더 구조 이동 및 파일 이름 수정 |
-| add | 파일 추가 |
-| del | 파일 삭제 |
-| refactor | 코드 리팩토링 |
-| init | 프로젝트 세팅 |
-| chore | 배포, 빌드 등 기타 작업 |
-| merge | 브랜치 병합 |
-
-### Example
-```text
-feat: 하자 점검 화면 구현
-fix: 방 목록 조회 오류 수정
-refactor: DefectViewModel 구조 변경
-```
-
-### Commit Granularity (커밋 단위 규칙)
-
-커밋은 반드시 최소 단위로 나눠서 작성한다. 여러 파일을 한 번에 커밋하지 않는다.
-
-- **파일 단위**: 역할이 다른 파일은 각각 별도 커밋
-- **폴더/레이어 단위**: 같은 레이어(Domain, Data, Core 등)의 유사한 파일들은 묶어서 커밋
-- **절대 금지**: 서로 다른 레이어(예: Domain + Data + Core)를 한 커밋에 포함하지 않는다
-
-**예시 (Defect 도메인 추가 시)**
-```
-add: Defect 도메인 모델 추가 (DefectRoomData, DefectReport, DefectReportDetail)
-add: DefectRepositoryProtocol 추가
-add: Defect UseCase 프로토콜 추가 (GetDefectRoomData, GetDefectReport, GetDefectReportDetail)
-add: Defect UseCase 구현체 추가
-add: DefectTarget, DefectRepository 추가
-feat: UseCaseProvider에 Defect 의존성 추가
-feat: DIContainer에 UseCaseProvider 등록 방식으로 개선
-```
-
 ### 새로운 화면 추가 절차
 
 1. `NavigationDestination`에 케이스 추가
 2. `NavigationRoutingView`의 `@ViewBuilder` 분기에 추가
 3. 독자적인 스택이 필요한 경우 `PathStore`에 경로 배열 추가
-
-### 현재 구현된 Home Feature UseCases
-
-- `FetchHomeDataUseCase` — 홈 데이터(방 목록) 조회
-- `FetchRoomDetailUseCase` — 방 상세 조회
-- `UpdateRoomUseCase` — 방 정보 수정
-- `PatchMainRoomUseCase` — 대표 방 변경
-- `DeleteRoomUseCase` — 방 삭제
