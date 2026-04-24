@@ -28,7 +28,7 @@ struct DefectView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if viewModel == nil {
-                let useCase = di.resolve(UseCaseProvider.self).makeGetDefectReportUseCase()
+                let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectReportUseCase()
                 viewModel = DefectViewModel(roomId: roomId, useCase: useCase)
             }
             Task { await viewModel?.fetchReport() }

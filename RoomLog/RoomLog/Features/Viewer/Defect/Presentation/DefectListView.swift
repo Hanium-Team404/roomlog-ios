@@ -23,7 +23,7 @@ struct DefectListView: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             if viewModel == nil {
-                let useCase = di.resolve(UseCaseProvider.self).makeGetDefectRoomDataUseCase()
+                let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectRoomDataUseCase()
                 viewModel = DefectListViewModel(useCase: useCase)
             }
             Task { await viewModel?.fetchItems() }
