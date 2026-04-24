@@ -34,7 +34,4 @@ final class DefectViewModel {
         }
     }
 
-    var totalEstimate: Int {
-        report?.defects.reduce(0) { $0 + $1.repairCost } ?? 0
-    }
 }
