@@ -18,8 +18,8 @@ final class DefectUseCaseProviderImpl: DefectUseCaseProvider {
     private let defectRepository: DefectRepositoryProtocol
 
     // MARK: - Init
-    init(adapter: MoyaNetworkAdapter) {
-        self.defectRepository = DefectRepository(adapter: adapter)
+    init(defectRepository: DefectRepositoryProtocol) {
+        self.defectRepository = defectRepository
     }
 
     // MARK: - Defect UseCases

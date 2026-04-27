@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct RoomLogApp: App {
+    let di = DIContainer.configured()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RoomLogTab()
+                .environment(\.di, di)
         }
     }
 }

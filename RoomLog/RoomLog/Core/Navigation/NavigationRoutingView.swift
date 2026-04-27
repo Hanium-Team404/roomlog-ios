@@ -48,8 +48,14 @@ private extension NavigationRoutingView {
     @ViewBuilder
     func defectView(_ route: NavigationDestination.Defect) -> some View {
         switch route {
-        case .test:
-            Text("defect")
+        case .mainView:
+            ViewerView()
+        case .defectList:
+            DefectListView()
+        case .defectListMain(let roomId):
+            DefectView(roomId: roomId)
+        case .defectListDetail:
+            Text("하자점검 목록 디테일 - TODO")
         }
     }
     

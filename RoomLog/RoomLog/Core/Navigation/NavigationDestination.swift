@@ -17,7 +17,10 @@ enum NavigationDestination: Hashable {
     }
     
     enum Defect: Hashable {
-        case test
+        case mainView // 하자점검, 내방비교
+        case defectList
+        case defectListMain(roomId: Int)
+        case defectListDetail
     }
     
     enum MyPage: Hashable {

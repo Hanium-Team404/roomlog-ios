@@ -20,7 +20,7 @@ final class DefectRepository: DefectRepositoryProtocol {
     }
 
     // MARK: - Function
-    func getDefectRoomData() async throws -> DefectRoomData {
+    func getDefectRoomData() async throws -> [DefectRoomData] {
         // TODO: DTO 확정 후 실제 디코딩 구현
         let response = try await adapter.request(DefectTarget.getDefectRoomData)
         throw RepositoryError.decodingError(detail: "getDefectRoomData DTO 미구현. status=\(response.statusCode), bytes=\(response.data.count)")

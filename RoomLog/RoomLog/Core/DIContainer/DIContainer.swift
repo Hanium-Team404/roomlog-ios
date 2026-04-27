@@ -79,10 +79,22 @@ extension DIContainer {
             HomeUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
+        // MARK: - Repository
+        // TODO: 서버 연동 시 DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))로 교체
+        container.register(DefectRepositoryProtocol.self) {
+            MockDefectRepository()
+        }
+
         container.register(DefectUseCaseProvider.self) {
-            DefectUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
+            DefectUseCaseProviderImpl(defectRepository: container.resolve(DefectRepositoryProtocol.self))
+        }
+
+        // MARK: - Navigation
+        container.register(PathStore.self) {
+            PathStore()
         }
 
         return container
     }
 }
+

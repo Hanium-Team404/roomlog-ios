@@ -8,7 +8,7 @@ import Foundation
 
 struct DefectReportDetail {
     let id: String
-    let defectThumbnailURL: URL
+    let imageURL: String?
     let type: String
     let severity: Severity
     let description: String
@@ -17,6 +17,9 @@ struct DefectReportDetail {
     let location: String
     let discoveredDate: Date
     let memo: String?
+    let x: Float?
+    let y: Float?
+    let z: Float?
 }
 
 enum Severity {

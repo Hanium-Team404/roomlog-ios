@@ -8,6 +8,7 @@ import Foundation
 
 struct DefectReport {
     let room: DefectRoomData
+    let imageURL: String?
     let defectCount: Int
     let minRepairCost: Int
     let repairArea: Float
