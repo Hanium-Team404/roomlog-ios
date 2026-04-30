@@ -85,17 +85,6 @@ struct SignUpView: View {
 
             Spacer()
         }
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .foregroundStyle(Color("neutral900"))
-                }
-            }
-        }
         .onChange(of: viewModel?.isSignUpCompleted) { _, newValue in
             if newValue == true {
                 dismiss()
