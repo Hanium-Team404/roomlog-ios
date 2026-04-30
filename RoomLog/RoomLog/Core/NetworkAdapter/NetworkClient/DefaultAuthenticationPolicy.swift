@@ -17,10 +17,11 @@ struct DefaultAuthenticationPolicy: AuthenticationPolicy, Sendable {
 
     ///
     /// - Parameter request: 판단할 URLRequest
-    /// - Returns: 항상  `true`
-    ///   -> 모든 API 요청에 인증 적용
+    /// - Returns: 항상  `true` / API요청이 auth로 시작하는 경우 `false`
+    /// 
     nonisolated func requireAuthentication(_ request: URLRequest) -> Bool {
-        true
+        guard let path = request.url?.path else { return true }
+        return !path.hasPrefix("/auth/")
     }
     
     /// 401 Unautherized 응답을 인증 실패로 판단

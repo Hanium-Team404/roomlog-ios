@@ -13,7 +13,7 @@ struct APIResponse<T: Codable>: Codable {
     /// 요청 성공 여부
     let isSuccess: Bool
     /// 응답 코드
-    let code: String?
+    let code: Int?
     /// 응답 메세지
     let message: String?
     /// 응답 결과
@@ -24,7 +24,7 @@ struct APIResponse<T: Codable>: Codable {
         case isSuccess = "success"
         case code
         case message
-        case result
+        case result = "data"
     }
 }
 
