@@ -11,6 +11,7 @@ struct AuthUser {
     let userId: Int
     let email: String
     let nickname: String
+    let tokenPair: TokenPair
 }
 
 struct SignedUpUser {

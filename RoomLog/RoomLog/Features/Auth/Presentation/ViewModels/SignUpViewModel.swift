@@ -27,21 +27,26 @@ final class SignUpViewModel {
     }
 
     // MARK: - Actions
-    var isFormValid: Bool {
-        !email.isEmpty && !password.isEmpty && !nickname.isEmpty
-    }
-
+    
+    @MainActor
     func signUp() async {
-        guard isFormValid else { return }
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedEmail.isEmpty, !trimmedPassword.isEmpty, !trimmedNickname.isEmpty else {
+            errorMessage = "이메일, 비밀번호와 닉네임을 입력해주세요."
+            return
+        }
 
         isLoading = true
         errorMessage = nil
 
         do {
             _ = try await signUpUseCase.execute(
-                email: email,
-                password: password,
-                nickname: nickname
+                email: trimmedEmail,
+                password: trimmedPassword,
+                nickname: trimmedNickname
             )
             isSignUpCompleted = true
         } catch {

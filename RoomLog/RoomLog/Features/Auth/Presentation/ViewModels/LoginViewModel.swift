@@ -14,32 +14,44 @@ final class LoginViewModel {
     var password: String = ""
 
     // MARK: - State
-    var isLoading: Bool = false
-    var errorMessage: String?
-    var isLoggedIn: Bool = false
+    private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String?
+    private(set) var loginState: Bool = false
 
-    // MARK: - Dependencies
     private let loginUseCase: LoginUseCaseProtocol
 
+    // MARK: - Init
     init(loginUseCase: LoginUseCaseProtocol) {
         self.loginUseCase = loginUseCase
     }
 
     // MARK: - Actions
-    var isFormValid: Bool {
-        !email.isEmpty && !password.isEmpty
-    }
-
+    
+    @MainActor
     func login() async {
-        guard isFormValid else { return }
-
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedEmail.isEmpty, !trimmedPassword.isEmpty else {
+            errorMessage = "이메일과 비밀번호를 입력해주세요."
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
 
         do {
-            _ = try await loginUseCase.execute(email: email, password: password)
-            isLoggedIn = true
+            let user = try await loginUseCase.execute(email: trimmedEmail, password: trimmedPassword)
+            #if DEBUG
+            print("✅ [Login] userId: \(user.userId), email: \(user.email)")
+            print("✅ [Login] accessToken: \(user.tokenPair.accessToken.prefix(20))...")
+            print("✅ [Login] refreshToken: \(user.tokenPair.refreshToken.prefix(20))...")
+            #endif
+            loginState = true
         } catch {
+            #if DEBUG
+            print("❌ [Login] error: \(error)")
+            #endif
             errorMessage = error.localizedDescription
         }
 

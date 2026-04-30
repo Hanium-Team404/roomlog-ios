@@ -15,6 +15,6 @@ final class SignUpUseCase: SignUpUseCaseProtocol {
     }
 
     func execute(email: String, password: String, nickname: String) async throws -> SignedUpUser {
-        try await repository.signUp(email: email, password: password, nickname: nickname)
+        try await repository.signUp(body: SignUpRequestDTO(email: email, password: password, nickname: nickname))
     }
 }

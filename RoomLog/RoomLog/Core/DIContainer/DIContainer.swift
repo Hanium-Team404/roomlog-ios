@@ -74,10 +74,15 @@ extension DIContainer {
             )
         }
 
+        // MARK: - Auth Repository
+        container.register(AuthRepositoryProtocol.self) {
+            AuthRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
         // MARK: - UseCase Providers
         container.register(AuthUseCaseProvider.self) {
             AuthUseCaseProviderImpl(
-                adapter: container.resolve(MoyaNetworkAdapter.self),
+                repositoryProvider: container.resolve(AuthRepositoryProtocol.self),
                 tokenStore: container.resolve(TokenStore.self)
             )
         }
