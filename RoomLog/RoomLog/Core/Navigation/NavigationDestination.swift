@@ -9,7 +9,7 @@ import Foundation
 
 enum NavigationDestination: Hashable {
     enum Auth: Hashable {
-        case test
+        case signup
     }
     
     enum Home: Hashable {

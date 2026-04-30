@@ -32,8 +32,8 @@ private extension NavigationRoutingView {
     @ViewBuilder
     func authView(_ route: NavigationDestination.Auth) -> some View {
         switch route {
-        case .test:
-            Text("Auth Test View")
+        case .signup:
+            SignUpView()
         }
     }
     
