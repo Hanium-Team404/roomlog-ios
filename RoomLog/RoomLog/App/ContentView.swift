@@ -8,17 +8,30 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.di) var di: DIContainer
+    @State private var isLoggedIn: Bool?
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch isLoggedIn {
+            case .none:
+                ProgressView()
+            case .some(true):
+                RoomLogTab()
+            case .some(false):
+                LoginView {
+                    isLoggedIn = true
+                }
+            }
         }
-        .padding()
+        .task {
+            let networkClient = di.resolve(NetworkClient.self)
+            isLoggedIn = await networkClient.isLoggedIn()
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(\.di, DIContainer.configured())
 }

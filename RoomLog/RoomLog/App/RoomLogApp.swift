@@ -13,7 +13,7 @@ struct RoomLogApp: App {
     
     var body: some Scene {
         WindowGroup {
-            RoomLogTab()
+            ContentView()
                 .environment(\.di, di)
         }
     }
