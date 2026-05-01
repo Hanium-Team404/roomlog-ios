@@ -8,20 +8,25 @@
 import Foundation
 
 struct DefaultAuthenticationPolicy: AuthenticationPolicy, Sendable {
-    
+
+    // MARK: - Property
+
+    /// 인증이 필요 없는 경로 목록
+    private nonisolated static let requestsWithoutAuthentication: Set<String> = [
+        "/auth/login",
+        "/auth/signup"
+    ]
+
     // MARK: - Initializer
     nonisolated init() {}
-    
-    // MARK: - AuthenticationPolicy
-    
 
-    ///
+    // MARK: - AuthenticationPolicy
+
     /// - Parameter request: 판단할 URLRequest
-    /// - Returns: 항상  `true` / API요청이 auth로 시작하는 경우 `false`
-    /// 
+    /// - Returns: `requestsWithoutAuthentication`에 포함된 경로면 `false`, 그 외 `true`
     nonisolated func requireAuthentication(_ request: URLRequest) -> Bool {
         guard let path = request.url?.path else { return true }
-        return !path.hasPrefix("/auth/")
+        return !Self.requestsWithoutAuthentication.contains(path)
     }
     
     /// 401 Unautherized 응답을 인증 실패로 판단
