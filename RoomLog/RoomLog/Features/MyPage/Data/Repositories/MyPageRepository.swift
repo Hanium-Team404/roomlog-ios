@@ -22,8 +22,11 @@ final class MyPageRepository: MyPageRepositoryProtocol {
     // MARK: - Function
     func getUser() async throws -> User {
         let response = try await adapter.request(UserTarget.getUser)
-        let dto = try decoder.decode(APIResponse<UserResponseDTO>.self, from: response.data)
-        print(dto)
-        return try dto.unwrap().toDomain()
+        do {
+            let dto = try decoder.decode(APIResponse<UserResponseDTO>.self, from: response.data)
+            return try dto.unwrap().toDomain()
+        } catch let error as DecodingError {
+            throw RepositoryError.decodingError(detail: String(describing: error))
+        }
     }
 }
