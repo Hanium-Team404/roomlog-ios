@@ -12,7 +12,7 @@ struct RoomLogApp: App {
     
     //MARK: - Properties
     @State private var container: DIContainer
-    @State private var appState: AppState = .login //TODO: SplashView 제작 이후 앱 진입점 .splash로 변경
+    @State private var appState: AppState = .splash
     
     init() {
         _container = State(
@@ -34,7 +34,11 @@ struct RoomLogApp: App {
         VStack {
             switch appState {
             case .splash:
-                Text("roomlog_splashview")
+                SplashView(
+                    networkClient: container.resolve(NetworkClient.self),
+                    getUserUseCase: container.resolve(MyPageUseCaseProvider.self).makeGetUserUseCase(),
+                    tokenStore: container.resolve(TokenStore.self)
+                )
             case .login:
                 LoginView(
                     loginUseCase: container.resolve(AuthUseCaseProvider.self).loginUseCase
