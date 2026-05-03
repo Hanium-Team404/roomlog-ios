@@ -13,16 +13,17 @@ struct RoomLogTab: View {
     // MARK: - Property
     @State var isShowMyPage: Bool = false
     @Environment(\.di) var di
-    
+    @Environment(\.colorScheme) var colorScheme
+
     // MARK: - Body
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
-        
+
         TabView {
-            Tab("", systemImage: "house") {
+            Tab("Home", systemImage: "house") {
                 Text("Home")
             }
-            Tab("", systemImage: "wrench.and.screwdriver.fill") {
+            Tab("Viewer", systemImage: "magnifyingglass") {
                 NavigationStack(path: Bindable(pathStore).defectPath) {
                     ViewerView()
                         .navigationDestination(for: NavigationDestination.self) {
@@ -30,11 +31,11 @@ struct RoomLogTab: View {
                         }
                 }
             }
-            Tab("", systemImage: "person.fill", role: .search) {
+            Tab("Profile", systemImage: "person.fill") {
                 Text("MyPage")
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .tint(colorScheme == .dark ? .cloudDancer : .mutedBlue)
     }
 }
 
