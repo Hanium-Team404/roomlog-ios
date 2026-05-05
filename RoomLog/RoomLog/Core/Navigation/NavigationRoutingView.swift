@@ -40,8 +40,14 @@ private extension NavigationRoutingView {
     @ViewBuilder
     func homeView(_ route: NavigationDestination.Home) -> some View {
         switch route {
-        case .test:
-            Text("home")
+        case .home:
+            HomeView()
+        case .roomList(let houseId):
+            RoomListView(houseId: houseId)
+        case .roomDetail:
+            Text("roomdetail")
+        case .scan:
+            ScanView()
         }
     }
     
