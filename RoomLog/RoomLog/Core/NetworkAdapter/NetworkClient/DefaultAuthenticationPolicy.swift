@@ -8,19 +8,17 @@
 import Foundation
 
 struct DefaultAuthenticationPolicy: AuthenticationPolicy, Sendable {
-    
+
     // MARK: - Initializer
     nonisolated init() {}
-    
-    // MARK: - AuthenticationPolicy
-    
 
-    ///
+    // MARK: - AuthenticationPolicy
+
     /// - Parameter request: 판단할 URLRequest
-    /// - Returns: 항상  `true`
-    ///   -> 모든 API 요청에 인증 적용
+    /// - Returns: /auth를 prefix로 가질 경우 `false`, 그 외 `true`
     nonisolated func requireAuthentication(_ request: URLRequest) -> Bool {
-        true
+        guard let path = request.url?.path else { return true }
+        return !path.hasPrefix("/auth")
     }
     
     /// 401 Unautherized 응답을 인증 실패로 판단

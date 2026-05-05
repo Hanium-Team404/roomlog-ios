@@ -27,8 +27,7 @@ struct TokenRefreshServiceImpl: TokenRefreshService {
     
     func refresh(_ refreshToken: String) async throws -> TokenPair {
         
-        // TODO: 실제 refresh 요청 path로 변경 필요
-        let url = baseURL.appending(path:"/api/refresh")
+        let url = baseURL.appending(path:"/auth/refresh")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

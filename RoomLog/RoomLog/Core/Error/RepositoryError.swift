@@ -9,7 +9,7 @@ import Foundation
 
 enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
     
-    case serverError(code: String?, message: String?)
+    case serverError(code: Int?, message: String?)
     
     case decodingError(detail: String?)
     
@@ -22,7 +22,7 @@ enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
         }
     }
     
-    var code: String? {
+    var code: Int? {
         switch self {
         case .serverError(let code, _):
             return code
@@ -30,9 +30,9 @@ enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
             return nil
         }
     }
-    
+
     var errorCode: String {
-        code ?? "unknown code"
+        code.map { String($0) } ?? "unknown code"
     }
     
     var userMessage: String {

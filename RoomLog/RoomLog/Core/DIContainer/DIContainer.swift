@@ -74,9 +74,25 @@ extension DIContainer {
             )
         }
 
+        // MARK: - Auth Repository
+        container.register(AuthRepositoryProtocol.self) {
+            AuthRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
         // MARK: - UseCase Providers
+        container.register(AuthUseCaseProvider.self) {
+            AuthUseCaseProviderImpl(
+                repositoryProvider: container.resolve(AuthRepositoryProtocol.self),
+                tokenStore: container.resolve(TokenStore.self)
+            )
+        }
+
         container.register(HomeUseCaseProvider.self) {
             HomeUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
+        container.register(MyPageUseCaseProvider.self) {
+            MyPageUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
         // MARK: - Repository

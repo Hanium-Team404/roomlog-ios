@@ -157,7 +157,8 @@
 /* Begin XCBuildConfiguration section */
 		0B1EC4492F7BB971001FE02F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DBF056CA2FA9C5D600708069 /* Debug.xcconfig */;
+			baseConfigurationReferenceAnchor = 0B1EC4422F7BB970001FE02F /* RoomLog */;
+			baseConfigurationReferenceRelativePath = Core/Config/Config.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -222,6 +223,8 @@
 		};
 		0B1EC44A2F7BB971001FE02F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0B1EC4422F7BB970001FE02F /* RoomLog */;
+			baseConfigurationReferenceRelativePath = Core/Config/Config.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -279,7 +282,8 @@
 		};
 		0B1EC44C2F7BB971001FE02F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DBF056CA2FA9C5D600708069 /* Debug.xcconfig */;
+			baseConfigurationReferenceAnchor = 0B1EC4422F7BB970001FE02F /* RoomLog */;
+			baseConfigurationReferenceRelativePath = Core/Config/Config.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -319,6 +323,8 @@
 		};
 		0B1EC44D2F7BB971001FE02F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0B1EC4422F7BB970001FE02F /* RoomLog */;
+			baseConfigurationReferenceRelativePath = Core/Config/Config.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
