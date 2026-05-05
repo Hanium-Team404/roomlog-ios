@@ -21,7 +21,12 @@ struct RoomLogTab: View {
 
         TabView {
             Tab("Home", systemImage: "house") {
-                Text("Home")
+                NavigationStack(path: Bindable(pathStore).homePath) {
+                    HomeView()
+                        .navigationDestination(for: NavigationDestination.self) {
+                            NavigationRoutingView(destination: $0)
+                        }
+                }
             }
             Tab("Viewer", systemImage: "magnifyingglass") {
                 NavigationStack(path: Bindable(pathStore).defectPath) {

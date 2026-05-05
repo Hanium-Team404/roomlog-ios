@@ -109,6 +109,10 @@ extension DIContainer {
         container.register(PathStore.self) {
             PathStore()
         }
+        
+        container.register(NavigationRouter.self) {
+            NavigationRouter()
+        }
 
         return container
     }
