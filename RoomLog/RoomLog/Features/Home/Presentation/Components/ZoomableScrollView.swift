@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 
-struct ZoomableScrollView<Content: View>: UIViewRepresentable {
+struct ZoomableScrollView<Content: View>: UIViewControllerRepresentable {
 
     let contentSize: CGSize
     let minZoom: CGFloat
@@ -19,8 +19,9 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         Coordinator()
     }
 
-    func makeUIView(context: Context) -> UIScrollView {
-        let scrollView = UIScrollView()
+    func makeUIViewController(context: Context) -> ZoomableScrollViewController {
+        let vc = ZoomableScrollViewController()
+        let scrollView = vc.scrollView
         scrollView.delegate = context.coordinator
         scrollView.minimumZoomScale = minZoom
         scrollView.maximumZoomScale = maxZoom
@@ -36,7 +37,9 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         hostingController.view.backgroundColor = .clear
         hostingController.view.frame = CGRect(origin: .zero, size: contentSize)
 
+        vc.addChild(hostingController)
         scrollView.addSubview(hostingController.view)
+        hostingController.didMove(toParent: vc)
         context.coordinator.hostingController = hostingController
 
         // 초기 스크롤 위치를 캔버스 중앙으로
@@ -46,10 +49,10 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
             scrollView.contentOffset = CGPoint(x: max(offsetX, 0), y: max(offsetY, 0))
         }
 
-        return scrollView
+        return vc
     }
 
-    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+    func updateUIViewController(_ vc: ZoomableScrollViewController, context: Context) {
         context.coordinator.hostingController?.rootView = content()
     }
 
@@ -59,5 +62,13 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             hostingController?.view
         }
+    }
+}
+
+final class ZoomableScrollViewController: UIViewController {
+    let scrollView = UIScrollView()
+
+    override func loadView() {
+        view = scrollView
     }
 }
