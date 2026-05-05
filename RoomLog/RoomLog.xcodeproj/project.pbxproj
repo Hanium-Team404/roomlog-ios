@@ -9,10 +9,12 @@
 /* Begin PBXBuildFile section */
 		0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */; };
 		0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0BEFDD962F84FDF900CDE2A6 /* Moya */; };
+		DBF056CB2FA9C5D600708069 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = DBF056CA2FA9C5D600708069 /* Debug.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0B1EC4402F7BB970001FE02F /* RoomLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoomLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DBF056CA2FA9C5D600708069 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -54,6 +56,7 @@
 			children = (
 				0B1EC4422F7BB970001FE02F /* RoomLog */,
 				0B1EC4412F7BB970001FE02F /* Products */,
+				DBF056CA2FA9C5D600708069 /* Debug.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -135,6 +138,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DBF056CB2FA9C5D600708069 /* Debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,6 +157,7 @@
 /* Begin XCBuildConfiguration section */
 		0B1EC4492F7BB971001FE02F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DBF056CA2FA9C5D600708069 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -274,6 +279,7 @@
 		};
 		0B1EC44C2F7BB971001FE02F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DBF056CA2FA9C5D600708069 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -289,6 +295,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -327,6 +334,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
