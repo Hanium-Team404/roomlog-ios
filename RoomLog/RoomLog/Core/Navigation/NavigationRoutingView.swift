@@ -54,8 +54,8 @@ private extension NavigationRoutingView {
             DefectListView()
         case .defectListMain(let roomId):
             DefectView(roomId: roomId)
-        case .defectListDetail:
-            Text("하자점검 목록 디테일 - TODO")
+        case .defectListDetail(let defect, let roomImageURL):
+            DefectDetailView(defect: defect, roomImageURL: roomImageURL)
         }
     }
     

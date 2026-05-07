@@ -20,7 +20,7 @@ enum NavigationDestination: Hashable {
         case mainView // 하자점검, 내방비교
         case defectList
         case defectListMain(roomId: Int)
-        case defectListDetail
+        case defectListDetail(defect: DefectReportDetail, roomImageURL: String?)
     }
     
     enum MyPage: Hashable {
