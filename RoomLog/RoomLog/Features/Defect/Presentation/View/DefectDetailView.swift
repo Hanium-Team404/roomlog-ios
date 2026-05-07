@@ -1,13 +1,241 @@
 //
-//  Untitled.swift
+//  DefectDetailView.swift
 //  RoomLog
 //
 //  Created by 송민교 on 4/20/26.
 //
+
 import SwiftUI
 
 struct DefectDetailView: View {
+    let defect: DefectReportDetail
+    let roomImageURL: String?
+
+    private static let displayDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy.MM.dd"
+        f.locale = Locale(identifier: "ko_KR")
+        return f
+    }()
+
     var body: some View {
-        
+        ScrollView {
+            VStack(spacing: 16) {
+                roomImageView
+                summaryCard
+                detailCard
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+        .safeAreaInset(edge: .bottom) {
+            bottomButton
+        }
+        .navigationTitle(defect.type)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Room Image
+
+private extension DefectDetailView {
+    var roomImageView: some View {
+        Group {
+            if let urlString = roomImageURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        imagePlaceholder
+                    }
+                }
+            } else {
+                imagePlaceholder
+            }
+        }
+        .frame(height: 262)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    var imagePlaceholder: some View {
+        Color(.systemGray5)
+            .overlay {
+                Image(systemName: "photo")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+            }
+    }
+}
+
+// MARK: - Summary Card
+
+private extension DefectDetailView {
+    var summaryCard: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("심각도")
+                    .font(.medium, 16)
+                    .foregroundStyle(Color("dustyBlue"))
+                severityBadge
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 12) {
+                Text("예상 수리비")
+                    .font(.medium, 16)
+                    .foregroundStyle(Color("dustyBlue"))
+                Text(formattedRepairCost)
+                    .font(.semibold, 24)
+                    .foregroundStyle(Color("neutral700"))
+            }
+        }
+        .padding(.horizontal, 36)
+        .padding(.vertical, 30)
+        .frame(maxWidth: .infinity)
+        .background(cardBackground)
+    }
+
+    var severityBadge: some View {
+        Text(defect.severity.label)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(defect.severity.badgeTextColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(defect.severity.badgeTextColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    var formattedRepairCost: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        let formatted = formatter.string(from: NSNumber(value: defect.repairCost)) ?? "\(defect.repairCost)"
+        return "₩ \(formatted)"
+    }
+}
+
+// MARK: - Detail Card
+
+private extension DefectDetailView {
+    var detailCard: some View {
+        VStack(alignment: .leading, spacing: 42) {
+            Text("하자 상세 정보")
+                .font(.semibold, 20)
+                .foregroundStyle(Color("neutral800"))
+
+            infoRow(label: "위치", value: defect.location)
+            areaRow
+            if let date = defect.discoveredDate {
+                infoRow(label: "발견일", value: Self.displayDateFormatter.string(from: date))
+            }
+            memoSection
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
+    }
+
+    func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.medium, 16)
+                .foregroundStyle(.primary)
+                .frame(width: 52, alignment: .leading)
+            Spacer()
+            Text(value)
+                .font(.medium, 16)
+                .foregroundStyle(Color("blueGray500"))
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    var areaRow: some View {
+        HStack {
+            Text("면적")
+                .font(.medium, 16)
+                .foregroundStyle(.primary)
+                .frame(width: 52, alignment: .leading)
+            Spacer()
+            Text(String(format: "%.2f m²", defect.defectArea))
+                .font(.medium, 16)
+                .foregroundStyle(Color("blueGray500"))
+        }
+    }
+
+    var memoSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("추가사항")
+                .font(.medium, 16)
+                .foregroundStyle(.primary)
+            Text(defect.memo?.isEmpty == false ? defect.memo! : defect.description)
+                .font(.medium, 16)
+                .foregroundStyle(Color("blueGray500"))
+        }
+    }
+
+    var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 20)
+            .fill(.white)
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
+    }
+}
+
+// MARK: - Bottom Button
+
+private extension DefectDetailView {
+    var bottomButton: some View {
+        Button(action: {
+            // TODO: 추천 업체 화면으로 이동
+        }) {
+            Text("추천 업체 보기")
+                .font(.semibold, 17)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Color("mutedBlue"), in: Capsule())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
+#Preview {
+    let defect = DefectReportDetail(
+        id: "1",
+        imageURL: nil,
+        type: "균열",
+        severity: .high,
+        description: "벽면에 균열이 발견되었습니다.",
+        repairCost: 80000,
+        defectArea: 0.3,
+        location: "거실 북쪽 벽",
+        discoveredDate: nil,
+        memo: nil,
+        x: nil,
+        y: nil,
+        z: nil
+    )
+    NavigationStack {
+        DefectDetailView(defect: defect, roomImageURL: nil)
+    }
+}
+
+// MARK: - Severity Style
+
+private extension Severity {
+    var label: String {
+        switch self {
+        case .high: "높음"
+        case .medium: "중간"
+        case .low: "낮음"
+        }
+    }
+
+    var badgeTextColor: Color {
+        switch self {
+        case .high: .red
+        case .medium: .orange
+        case .low: Color("mutedBlue")
+        }
     }
 }
