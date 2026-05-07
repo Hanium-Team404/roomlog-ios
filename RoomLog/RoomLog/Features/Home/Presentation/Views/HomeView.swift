@@ -9,17 +9,24 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(\.di) private var di
+    @State private var viewModel: HomeViewModel
+
+    init(provider: HomeUseCaseProvider) {
+        self._viewModel = .init(
+            wrappedValue: HomeViewModel(provider: provider)
+        )
+    }
 
     private var pathStore: PathStore {
         di.resolve(PathStore.self)
     }
 
     var body: some View {
-        ZStack {
-            // 맵이 베이스
-            HouseMapView { house in
-                pathStore.homePath.append(.home(.roomList(houseId: house.houseId)))
-            }
+        HouseMapView(houses: viewModel.houses) { house in
+            pathStore.homePath.append(.home(.roomList(houseId: house.houseId)))
+        }
+        .task {
+            await viewModel.fetchHouses()
         }
         .toolbar {
             ToolbarItem(placement: .title) {
@@ -29,7 +36,7 @@ struct HomeView: View {
                     .frame(width: 128)
                     .padding(.top)
             }
-            
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     print("plus")
