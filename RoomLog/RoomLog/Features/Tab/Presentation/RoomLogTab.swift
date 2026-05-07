@@ -22,7 +22,7 @@ struct RoomLogTab: View {
         TabView {
             Tab("Home", systemImage: "house") {
                 NavigationStack(path: Bindable(pathStore).homePath) {
-                    HomeView()
+                    HomeView(provider: di.resolve(HomeUseCaseProvider.self))
                         .navigationDestination(for: NavigationDestination.self) {
                             NavigationRoutingView(destination: $0)
                         }
