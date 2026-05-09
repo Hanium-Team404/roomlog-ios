@@ -105,6 +105,11 @@ extension DIContainer {
             DefectUseCaseProviderImpl(defectRepository: container.resolve(DefectRepositoryProtocol.self))
         }
 
+        // MARK: - Shared State
+        container.register(HomeState.self) {
+            HomeState()
+        }
+
         // MARK: - Navigation
         container.register(PathStore.self) {
             PathStore()

@@ -35,6 +35,7 @@ struct HouseMapView: View {
     // MARK: - Properties
 
     let houses: [House]
+    var namespace: Namespace.ID
     var onHouseTap: (House) -> Void
 
     // MARK: - Body
@@ -73,6 +74,7 @@ struct HouseMapView: View {
                                 .scaledToFit()
                                 .frame(width: Layout.houseImageWidth)
                         }
+                        .matchedTransitionSource(id: house.houseId, in: namespace)
                         .onTapGesture {
                             onHouseTap(house)
                         }
