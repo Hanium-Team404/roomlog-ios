@@ -8,40 +8,71 @@
 import Foundation
 
 protocol HomeUseCaseProvider {
-    func makeFetchHomeDataUseCase() -> FetchHomeDataUseCaseProtocol
-    func makeFetchRoomDetailUseCase() -> FetchRoomDetailUseCaseProtocol
+    // MARK: - House
+    func makeGetHousesUseCase() -> GetHousesUseCaseProtocol
+    func makeCreateHouseUseCase() -> CreateHouseUseCaseProtocol
+    func makeUpdateHouseUseCase() -> UpdateHouseUseCaseProtocol
+    func makeDeleteHouseUseCase() -> DeleteHouseUseCaseProtocol
+    func makeSetMainHouseUseCase() -> SetMainHouseUseCaseProtocol
+    func makeGetHouseRoomsUseCase() -> GetHouseRoomsUseCaseProtocol
+    func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol
+
+    // MARK: - Room
+    func makeGetRoomDetailUseCase() -> GetRoomDetailUseCaseProtocol
     func makeUpdateRoomUseCase() -> UpdateRoomUseCaseProtocol
-    func makePatchMainRoomUseCase() -> PatchMainRoomUseCaseProtocol
     func makeDeleteRoomUseCase() -> DeleteRoomUseCaseProtocol
 }
 
 final class HomeUseCaseProviderImpl: HomeUseCaseProvider {
     // MARK: - Repository
-    private let homeRepository: HomeRepositoryProtocol
+    private let houseRepository: HouseRepositoryProtocol
+    private let roomRepository: RoomRepositoryProtocol
 
     // MARK: - Init
     init(adapter: MoyaNetworkAdapter) {
-        self.homeRepository = HomeRepository(adapter: adapter)
+        self.houseRepository = HouseRepository(adapter: adapter)
+        self.roomRepository = RoomRepository(adapter: adapter)
     }
 
-    // MARK: - Home UseCases
-    func makeFetchHomeDataUseCase() -> FetchHomeDataUseCaseProtocol {
-        FetchHomeDataUseCase(repository: homeRepository)
+    // MARK: - House UseCases
+    func makeGetHousesUseCase() -> GetHousesUseCaseProtocol {
+        GetHousesUseCase(repository: houseRepository)
     }
 
-    func makeFetchRoomDetailUseCase() -> FetchRoomDetailUseCaseProtocol {
-        FetchRoomDetailUseCase(repository: homeRepository)
+    func makeCreateHouseUseCase() -> CreateHouseUseCaseProtocol {
+        CreateHouseUseCase(repository: houseRepository)
+    }
+
+    func makeUpdateHouseUseCase() -> UpdateHouseUseCaseProtocol {
+        UpdateHouseUseCase(repository: houseRepository)
+    }
+
+    func makeDeleteHouseUseCase() -> DeleteHouseUseCaseProtocol {
+        DeleteHouseUseCase(repository: houseRepository)
+    }
+
+    func makeSetMainHouseUseCase() -> SetMainHouseUseCaseProtocol {
+        SetMainHouseUseCase(repository: houseRepository)
+    }
+
+    func makeGetHouseRoomsUseCase() -> GetHouseRoomsUseCaseProtocol {
+        GetHouseRoomsUseCase(repository: houseRepository)
+    }
+
+    func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol {
+        CreateRoomUseCase(repository: houseRepository)
+    }
+
+    // MARK: - Room UseCases
+    func makeGetRoomDetailUseCase() -> GetRoomDetailUseCaseProtocol {
+        GetRoomDetailUseCase(repository: roomRepository)
     }
 
     func makeUpdateRoomUseCase() -> UpdateRoomUseCaseProtocol {
-        UpdateRoomUseCase(repository: homeRepository)
-    }
-
-    func makePatchMainRoomUseCase() -> PatchMainRoomUseCaseProtocol {
-        PatchMainRoomUseCase(repository: homeRepository)
+        UpdateRoomUseCase(repository: roomRepository)
     }
 
     func makeDeleteRoomUseCase() -> DeleteRoomUseCaseProtocol {
-        DeleteRoomUseCase(repository: homeRepository)
+        DeleteRoomUseCase(repository: roomRepository)
     }
 }

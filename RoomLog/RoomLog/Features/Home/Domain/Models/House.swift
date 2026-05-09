@@ -7,9 +7,21 @@
 
 import Foundation
 
-struct House: Codable, Hashable {
+struct House: Hashable, Identifiable {
+    var id: Int { houseId }
     let houseId: Int
     let name: String
-    let x: Float
-    let y: Float
+}
+
+struct HouseList {
+    let houses: [House]
+    let mainHouse: House?
+    let totalCount: Int
+}
+
+struct HouseRooms {
+    let rooms: [RoomSummary]
+    let houseId: Int
+    let houseName: String
+    let totalCount: Int
 }
