@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct House: Codable {
+struct House: Codable, Hashable {
     let houseId: Int
     let name: String
     let x: Float

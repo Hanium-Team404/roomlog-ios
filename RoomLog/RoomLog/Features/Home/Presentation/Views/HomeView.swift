@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(\.di) private var di
     @State private var viewModel: HomeViewModel
+    @Namespace private var houseNamespace
 
     init(provider: HomeUseCaseProvider) {
         self._viewModel = .init(
@@ -21,12 +22,21 @@ struct HomeView: View {
         di.resolve(PathStore.self)
     }
 
+    private var homeState: HomeState {
+        di.resolve(HomeState.self)
+    }
+
     var body: some View {
-        HouseMapView(houses: viewModel.houses) { house in
+        HouseMapView(houses: viewModel.houses, namespace: houseNamespace) { house in
             pathStore.homePath.append(.home(.roomList(houseId: house.houseId)))
+        }
+        .navigationDestination(for: NavigationDestination.self) {
+            NavigationRoutingView(destination: $0)
+                .navigationTransition(.zoom(sourceID: sourceID(for: $0), in: houseNamespace))
         }
         .task {
             await viewModel.fetchHouses()
+            homeState.hasHouses = !viewModel.houses.isEmpty
         }
         .toolbar {
             ToolbarItem(placement: .title) {
@@ -44,6 +54,15 @@ struct HomeView: View {
                     Image(systemName: "plus")
                 }
             }
+        }
+    }
+
+    private func sourceID(for destination: NavigationDestination) -> Int {
+        switch destination {
+        case .home(.roomList(let houseId)):
+            return houseId
+        default:
+            return 0
         }
     }
 }

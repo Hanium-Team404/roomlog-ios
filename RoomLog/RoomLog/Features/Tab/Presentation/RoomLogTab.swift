@@ -12,23 +12,27 @@ struct RoomLogTab: View {
 
     // MARK: - Property
     @State var isShowMyPage: Bool = false
+    @State private var selectedTab: TabIdentifier = .home
+    @State private var showViewerLockedToast: Bool = false
     @Environment(\.di) var di
     @Environment(\.colorScheme) var colorScheme
+
+    private enum TabIdentifier: Hashable {
+        case home, viewer, profile
+    }
 
     // MARK: - Body
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
+        let homeState = di.resolve(HomeState.self)
 
-        TabView {
-            Tab("Home", systemImage: "house") {
+        TabView(selection: $selectedTab) {
+            Tab("Home", systemImage: "house", value: .home) {
                 NavigationStack(path: Bindable(pathStore).homePath) {
                     HomeView(provider: di.resolve(HomeUseCaseProvider.self))
-                        .navigationDestination(for: NavigationDestination.self) {
-                            NavigationRoutingView(destination: $0)
-                        }
                 }
             }
-            Tab("Viewer", systemImage: "magnifyingglass") {
+            Tab("Viewer", systemImage: "magnifyingglass", value: .viewer) {
                 NavigationStack(path: Bindable(pathStore).defectPath) {
                     ViewerView()
                         .navigationDestination(for: NavigationDestination.self) {
@@ -36,15 +40,36 @@ struct RoomLogTab: View {
                         }
                 }
             }
-            Tab("Profile", systemImage: "person.fill") {
+            Tab("Profile", systemImage: "person.fill", value: .profile) {
                 Text("MyPage")
             }
         }
         .tint(colorScheme == .dark ? .cloudDancer : .mutedBlue)
+        .onChange(of: selectedTab) { _, newValue in
+            if newValue == .viewer && !homeState.hasHouses {
+                selectedTab = .home
+                showViewerLockedToast = true
+            }
+        }
+        .overlay(alignment: .top) {
+            if showViewerLockedToast {
+                HouseBannerView()
+                    .padding(.horizontal, 24)
+                    .padding(.top, 60)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            withAnimation {
+                                showViewerLockedToast = false
+                            }
+                        }
+                    }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showViewerLockedToast)
     }
 }
 
 #Preview {
     RoomLogTab()
 }
-
