@@ -17,7 +17,6 @@ final class HomeViewModel {
     // MARK: - State
 
     private(set) var houses: [House] = []
-    private(set) var homeData: HomeData?
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
 
@@ -31,10 +30,14 @@ final class HomeViewModel {
 
     @MainActor
     func fetchHouses() async {
-        // TODO: House 목록 API 연동 시 UseCase 호출로 교체
-        houses = [
-            House(houseId: 1, name: "망고의 집", x: 750, y: 750),
-            House(houseId: 2, name: "도도의 집", x: 350, y: 750)
-        ]
+        isLoading = true
+        errorMessage = nil
+        do {
+            let result = try await provider.makeGetHousesUseCase().execute()
+            houses = result.houses
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
     }
 }

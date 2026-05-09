@@ -2,22 +2,19 @@
 //  UpdateRoomUseCase.swift
 //  RoomLog
 //
-//  Created by 김도연 on 4/7/26.
+//  Created by 김도연 on 5/9/26.
 //
 
 import Foundation
 
 final class UpdateRoomUseCase: UpdateRoomUseCaseProtocol {
-    // MARK: - Property
-    private let repository: HomeRepositoryProtocol
+    private let repository: RoomRepositoryProtocol
 
-    // MARK: - Init
-    init(repository: HomeRepositoryProtocol) {
+    init(repository: RoomRepositoryProtocol) {
         self.repository = repository
     }
 
-    // MARK: - Function
-    func execute(request: UpdatedRoomDetail) async throws -> UpdatedRoomDetail {
-        try await repository.patchRoom(request: request)
+    func execute(roomId: Int, name: String, address: String, moveInDate: Date, moveOutDate: Date?) async throws {
+        try await repository.updateRoom(roomId: roomId, name: name, address: address, moveInDate: moveInDate, moveOutDate: moveOutDate)
     }
 }

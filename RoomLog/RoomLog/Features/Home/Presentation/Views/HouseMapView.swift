@@ -64,7 +64,8 @@ struct HouseMapView: View {
                             .foregroundStyle(.blueGray500)
                     }
                 } else {
-                    ForEach(houses, id: \.houseId) { house in
+                    // TODO: 집 위치 배치 로직 구현 필요
+                    ForEach(Array(houses.enumerated()), id: \.element.houseId) { index, house in
                         VStack(spacing: Layout.houseSpacing) {
                             Text(house.name)
                                 .font(.medium, Layout.houseNameFontSize)
@@ -78,7 +79,10 @@ struct HouseMapView: View {
                         .onTapGesture {
                             onHouseTap(house)
                         }
-                        .position(x: CGFloat(house.x), y: CGFloat(house.y))
+                        .position(
+                            x: Layout.canvasSize / 2 + CGFloat(index % 2) * 400 - 200,
+                            y: Layout.canvasSize / 2
+                        )
                     }
                 }
             }
