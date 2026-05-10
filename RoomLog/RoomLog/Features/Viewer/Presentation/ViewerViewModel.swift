@@ -23,6 +23,8 @@ final class ViewerViewModel {
         defer { isLoading = false }
         do {
             rooms = try await useCase.execute()
-        } catch {}
+        } catch {
+            // TODO: 추후 추가 - @minkyo
+        }
     }
 }
