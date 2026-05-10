@@ -49,11 +49,29 @@ struct HomeView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    print("plus")
+                    viewModel.showAddHouseAlert = true
                 } label: {
                     Image(systemName: "plus")
                 }
             }
+        }
+        .tint(.accent)
+        .alert("어떤 이름으로 저장할까요?", isPresented: $viewModel.showAddHouseAlert) {
+            TextField("예: 망고의 집", text: $viewModel.newHouseName)
+            
+            Button("취소", role: .cancel) {
+                viewModel.newHouseName = ""
+            }
+            Button {
+                Task {
+                    await viewModel.createHouse()
+                    homeState.hasHouses = !viewModel.houses.isEmpty
+                }
+            } label: {
+                 Text("만들기")
+                    .tint(.white)
+            }
+            .keyboardShortcut(.defaultAction)
         }
     }
 
@@ -65,4 +83,13 @@ struct HomeView: View {
             return 0
         }
     }
+}
+
+#Preview {
+    NavigationStack {
+        HomeView(
+            provider: DIContainer.configured().resolve(HomeUseCaseProvider.self)
+        )
+    }
+    .environment(\.di, .configured())
 }

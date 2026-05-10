@@ -44,7 +44,6 @@ struct RoomLogTab: View {
                 Text("MyPage")
             }
         }
-        .tint(colorScheme == .dark ? .cloudDancer : .mutedBlue)
         .onChange(of: selectedTab) { _, newValue in
             if newValue == .viewer && !homeState.hasHouses {
                 selectedTab = .home
