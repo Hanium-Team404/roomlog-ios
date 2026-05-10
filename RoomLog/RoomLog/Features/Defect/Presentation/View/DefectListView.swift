@@ -48,6 +48,13 @@ struct DefectListView: View {
     }
 }
 
+#Preview {
+    NavigationStack {
+        DefectListView()
+    }
+    .environment(\.di, DIContainer.configured())
+}
+
 // MARK: - 하자 List들
 
 private struct DefectListRow: View {

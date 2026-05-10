@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct DefectReportDetail {
+struct DefectReportDetail: Hashable {
     let id: String
     let imageURL: String?
     let type: String
@@ -15,13 +15,21 @@ struct DefectReportDetail {
     let repairCost: Int
     let defectArea: Double
     let location: String
-    let discoveredDate: Date
+    let discoveredDate: Date?
     let memo: String?
     let x: Float?
     let y: Float?
     let z: Float?
 }
 
-enum Severity {
+enum Severity: Hashable {
     case high, medium, low
+
+    init(rawString: String) {
+        switch rawString.uppercased() {
+        case "HIGH": self = .high
+        case "MEDIUM": self = .medium
+        default: self = .low
+        }
+    }
 }

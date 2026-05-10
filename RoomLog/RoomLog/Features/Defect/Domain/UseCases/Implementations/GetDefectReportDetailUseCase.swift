@@ -8,16 +8,13 @@
 import Foundation
 
 final class GetDefectReportDetailUseCase: GetDefectReportDetailUseCaseProtocol {
-    // MARK: - Property
     private let repository: DefectRepositoryProtocol
 
-    // MARK: - Init
     init(repository: DefectRepositoryProtocol) {
         self.repository = repository
     }
 
-    // MARK: - Function
-    func execute(roomId: Int, reportId: Int) async throws -> DefectReportDetail {
-        try await repository.getDefectReportDetail(roomId: roomId, reportId: reportId)
+    func execute(roomId: Int) async throws -> DefectReportDetail {
+        try await repository.getDefectReportDetail(roomId: roomId)
     }
 }
