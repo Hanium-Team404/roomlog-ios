@@ -19,7 +19,12 @@ final class DefectRepository: DefectRepositoryProtocol {
 
     func getDefectRoomData() async throws -> [DefectRoomData] {
         let response = try await adapter.request(DefectTarget.getDefectRoomData)
-        let apiResponse = try decoder.decode(APIResponse<HomeDataResponseDTO>.self, from: response.data)
+        let apiResponse: APIResponse<HomeDataResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<HomeDataResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
         return try apiResponse.unwrap().rooms.map { dto in
             DefectRoomData(
                 id: dto.roomId,
@@ -32,7 +37,12 @@ final class DefectRepository: DefectRepositoryProtocol {
 
     func getDefectReport(roomId: Int) async throws -> DefectReport {
         let response = try await adapter.request(DefectTarget.getDefectReport(roomId: roomId))
-        let apiResponse = try decoder.decode(APIResponse<DefectReportResponseDTO>.self, from: response.data)
+        let apiResponse: APIResponse<DefectReportResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<DefectReportResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
         return try apiResponse.unwrap().toDomain()
     }
 
