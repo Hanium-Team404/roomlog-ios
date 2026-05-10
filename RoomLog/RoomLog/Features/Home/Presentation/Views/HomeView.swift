@@ -62,11 +62,14 @@ struct HomeView: View {
             Button("취소", role: .cancel) {
                 viewModel.newHouseName = ""
             }
-            Button("만들기") {
+            Button {
                 Task {
                     await viewModel.createHouse()
                     homeState.hasHouses = !viewModel.houses.isEmpty
                 }
+            } label: {
+                 Text("만들기")
+                    .tint(.white)
             }
             .keyboardShortcut(.defaultAction)
         }
