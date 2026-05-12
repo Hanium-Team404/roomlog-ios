@@ -41,7 +41,9 @@ struct RoomLogTab: View {
                 }
             }
             Tab("Profile", systemImage: "person.fill", value: .profile) {
-                Text("MyPage")
+                NavigationStack {
+                    MyPageView()
+                }
             }
         }
         .onChange(of: selectedTab) { _, newValue in
@@ -52,7 +54,17 @@ struct RoomLogTab: View {
         }
         .overlay(alignment: .top) {
             if showViewerLockedToast {
-                HouseBannerView()
+                ToastView {
+                        Group {
+                            Text("집을 추가한 뒤 ")
+                                .foregroundStyle(.neutral600)
+                            Text("Viewer")
+                                .foregroundStyle(.dustyBlue)
+                            Text("를 사용하실 수 있습니다")
+                                .foregroundStyle(.neutral600)
+                        }
+                        .font(.medium, 14)
+                    }
                     .padding(.horizontal, 24)
                     .padding(.top, 60)
                     .transition(.move(edge: .top).combined(with: .opacity))

@@ -26,11 +26,19 @@ struct MoyaNetworkAdapter {
     func request<T: TargetType>(_ target: T) async throws -> Moya.Response {
         // Moya TargetType을 URLRequest로 변환
         let urlRequest = try buildURLRequest(target)
-        
+
+        #if DEBUG
+        logRequest(urlRequest)
+        #endif
+
         do {
             // NetworkClient(토큰 자동 갱신 지원)를 통해 요청
             let (data, httpResponse) = try await networkClient.request(urlRequest)
-            
+
+            #if DEBUG
+            logResponse(httpResponse, data: data, request: urlRequest)
+            #endif
+
             // Moya의 Response 형태로 포장해서 반환
             let response = Response(
                 statusCode: httpResponse.statusCode,
@@ -40,13 +48,49 @@ struct MoyaNetworkAdapter {
             )
             return response
         } catch {
+            #if DEBUG
+            print("🔴 [Network] ERROR \(urlRequest.httpMethod ?? "") \(urlRequest.url?.absoluteString ?? "")")
+            print("  → \(error.localizedDescription)")
+            #endif
             throw error
         }
     }
 }
 
+// MARK: - Debug Logging
+
+#if DEBUG
 extension MoyaNetworkAdapter {
-    
+    private func logRequest(_ request: URLRequest) {
+        let method = request.httpMethod ?? "?"
+        let url = request.url?.absoluteString ?? "?"
+        print("🟡 [Network] → \(method) \(url)")
+        if let body = request.httpBody,
+           let json = try? JSONSerialization.jsonObject(with: body),
+           let pretty = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+           let str = String(data: pretty, encoding: .utf8) {
+            print("  📦 Body: \(str)")
+        }
+    }
+
+    private func logResponse(_ response: HTTPURLResponse, data: Data, request: URLRequest) {
+        let method = request.httpMethod ?? "?"
+        let url = request.url?.absoluteString ?? "?"
+        let status = response.statusCode
+        let icon = (200..<300).contains(status) ? "🟢" : "🔴"
+        print("\(icon) [Network] ← \(status) \(method) \(url)")
+        if let str = String(data: data, encoding: .utf8) {
+            let preview = str.prefix(500)
+            print("  📄 Response: \(preview)\(str.count > 500 ? "..." : "")")
+        }
+    }
+}
+#endif
+
+// MARK: - URLRequest Builder
+
+extension MoyaNetworkAdapter {
+
     private func buildURLRequest<T: TargetType>(_ target: T) throws -> URLRequest {
         // 1. URL 구성 (baseURL + path)
         let url = target.baseURL.appending(path: target.path)
