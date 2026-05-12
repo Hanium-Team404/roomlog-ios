@@ -42,7 +42,7 @@ struct RoomLogTab: View {
             }
             Tab("Profile", systemImage: "person.fill", value: .profile) {
                 NavigationStack {
-                    MyPageView()
+                    MyPageView(provider: di.resolve(MyPageUseCaseProvider.self))
                 }
             }
         }
