@@ -13,9 +13,10 @@ enum NavigationDestination: Hashable {
     }
     
     enum Home: Hashable {
-        case roomList(houseId: Int)
+        case roomList(houseId: Int, houseName: String)
         case roomDetail(roomId: Int)
         case scan
+        case houseList
     }
     
     enum Defect: Hashable {

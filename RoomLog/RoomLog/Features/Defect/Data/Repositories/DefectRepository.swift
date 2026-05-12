@@ -18,21 +18,22 @@ final class DefectRepository: DefectRepositoryProtocol {
     }
 
     func getDefectRoomData() async throws -> [DefectRoomData] {
-        let response = try await adapter.request(DefectTarget.getDefectRoomData)
-        let apiResponse: APIResponse<HomeDataResponseDTO>
-        do {
-            apiResponse = try decoder.decode(APIResponse<HomeDataResponseDTO>.self, from: response.data)
-        } catch {
-            throw RepositoryError.decodingError(detail: error.localizedDescription)
-        }
-        return try apiResponse.unwrap().rooms.map { dto in
-            DefectRoomData(
-                id: dto.roomId,
-                title: dto.name,
-                date: dto.recentScanDate.flatMap { Date.fromServerDateTime($0) } ?? Date(),
-                thumbnailURL: dto.thumbnailURL
-            )
-        }
+//        let response = try await adapter.request(DefectTarget.getDefectRoomData)
+//        let apiResponse: APIResponse<HomeDataResponseDTO>
+//        do {
+//            apiResponse = try decoder.decode(APIResponse<HomeDataResponseDTO>.self, from: response.data)
+//        } catch {
+//            throw RepositoryError.decodingError(detail: error.localizedDescription)
+//        }
+//        return try apiResponse.unwrap().rooms.map { dto in
+//            DefectRoomData(
+//                id: dto.roomId,
+//                title: dto.name,
+//                date: dto.recentScanDate.flatMap { Date.fromServerDateTime($0) } ?? Date(),
+//                thumbnailURL: dto.thumbnailURL
+//            )
+//        }
+        return []
     }
 
     func getDefectReport(roomId: Int) async throws -> DefectReport {
