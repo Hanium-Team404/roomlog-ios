@@ -63,12 +63,20 @@ struct MyPageView: View {
             Button("취소", role: .cancel) {}
             Button("탈퇴", role: .destructive) {
                 Task {
-                    await viewModel.deleteAccount()
-                    appFlow.logout()
+                    if await viewModel.deleteAccount() {
+                        appFlow.logout()
+                    }
                 }
             }
         } message: {
             Text("탈퇴하면 모든 데이터가 삭제되며\n복구할 수 없습니다.")
+        }
+        .alert("오류", isPresented: $viewModel.showError) {
+            Button("확인") {}
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+            }
         }
     }
 }

@@ -18,7 +18,8 @@ final class MyPageViewModel {
 
     private(set) var user: User?
     private(set) var isLoading: Bool = false
-    private(set) var errorMessage: String?
+    var errorMessage: String?
+    var showError: Bool = false
 
     var showEditNicknameAlert: Bool = false
     var editingNickname: String = ""
@@ -41,6 +42,7 @@ final class MyPageViewModel {
             user = try await provider.makeGetUserUseCase().execute()
         } catch {
             errorMessage = error.localizedDescription
+            showError = true
         }
         isLoading = false
     }
@@ -55,15 +57,19 @@ final class MyPageViewModel {
             editingNickname = ""
         } catch {
             errorMessage = error.localizedDescription
+            showError = true
         }
     }
 
     @MainActor
-    func deleteAccount() async {
+    func deleteAccount() async -> Bool {
         do {
             try await provider.makeDeleteUserUseCase().execute()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            showError = true
+            return false
         }
     }
 }
