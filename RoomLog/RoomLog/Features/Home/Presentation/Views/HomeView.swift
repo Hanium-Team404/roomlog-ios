@@ -27,12 +27,16 @@ struct HomeView: View {
     }
 
     var body: some View {
-        HouseMapView(houses: viewModel.houses, namespace: houseNamespace) { house in
-            pathStore.homePath.append(.home(.roomList(houseId: house.houseId)))
+        HouseMapView(houses: viewModel.houses, mainHouseId: viewModel.mainHouse?.houseId, namespace: houseNamespace) { house in
+            pathStore.homePath.append(.home(.roomList(houseId: house.houseId, houseName: house.name)))
         }
-        .navigationDestination(for: NavigationDestination.self) {
-            NavigationRoutingView(destination: $0)
-                .navigationTransition(.zoom(sourceID: sourceID(for: $0), in: houseNamespace))
+        .navigationDestination(for: NavigationDestination.self) { dest in
+            if case .home(.roomList) = dest {
+                NavigationRoutingView(destination: dest)
+                    .navigationTransition(.zoom(sourceID: sourceID(for: dest), in: houseNamespace))
+            } else {
+                NavigationRoutingView(destination: dest)
+            }
         }
         .task {
             await viewModel.fetchHouses()
@@ -45,6 +49,14 @@ struct HomeView: View {
                     .scaledToFit()
                     .frame(width: 128)
                     .padding(.top)
+            }
+
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    pathStore.homePath.append(.home(.houseList))
+                } label: {
+                    Image(.houseList)
+                }
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -77,7 +89,7 @@ struct HomeView: View {
 
     private func sourceID(for destination: NavigationDestination) -> Int {
         switch destination {
-        case .home(.roomList(let houseId)):
+        case .home(.roomList(let houseId, _)):
             return houseId
         default:
             return 0

@@ -17,6 +17,7 @@ final class HomeViewModel {
     // MARK: - State
 
     private(set) var houses: [House] = []
+    private(set) var mainHouse: House?
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
     var showAddHouseAlert: Bool = false
@@ -37,6 +38,7 @@ final class HomeViewModel {
         do {
             let result = try await provider.makeGetHousesUseCase().execute()
             houses = result.houses
+            mainHouse = result.mainHouse
         } catch {
             errorMessage = error.localizedDescription
         }
