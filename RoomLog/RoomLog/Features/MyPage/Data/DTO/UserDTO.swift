@@ -7,6 +7,14 @@
 
 import Foundation
 
+// MARK: - Request DTO
+
+struct UpdateUserRequestDTO: Encodable {
+    let nickname: String
+}
+
+// MARK: - Response DTO
+
 struct UserResponseDTO: Codable {
     let userId: Int
     let nickname: String
@@ -27,5 +35,25 @@ struct UserResponseDTO: Codable {
             email: email,
             createdAt: Date.fromServerDateTime(createdAt) ?? Date()
         )
+    }
+}
+
+struct UpdateUserResponseDTO: Codable {
+    let userId: Int
+    let nickname: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case nickname
+    }
+}
+
+struct DeleteUserResponseDTO: Codable {
+    let userId: Int
+    let deleted: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case deleted
     }
 }
