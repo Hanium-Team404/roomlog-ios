@@ -8,22 +8,31 @@
 import Foundation
 import ARKit
 import CoreMotion
-import ZIPFoundation
 
 @Observable
 final class ScanViewModel: NSObject {
-    enum RecordingState {
+
+    // MARK: - Phase
+
+    enum Phase {
         case idle
         case recording
-        case processing
-        case done(zipURL: URL)
-        case failed(String)
+        case recorded
     }
 
-    // MARK: - Property
+    // MARK: - Properties
 
-    private(set) var recordingState: RecordingState = .idle
+    private(set) var phase: Phase = .idle
+    private(set) var recordingSeconds: Int = 0
+    private var isPreview: Bool = false
+
     let session = ARSession()
+    let houseId: Int
+    let scanType: String
+
+    private let processingManager: ScanProcessingManager
+    private let onStartConversion: () -> Void
+    private var recordingTimer: Timer?
 
     private let configuration: ARWorldTrackingConfiguration = {
         let config = ARWorldTrackingConfiguration()
@@ -36,9 +45,38 @@ final class ScanViewModel: NSObject {
     private let motionManager = CMMotionManager()
     private var encoder: DatasetEncoder?
 
+    // MARK: - Init
+
+    init(
+        houseId: Int,
+        scanType: String,
+        processingManager: ScanProcessingManager,
+        onStartConversion: @escaping () -> Void
+    ) {
+        self.houseId = houseId
+        self.scanType = scanType
+        self.processingManager = processingManager
+        self.onStartConversion = onStartConversion
+        super.init()
+    }
+
+    #if DEBUG
+    convenience init(preview phase: Phase) {
+        self.init(
+            houseId: 0,
+            scanType: "IN",
+            processingManager: ScanProcessingManager(),
+            onStartConversion: {}
+        )
+        self.phase = phase
+        self.isPreview = true
+    }
+    #endif
+
     // MARK: - Lifecycle
 
     func setup() {
+        guard !isPreview else { return }
         session.delegate = self
         session.run(configuration)
     }
@@ -54,49 +92,42 @@ final class ScanViewModel: NSObject {
         do {
             encoder = try DatasetEncoder(arConfiguration: configuration)
         } catch {
-            recordingState = .failed(error.localizedDescription)
             return
         }
         startIMU()
-        recordingState = .recording
+        recordingSeconds = 0
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.recordingSeconds += 1
+        }
+        phase = .recording
     }
 
     func stopRecording() {
+        recordingTimer?.invalidate()
+        recordingTimer = nil
         stopIMU()
-        recordingState = .processing
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            await encoder?.wrapUp()
-            await createZip()
-        }
+        phase = .recorded
+    }
+
+    func startConversion() {
+        guard let encoder else { return }
+        processingManager.startFullProcess(
+            encoder: encoder,
+            houseId: houseId,
+            scanType: scanType
+        )
+        self.encoder = nil
+        onStartConversion()
     }
 
     func reset() {
-        if case .done(let url) = recordingState {
-            try? FileManager.default.removeItem(at: url)
-        }
+        recordingTimer?.invalidate()
+        recordingTimer = nil
         encoder = nil
-        recordingState = .idle
+        phase = .idle
     }
 
-    // MARK: - Private
-
-    private func createZip() async {
-        guard let dir = encoder?.datasetDirectoryURL else {
-            recordingState = .failed("데이터셋 경로 없음")
-            return
-        }
-        let zipURL = dir.deletingLastPathComponent()
-            .appendingPathComponent(dir.lastPathComponent + ".zip")
-        do {
-            try await Task.detached(priority: .utility) {
-                try FileManager.default.zipItem(at: dir, to: zipURL)
-            }.value
-            recordingState = .done(zipURL: zipURL)
-        } catch {
-            recordingState = .failed("압축 실패: \(error.localizedDescription)")
-        }
-    }
+    // MARK: - IMU
 
     private func startIMU() {
         guard motionManager.isAccelerometerAvailable, motionManager.isGyroAvailable else { return }
