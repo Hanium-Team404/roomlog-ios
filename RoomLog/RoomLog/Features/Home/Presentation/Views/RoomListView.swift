@@ -33,6 +33,8 @@ struct RoomListView: View {
 
     @Environment(\.di) private var di
     @State private var viewModel: RoomListViewModel
+    @State private var showProcessingStatus: Bool = false
+    @State private var showScanTypeSheet: Bool = false
 
     init(houseId: Int, houseName: String, provider: HomeUseCaseProvider) {
         self._viewModel = .init(
@@ -42,6 +44,10 @@ struct RoomListView: View {
 
     private var pathStore: PathStore {
         di.resolve(PathStore.self)
+    }
+
+    private var processingManager: ScanProcessingManager {
+        di.resolve(ScanProcessingManager.self)
     }
 
     // MARK: - Body
@@ -67,14 +73,17 @@ struct RoomListView: View {
                 roomList(viewModel: viewModel)
             }
 
-            scanButton
+            bottomAction
         }
         .navigationTitle(viewModel.houseName)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.rooms.isEmpty {
-                    Button(viewModel.isEditing ? Strings.doneButton : Strings.editButton) {
+                    Button {
                         withAnimation { viewModel.isEditing.toggle() }
+                    } label: {
+                        Text(viewModel.isEditing ? Strings.doneButton : Strings.editButton)
+                            .font(.medium, 16)
                     }
                 }
             }
@@ -126,34 +135,44 @@ struct RoomListView: View {
 
     @ViewBuilder
     private func roomRow(room: RoomSummary, isEditing: Bool, onDelete: @escaping () -> Void) -> some View {
-        HStack(spacing: Layout.rowSpacing) {
-            thumbnailView(url: room.thumbnailURL)
+        Button {
+            if !isEditing {
+                pathStore.homePath.append(.home(.roomDetail(roomId: room.id)))
+            }
+        } label: {
+            HStack(spacing: Layout.rowSpacing) {
+                thumbnailView(url: room.thumbnailURL)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(room.name)
-                    .font(.semibold, 16)
-                    .foregroundStyle(.neutral800)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(room.name)
+                        .font(.semibold, 16)
+                        .foregroundStyle(.neutral800)
 
-                if let date = room.recentScanDate {
-                    Text(Self.displayDateFormatter.string(from: date))
-                        .font(.medium, 14)
+                    if let date = room.recentScanDate {
+                        Text(date.toShortDisplayString())
+                            .font(.medium, 14)
+                            .foregroundStyle(.blueGray300)
+                    }
+                }
+
+                Spacer()
+
+                if isEditing {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                            .frame(width: 24, height: 24)
+                    }
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.blueGray300)
                 }
             }
-
-            Spacer()
-
-            if isEditing {
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.red)
-                        .frame(width: 24, height: 24)
-                }
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
     }
 
     // MARK: - Thumbnail
@@ -194,26 +213,81 @@ struct RoomListView: View {
         EmptyStateView(title: Strings.emptyTitle, description: Strings.emptyBody)
     }
 
-    // MARK: - Scan Button
+    // MARK: - Bottom Action
 
-    private var scanButton: some View {
-        BottomCTAButton {
-            pathStore.homePath.append(.home(.scan))
-        } label: {
-            HStack(spacing: 8) {
-                Image(.scan)
-                Text(Strings.scanButton)
-                    .font(.semibold, 16)
+    @ViewBuilder
+    private var bottomAction: some View {
+        if let active = processingManager.activeScan, active.houseId == viewModel.houseId {
+            BottomCTAButton {
+                showProcessingStatus = true
+            } label: {
+                HStack(spacing: 8) {
+                    switch active.phase {
+                    case .zipping, .uploading, .polling:
+                        ProgressView()
+                            .tint(.cloudDancer)
+                        Text("스캔 처리 중...")
+                            .font(.semibold, 16)
+                    case .completed:
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("스캔 완료! 탭하여 확인")
+                            .font(.semibold, 16)
+                    case .failed:
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text("스캔 실패")
+                            .font(.semibold, 16)
+                    }
+                }
+            }
+            .sheet(isPresented: $showProcessingStatus) {
+                scanStatusSheet(active: active)
+            }
+        } else {
+            BottomCTAButton {
+                showScanTypeSheet = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(.scan)
+                    Text(Strings.scanButton)
+                        .font(.semibold, 16)
+                }
+            }
+            .confirmationDialog("스캔 유형을 선택하세요", isPresented: $showScanTypeSheet, titleVisibility: .visible) {
+                Button {
+                    pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId, scanType: "IN")))
+                } label: {
+                    Text("입주 전 스캔")
+                        .font(.medium, 16)
+                }
+                Button {
+                    pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId, scanType: "OUT")))
+                } label: {
+                    Text("입주 후 스캔")
+                        .font(.medium, 16)
+                }
+                Button("취소", role: .cancel) {}
             }
         }
     }
 
-    // MARK: - Date Formatter
+    // MARK: - Scan Status Sheet
 
-    private static let displayDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy.MM.dd"
-        f.locale = Locale(identifier: "ko_KR")
-        return f
-    }()
+    private func scanStatusSheet(active: ScanProcessingManager.ActiveScan) -> some View {
+        ScanStatusSheet(
+            phase: active.phase,
+            onPreview: { fileURL in
+                showProcessingStatus = false
+                pathStore.homePath.append(.home(.plyPreview(fileURL: fileURL)))
+            },
+            onCancel: {
+                processingManager.cancel()
+                showProcessingStatus = false
+            },
+            onDismiss: {
+                processingManager.cancel()
+                showProcessingStatus = false
+            }
+        )
+    }
+
 }

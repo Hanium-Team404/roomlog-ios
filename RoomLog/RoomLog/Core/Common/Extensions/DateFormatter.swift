@@ -45,6 +45,18 @@ extension Date {
         )
     }
 
+    /// "2026.03.01" 형식 (간결한 날짜 표시용)
+    func toShortDisplayString() -> String {
+        Date.shortDisplayFormatter.string(from: self)
+    }
+
+    private static let shortDisplayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy.MM.dd"
+        f.locale = Locale(identifier: "ko_KR")
+        return f
+    }()
+
     // MARK: - String → Date (서버 파싱용)
 
     /// "yyyy-MM-dd" 형식 문자열을 Date로 변환
