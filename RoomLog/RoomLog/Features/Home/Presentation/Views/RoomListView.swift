@@ -284,7 +284,11 @@ struct RoomListView: View {
             phase: active.phase,
             onPreview: { fileURL in
                 showProcessingStatus = false
-                pathStore.homePath.append(.home(.plyPreview(fileURL: fileURL)))
+                pathStore.homePath.append(.home(.plyPreview(
+                    fileURL: fileURL,
+                    scanId: active.scanId,
+                    houseId: active.houseId
+                )))
             },
             onCancel: {
                 processingManager.cancel()

@@ -59,11 +59,8 @@ private extension NavigationRoutingView {
                     _ = pathStore.homePath.popLast()
                 }
             )
-        case .plyPreview(let fileURL):
-            PLYSceneView(fileURL: fileURL)
-                .ignoresSafeArea(edges: .bottom)
-                .navigationTitle("3D 미리보기")
-                .navigationBarTitleDisplayMode(.inline)
+        case .plyPreview(let fileURL, let scanId, let houseId):
+            ScanPreviewView(fileURL: fileURL, scanId: scanId, houseId: houseId)
         case .houseList:
             HouseListView(provider: provider)
         }
