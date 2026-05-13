@@ -95,7 +95,7 @@ struct ScanPreviewView: View {
             Button("취소", role: .cancel) {}
             Button("다시 스캔", role: .destructive) {
                 processingManager.clear()
-                pathStore.homePath.removeLast(pathStore.homePath.count)
+                _ = pathStore.homePath.popLast()
             }
         } message: {
             Text("현재 스캔 결과를 폐기하고\n방 목록으로 돌아갑니다")
@@ -127,7 +127,7 @@ struct ScanPreviewView: View {
                 scanId: scanId
             )
             processingManager.clear()
-            pathStore.homePath.removeLast(pathStore.homePath.count)
+            _ = pathStore.homePath.popLast()
         } catch {
             errorMessage = error.localizedDescription
         }
