@@ -26,7 +26,11 @@ struct PLYSceneView: UIViewRepresentable {
         return scnView
     }
 
-    func updateUIView(_ uiView: SCNView, context: Context) {}
+    func updateUIView(_ uiView: SCNView, context: Context) {
+        if uiView.scene == nil, let scene = loadScene(from: fileURL) {
+            uiView.scene = scene
+        }
+    }
 
     private func loadScene(from url: URL) -> SCNScene? {
         let asset = MDLAsset(url: url)

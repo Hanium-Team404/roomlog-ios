@@ -91,6 +91,7 @@ final class ScanProcessingManager {
     }
 
     /// 특정 houseId에 완료된 스캔이 있는지 확인
+    @MainActor
     func completedScan(for houseId: Int) -> ActiveScan? {
         guard let scan = activeScan,
               scan.houseId == houseId,
@@ -101,6 +102,7 @@ final class ScanProcessingManager {
     }
 
     /// 특정 houseId에 진행 중인 스캔이 있는지 확인
+    @MainActor
     func isProcessing(for houseId: Int) -> Bool {
         guard let scan = activeScan, scan.houseId == houseId else { return false }
         switch scan.phase {
@@ -190,14 +192,30 @@ final class ScanProcessingManager {
 
     // MARK: - Poll & Download
 
+    private enum PollConfig {
+        static let maxAttempts = 60
+        static let intervalSeconds = 7
+        static let maxConsecutiveErrors = 3
+    }
+
     @MainActor
     private func pollAndDownload(scanId: Int, houseId: Int) async {
         guard let scanRepository else { return }
 
         // Poll until completed
+        var attempts = 0
+        var consecutiveErrors = 0
         while !Task.isCancelled {
+            attempts += 1
+            if attempts > PollConfig.maxAttempts {
+                activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("처리 시간이 초과되었습니다"))
+                clearPendingScan()
+                return
+            }
+
             do {
                 let status = try await scanRepository.getScanStatus(scanId: scanId).uppercased()
+                consecutiveErrors = 0
                 print("[ScanProcessing] scanId=\(scanId) status=\(status)")
                 if status == "COMPLETED" {
                     break
@@ -208,11 +226,14 @@ final class ScanProcessingManager {
                 }
             } catch {
                 if Task.isCancelled { return }
-                activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("상태 조회 실패: \(error.localizedDescription)"))
-                clearPendingScan()
-                return
+                consecutiveErrors += 1
+                if consecutiveErrors >= PollConfig.maxConsecutiveErrors {
+                    activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("상태 조회 실패: \(error.localizedDescription)"))
+                    clearPendingScan()
+                    return
+                }
             }
-            try? await Task.sleep(for: .seconds(7))
+            try? await Task.sleep(for: .seconds(PollConfig.intervalSeconds))
         }
 
         if Task.isCancelled { return }

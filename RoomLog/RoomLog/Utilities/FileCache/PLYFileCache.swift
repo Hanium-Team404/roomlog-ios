@@ -32,7 +32,12 @@ actor PLYFileCache {
             return cached
         }
 
-        let (tempURL, _) = try await URLSession.shared.download(from: remoteURL)
+        let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200...299).contains(httpResponse.statusCode) {
+            try? FileManager.default.removeItem(at: tempURL)
+            throw URLError(.badServerResponse)
+        }
         let destination = fileURL(for: roomId)
 
         try ensureCacheDirectory()

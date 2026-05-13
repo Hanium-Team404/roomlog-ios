@@ -135,44 +135,51 @@ struct RoomListView: View {
 
     @ViewBuilder
     private func roomRow(room: RoomSummary, isEditing: Bool, onDelete: @escaping () -> Void) -> some View {
-        Button {
-            if !isEditing {
-                pathStore.homePath.append(.home(.roomDetail(roomId: room.id)))
-            }
-        } label: {
-            HStack(spacing: Layout.rowSpacing) {
-                thumbnailView(url: room.thumbnailURL)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(room.name)
-                        .font(.semibold, 16)
-                        .foregroundStyle(.neutral800)
-
-                    if let date = room.recentScanDate {
-                        Text(date.toShortDisplayString())
-                            .font(.medium, 14)
-                            .foregroundStyle(.blueGray300)
-                    }
+        if isEditing {
+            roomRowContent(room: room) {
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
+                        .frame(width: 24, height: 24)
                 }
-
-                Spacer()
-
-                if isEditing {
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .foregroundStyle(.red)
-                            .frame(width: 24, height: 24)
-                    }
-                } else {
+            }
+        } else {
+            Button {
+                pathStore.homePath.append(.home(.roomDetail(roomId: room.id)))
+            } label: {
+                roomRowContent(room: room) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.blueGray300)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
         }
+    }
+
+    @ViewBuilder
+    private func roomRowContent<Trailing: View>(room: RoomSummary, @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: Layout.rowSpacing) {
+            thumbnailView(url: room.thumbnailURL)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(room.name)
+                    .font(.semibold, 16)
+                    .foregroundStyle(.neutral800)
+
+                if let date = room.recentScanDate {
+                    Text(date.toShortDisplayString())
+                        .font(.medium, 14)
+                        .foregroundStyle(.blueGray300)
+                }
+            }
+
+            Spacer()
+
+            trailing()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Thumbnail
@@ -262,7 +269,7 @@ struct RoomListView: View {
                 Button {
                     pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId, scanType: "OUT")))
                 } label: {
-                    Text("입주 후 스캔")
+                    Text("퇴거 전 스캔")
                         .font(.medium, 16)
                 }
                 Button("취소", role: .cancel) {}

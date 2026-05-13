@@ -56,7 +56,7 @@ private extension NavigationRoutingView {
                 scanType: scanType,
                 processingManager: di.resolve(ScanProcessingManager.self),
                 onStartConversion: {
-                    pathStore.homePath.removeLast()
+                    _ = pathStore.homePath.popLast()
                 }
             )
         case .plyPreview(let fileURL):

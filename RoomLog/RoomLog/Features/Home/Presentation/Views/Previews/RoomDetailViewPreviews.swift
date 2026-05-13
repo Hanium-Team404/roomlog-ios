@@ -39,7 +39,8 @@ private let sampleRoom = RoomDetail(
     NavigationStack {
         RoomDetailView(
             preview: sampleRoom,
-            localPLYURL: URL(fileURLWithPath: "/Users/dodle/Library/Mobile Documents/com~apple~CloudDocs/DGU/2026-1/캡스톤디자인/room.ply")
+            localPLYURL: URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("preview.ply")
         )
     }
 }
