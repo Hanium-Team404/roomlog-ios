@@ -9,4 +9,7 @@ import Foundation
 
 struct ScanResult {
     let scanId: Int
+    let status: String
+    let fileURL: String
+    let scanType: String
 }

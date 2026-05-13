@@ -10,31 +10,47 @@ import Moya
 internal import Alamofire
 
 enum ScanTarget {
-    case uploadScan(roomId: Int, zipFileURL: URL)
+    case uploadScan(houseId: Int, scanType: String, fileURL: URL)
+    case getScanStatus(scanId: Int)
+    case getScanPreview(scanId: Int)
 }
 
 extension ScanTarget: BaseTargetType {
     var path: String {
         switch self {
-        case .uploadScan(let roomId, _):
-            return "/rooms/\(roomId)/scans"
+        case .uploadScan:
+            return "/scans"
+        case .getScanStatus(let scanId):
+            return "/scans/\(scanId)/status"
+        case .getScanPreview(let scanId):
+            return "/scans/\(scanId)/preview"
         }
     }
 
     var method: Moya.Method {
-        .post
+        switch self {
+        case .uploadScan:
+            return .post
+        case .getScanStatus, .getScanPreview:
+            return .get
+        }
     }
 
     var task: Moya.Task {
         switch self {
-        case .uploadScan(_, let zipFileURL):
+        case .uploadScan(let houseId, let scanType, let fileURL):
             let formData = MultipartFormData(
-                provider: .file(zipFileURL),
+                provider: .file(fileURL),
                 name: "file",
-                fileName: "scan.zip",
-                mimeType: "application/zip"
+                fileName: fileURL.lastPathComponent,
+                mimeType: "application/octet-stream"
             )
-            return .uploadMultipart([formData])
+            return .uploadCompositeMultipart(
+                [formData],
+                urlParameters: ["house_id": houseId, "scan_type": scanType]
+            )
+        case .getScanStatus, .getScanPreview:
+            return .requestPlain
         }
     }
 }
