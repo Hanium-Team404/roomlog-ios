@@ -95,6 +95,10 @@ extension DIContainer {
             MyPageUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
+        container.register(ScanRepositoryProtocol.self) {
+            ScanRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
         // MARK: - Repository
         // TODO: 서버 연동 시 DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))로 교체
         container.register(DefectRepositoryProtocol.self) {
@@ -103,6 +107,13 @@ extension DIContainer {
 
         container.register(DefectUseCaseProvider.self) {
             DefectUseCaseProviderImpl(defectRepository: container.resolve(DefectRepositoryProtocol.self))
+        }
+
+        // MARK: - Scan Processing
+        container.register(ScanProcessingManager.self) {
+            let manager = ScanProcessingManager()
+            manager.configure(scanRepository: container.resolve(ScanRepositoryProtocol.self))
+            return manager
         }
 
         // MARK: - Shared State

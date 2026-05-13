@@ -25,6 +25,7 @@ struct RoomLogTab: View {
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
         let homeState = di.resolve(HomeState.self)
+        let _ = di.resolve(ScanProcessingManager.self)
 
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "house", value: .home) {

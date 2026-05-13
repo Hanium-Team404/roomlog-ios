@@ -43,10 +43,27 @@ private extension NavigationRoutingView {
         switch route {
         case .roomList(let houseId, let houseName):
             RoomListView(houseId: houseId, houseName: houseName, provider: provider)
-        case .roomDetail:
-            Text("roomdetail")
-        case .scan:
-            ScanView()
+        case .roomDetail(let roomId):
+            RoomDetailView(
+                roomId: roomId,
+                provider: provider,
+                scanRepository: di.resolve(ScanRepositoryProtocol.self)
+            )
+        case .scan(let houseId, let scanType):
+            let pathStore = di.resolve(PathStore.self)
+            ScanView(
+                houseId: houseId,
+                scanType: scanType,
+                processingManager: di.resolve(ScanProcessingManager.self),
+                onStartConversion: {
+                    _ = pathStore.homePath.popLast()
+                }
+            )
+        case .plyPreview(let fileURL):
+            PLYSceneView(fileURL: fileURL)
+                .ignoresSafeArea(edges: .bottom)
+                .navigationTitle("3D 미리보기")
+                .navigationBarTitleDisplayMode(.inline)
         case .houseList:
             HouseListView(provider: provider)
         }

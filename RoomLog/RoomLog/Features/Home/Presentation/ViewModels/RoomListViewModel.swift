@@ -54,6 +54,7 @@ final class RoomListViewModel {
         do {
             try await provider.makeDeleteRoomUseCase().execute(roomId: room.id)
             rooms.removeAll { $0.id == room.id }
+            await PLYFileCache.shared.removeCache(for: room.id)
         } catch {
             errorMessage = error.localizedDescription
         }
