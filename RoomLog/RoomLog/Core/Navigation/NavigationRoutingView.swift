@@ -39,13 +39,30 @@ private extension NavigationRoutingView {
     
     @ViewBuilder
     func homeView(_ route: NavigationDestination.Home) -> some View {
+        let provider = di.resolve(HomeUseCaseProvider.self)
         switch route {
-        case .roomList(let houseId):
-            RoomListView(houseId: houseId)
-        case .roomDetail:
-            Text("roomdetail")
-        case .scan:
-            ScanView()
+        case .roomList(let houseId, let houseName):
+            RoomListView(houseId: houseId, houseName: houseName, provider: provider)
+        case .roomDetail(let roomId):
+            RoomDetailView(
+                roomId: roomId,
+                provider: provider,
+                scanRepository: di.resolve(ScanRepositoryProtocol.self)
+            )
+        case .scan(let houseId, let scanType):
+            let pathStore = di.resolve(PathStore.self)
+            ScanView(
+                houseId: houseId,
+                scanType: scanType,
+                processingManager: di.resolve(ScanProcessingManager.self),
+                onStartConversion: {
+                    _ = pathStore.homePath.popLast()
+                }
+            )
+        case .plyPreview(let fileURL, let scanId, let houseId):
+            ScanPreviewView(fileURL: fileURL, scanId: scanId, houseId: houseId)
+        case .houseList:
+            HouseListView(provider: provider)
         }
     }
     

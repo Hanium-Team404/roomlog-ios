@@ -29,4 +29,25 @@ final class MyPageRepository: MyPageRepositoryProtocol {
             throw RepositoryError.decodingError(detail: String(describing: error))
         }
     }
+
+    func updateUser(nickname: String) async throws {
+        let request = UpdateUserRequestDTO(nickname: nickname)
+        let response = try await adapter.request(UserTarget.updateUser(request: request))
+        do {
+            let dto = try decoder.decode(APIResponse<UpdateUserResponseDTO>.self, from: response.data)
+            _ = try dto.unwrap()
+        } catch let error as DecodingError {
+            throw RepositoryError.decodingError(detail: String(describing: error))
+        }
+    }
+
+    func deleteUser() async throws {
+        let response = try await adapter.request(UserTarget.deleteUser)
+        do {
+            let dto = try decoder.decode(APIResponse<DeleteUserResponseDTO>.self, from: response.data)
+            _ = try dto.unwrap()
+        } catch let error as DecodingError {
+            throw RepositoryError.decodingError(detail: String(describing: error))
+        }
+    }
 }

@@ -9,6 +9,8 @@ import Foundation
 
 protocol MyPageUseCaseProvider {
     func makeGetUserUseCase() -> GetUserUseCaseProtocol
+    func makeUpdateUserUseCase() -> UpdateUserUseCaseProtocol
+    func makeDeleteUserUseCase() -> DeleteUserUseCaseProtocol
 }
 
 final class MyPageUseCaseProviderImpl: MyPageUseCaseProvider {
@@ -23,5 +25,13 @@ final class MyPageUseCaseProviderImpl: MyPageUseCaseProvider {
     // MARK: - MyPage UseCases
     func makeGetUserUseCase() -> GetUserUseCaseProtocol {
         GetUserUseCase(repository: myPageRepository)
+    }
+
+    func makeUpdateUserUseCase() -> UpdateUserUseCaseProtocol {
+        UpdateUserUseCase(repository: myPageRepository)
+    }
+
+    func makeDeleteUserUseCase() -> DeleteUserUseCaseProtocol {
+        DeleteUserUseCase(repository: myPageRepository)
     }
 }
