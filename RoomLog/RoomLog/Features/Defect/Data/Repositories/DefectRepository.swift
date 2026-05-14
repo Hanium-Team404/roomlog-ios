@@ -19,9 +19,9 @@ final class DefectRepository: DefectRepositoryProtocol {
 
     func getDefectRoomData() async throws -> [DefectRoomData] {
         let response = try await adapter.request(DefectTarget.getDefectRoomData)
-        let apiResponse: APIResponse<HomeDataResponseDTO>
+        let apiResponse: APIResponse<DefectRoomListResponseDTO>
         do {
-            apiResponse = try decoder.decode(APIResponse<HomeDataResponseDTO>.self, from: response.data)
+            apiResponse = try decoder.decode(APIResponse<DefectRoomListResponseDTO>.self, from: response.data)
         } catch {
             throw RepositoryError.decodingError(detail: error.localizedDescription)
         }
