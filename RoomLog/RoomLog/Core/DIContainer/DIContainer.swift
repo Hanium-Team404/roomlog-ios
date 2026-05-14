@@ -94,15 +94,19 @@ extension DIContainer {
         container.register(MyPageUseCaseProvider.self) {
             MyPageUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
+        
+        container.register(DefectUseCaseProvider.self) {
+            DefectUseCaseProviderImpl(defectRepository: container.resolve(DefectRepositoryProtocol.self))
+        }
+
+        container.register(EstimateUseCaseProvider.self) {
+            EstimateUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
 
         // MARK: - Repository
         // TODO: 서버 연동 시 DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))로 교체
         container.register(DefectRepositoryProtocol.self) {
             MockDefectRepository()
-        }
-
-        container.register(DefectUseCaseProvider.self) {
-            DefectUseCaseProviderImpl(defectRepository: container.resolve(DefectRepositoryProtocol.self))
         }
 
         // MARK: - Shared State
