@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "recommend_list_gray.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
