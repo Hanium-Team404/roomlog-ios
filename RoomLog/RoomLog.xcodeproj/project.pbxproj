@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */; };
 		0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0BEFDD962F84FDF900CDE2A6 /* Moya */; };
+		DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +45,7 @@
 			files = (
 				0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */,
 				0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */,
+				DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -89,6 +91,7 @@
 			packageProductDependencies = (
 				0BEFDD962F84FDF900CDE2A6 /* Moya */,
 				0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */,
+				DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */,
 			);
 			productName = RoomLog;
 			productReference = 0B1EC4402F7BB970001FE02F /* RoomLog.app */;
@@ -121,6 +124,7 @@
 			packageReferences = (
 				0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */,
 				0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0B1EC4412F7BB970001FE02F /* Products */;
@@ -284,7 +288,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9NLDD768V4;
+				DEVELOPMENT_TEAM = 2UH92ZBFJ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoomLog/Info.plist;
@@ -294,7 +298,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -324,7 +328,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9NLDD768V4;
+				DEVELOPMENT_TEAM = 2UH92ZBFJ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoomLog/Info.plist;
@@ -334,7 +338,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -396,6 +400,14 @@
 				minimumVersion = 15.0.3;
 			};
 		};
+		DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kakao-mapsSDK/KakaoMapsSDK-SPM";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.12.10;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -408,6 +420,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */;
 			productName = Moya;
+		};
+		DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */;
+			productName = "KakaoMapsSDK-SPM";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
