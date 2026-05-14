@@ -14,13 +14,13 @@ final class DefectViewModel {
     private(set) var isLoading = false
     var errorMessage: String?
 
-    // MARK: - Dependency
-    private let roomId: Int
-    private let useCase: GetDefectReportUseCaseProtocol
+    // MARK: - Provider
+    let roomId: Int
+    private let provider: DefectUseCaseProvider
 
-    init(roomId: Int, useCase: GetDefectReportUseCaseProtocol) {
+    init(roomId: Int, provider: DefectUseCaseProvider) {
         self.roomId = roomId
-        self.useCase = useCase
+        self.provider = provider
     }
 
     // MARK: - Function
@@ -28,7 +28,7 @@ final class DefectViewModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            report = try await useCase.execute(roomId: roomId)
+            report = try await provider.makeGetDefectReportUseCase().execute(roomId: roomId)
         } catch {
             errorMessage = error.localizedDescription
         }
