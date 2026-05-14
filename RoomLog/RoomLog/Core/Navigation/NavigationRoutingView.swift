@@ -57,9 +57,11 @@ private extension NavigationRoutingView {
         case .defectList:
             DefectListView()
         case .defectListMain(let roomId):
-            DefectView(roomId: roomId)
-        case .defectListDetail(let defect, let roomImageURL):
-            DefectDetailView(defect: defect, roomImageURL: roomImageURL)
+            DefectView(roomId: roomId, provider: di.resolve(DefectUseCaseProvider.self))
+        case .defectListDetail(let defect, let roomId, let roomImageURL):
+            DefectDetailView(defect: defect, roomId: roomId, roomImageURL: roomImageURL)
+        case .repairShopList(let roomId, let defect):
+            RepairShopListView(roomId: roomId, defect: defect, provider: di.resolve(EstimateUseCaseProvider.self))
         }
     }
     
