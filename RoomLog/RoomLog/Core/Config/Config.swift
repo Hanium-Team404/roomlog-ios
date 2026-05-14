@@ -21,4 +21,11 @@ enum Config {
         }
         return baseURL
     }()
+
+    static let kakaoNativeAppKey: String = {
+        guard let key = Config.infoDictionary["KAKAO_NATIVE_APP_KEY"] as? String else {
+            fatalError("KAKAO_NATIVE_APP_KEY not found")
+        }
+        return key
+    }()
 }
