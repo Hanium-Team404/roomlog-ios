@@ -6,15 +6,17 @@
 //
 
 import SwiftUI
+import KakaoMapsSDK
 
 @main
 struct RoomLogApp: App {
-    
+
     //MARK: - Properties
     @State private var container: DIContainer
     @State private var appState: AppState = .splash
-    
+
     init() {
+        SDKInitializer.InitSDK(appKey: Config.kakaoNativeAppKey)
         _container = State(
             initialValue: DIContainer.configured()
         )
