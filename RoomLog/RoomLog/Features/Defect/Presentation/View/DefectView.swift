@@ -8,30 +8,27 @@
 import SwiftUI
 
 struct DefectView: View {
-    let roomId: Int
     @Environment(\.di) var di
-    @State private var viewModel: DefectViewModel?
+    @State private var viewModel: DefectViewModel
+
+    init(roomId: Int, provider: DefectUseCaseProvider) {
+        self._viewModel = .init(
+            wrappedValue: DefectViewModel(roomId: roomId, provider: provider)
+        )
+    }
 
     var body: some View {
         Group {
-            if let viewModel {
-                if viewModel.isLoading {
-                    ProgressView()
-                } else if let report = viewModel.report {
-                    content(report: report)
-                }
+            if let report = viewModel.report {
+                content(report: report)
             } else {
                 ProgressView()
             }
         }
-        .navigationTitle(viewModel?.report.map { "\($0.room.title) 하자" } ?? "하자 점검")
+        .navigationTitle(viewModel.report.map { "\($0.room.title) 하자" } ?? "하자 점검")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if viewModel == nil {
-                let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectReportUseCase()
-                viewModel = DefectViewModel(roomId: roomId, useCase: useCase)
-            }
-            Task { await viewModel?.fetchReport() }
+        .task {
+            await viewModel.fetchReport()
         }
     }
 
@@ -43,7 +40,8 @@ struct DefectView: View {
                 imageSection(report: report)
                 summarySection(report: report)
                 defectListSection(defects: report.defects) { defect in
-                    pathStore.defectPath.append(.defect(.defectListDetail(defect: defect, roomImageURL: report.imageURL)))
+                    pathStore.defectPath.append(.defect(.defectListDetail(defect: defect, roomId: viewModel.roomId, roomImageURL: report.imageURL)))
+
                 }
             }
             .padding(.horizontal, 16)
@@ -70,10 +68,11 @@ struct DefectView: View {
 }
 
 #Preview {
+    let di = DIContainer.configured()
     NavigationStack {
-        DefectView(roomId: 1)
+        DefectView(roomId: 1, provider: di.resolve(DefectUseCaseProvider.self))
     }
-    .environment(\.di, DIContainer.configured())
+    .environment(\.di, di)
 }
 
 // MARK: - Section 1: 이미지 + 마커
