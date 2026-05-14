@@ -6,6 +6,24 @@
 //
 import Foundation
 
+struct DefectRoomListResponseDTO: Codable {
+    let rooms: [DefectRoomSummaryDTO]
+}
+
+struct DefectRoomSummaryDTO: Codable {
+    let roomId: Int
+    let name: String
+    let thumbnailURL: String?
+    let recentScanDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case roomId = "room_id"
+        case name
+        case thumbnailURL = "thumbnail_url"
+        case recentScanDate = "recent_scan_date"
+    }
+}
+
 struct DefectReportResponseDTO: Codable {
     let name: String
     let address: String
@@ -72,7 +90,7 @@ struct DefectDetailDTO: Codable {
 
     func toDomain() -> DefectReportDetail {
         DefectReportDetail(
-            id: "\(defectId)",
+            id: defectId,
             imageURL: inspectionImageUrl ?? beforeImageUrl,
             type: type,
             severity: Severity(rawString: severity),
