@@ -14,7 +14,7 @@ final class CreateHouseUseCase: CreateHouseUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(name: String) async throws -> House {
-        try await repository.createHouse(name: name)
+    func execute(name: String, address: String?) async throws -> House {
+        try await repository.createHouse(name: name, address: address)
     }
 }

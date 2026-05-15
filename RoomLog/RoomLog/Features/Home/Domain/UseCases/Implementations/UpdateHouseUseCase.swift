@@ -14,7 +14,7 @@ final class UpdateHouseUseCase: UpdateHouseUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(houseId: Int, name: String) async throws -> House {
-        try await repository.updateHouse(houseId: houseId, name: name)
+    func execute(houseId: Int, name: String, address: String?) async throws -> House {
+        try await repository.updateHouse(houseId: houseId, name: name, address: address)
     }
 }

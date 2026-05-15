@@ -11,10 +11,12 @@ import Foundation
 
 struct CreateHouseRequestDTO: Encodable {
     let name: String
+    let address: String?
 }
 
 struct UpdateHouseRequestDTO: Encodable {
     let name: String
+    let address: String?
 }
 
 // MARK: - Response DTO
@@ -22,11 +24,13 @@ struct UpdateHouseRequestDTO: Encodable {
 struct CreateHouseResponseDTO: Codable {
     let houseId: Int
     let name: String
+    let address: String?
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
+        case address
         case createdAt = "created_at"
     }
 }
@@ -46,24 +50,28 @@ struct GetHousesResponseDTO: Codable {
 struct HouseSummaryDTO: Codable {
     let houseId: Int
     let name: String
+    let address: String?
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
+        case address
     }
 
     func toDomain() -> House {
-        House(houseId: houseId, name: name)
+        House(houseId: houseId, name: name, address: address)
     }
 }
 
 struct UpdateHouseResponseDTO: Codable {
     let houseId: Int
     let name: String
+    let address: String?
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
+        case address
     }
 }
 
