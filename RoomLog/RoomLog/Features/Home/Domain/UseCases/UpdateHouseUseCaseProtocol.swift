@@ -8,5 +8,5 @@
 import Foundation
 
 protocol UpdateHouseUseCaseProtocol {
-    func execute(houseId: Int, name: String) async throws -> House
+    func execute(houseId: Int, name: String, address: String?) async throws -> House
 }

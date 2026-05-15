@@ -21,13 +21,11 @@ struct CreateRoomRequestDTO: Encodable {
 
 struct UpdateRoomRequestDTO: Encodable {
     let name: String
-    let address: String
     let moveInDate: String
     let moveOutDate: String?
 
     enum CodingKeys: String, CodingKey {
         case name
-        case address
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
     }
@@ -38,7 +36,7 @@ struct UpdateRoomRequestDTO: Encodable {
 struct RoomSummaryDTO: Codable {
     let roomId: Int
     let name: String
-    let thumbnailURL: String?
+    let fileURL: String?
     let latestScan: LatestScanDTO?
     let recentScanDate: String?
     let latestScanStatus: String?
@@ -46,7 +44,7 @@ struct RoomSummaryDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case thumbnailURL = "thumbnail_url"
+        case fileURL = "file_url"
         case latestScan = "latest_scan"
         case recentScanDate = "recent_scan_date"
         case latestScanStatus = "latest_scan_status"
@@ -56,7 +54,7 @@ struct RoomSummaryDTO: Codable {
         RoomSummary(
             id: roomId,
             name: name,
-            thumbnailURL: thumbnailURL,
+            thumbnailURL: fileURL,
             latestScan: latestScan?.toDomain(),
             recentScanDate: recentScanDate.flatMap { Date.fromServerDateTime($0) },
             latestScanStatus: latestScanStatus
@@ -81,20 +79,18 @@ struct LatestScanDTO: Codable {
 struct CreateRoomResponseDTO: Codable {
     let roomId: Int
     let name: String
-    let address: String?
     let moveInDate: String?
     let moveOutDate: String?
-    let thumbnailURL: String?
+    let fileURL: String?
     let createdAt: String
     let linkedScan: LinkedScanDTO?
 
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case address
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case thumbnailURL = "thumbnail_url"
+        case fileURL = "file_url"
         case createdAt = "created_at"
         case linkedScan = "linked_scan"
     }
@@ -115,10 +111,8 @@ struct LinkedScanDTO: Codable {
 struct RoomDetailResponseDTO: Codable {
     let roomId: Int
     let name: String
-    let address: String?
     let moveInDate: String?
     let moveOutDate: String?
-    let thumbnailURL: String?
     let fileURL: String?
     let createdAt: String
     let latestScan: ScanDetailDTO?
@@ -126,10 +120,8 @@ struct RoomDetailResponseDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case address
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case thumbnailURL = "thumbnail_url"
         case fileURL = "file_url"
         case createdAt = "created_at"
         case latestScan = "latest_scan"
@@ -142,10 +134,9 @@ struct RoomDetailResponseDTO: Codable {
         return RoomDetail(
             id: roomId,
             name: name,
-            address: address,
             moveInDate: moveInDate.flatMap { Date.fromServerDate($0) },
             moveOutDate: moveOutDate.flatMap { Date.fromServerDate($0) },
-            thumbnailURL: thumbnailURL,
+            thumbnailURL: fileURL,
             fileURL: fileURL,
             createdAt: parsedCreatedAt,
             latestScan: try latestScan?.toDomain()
@@ -179,18 +170,16 @@ struct ScanDetailDTO: Codable {
 struct UpdateRoomResponseDTO: Codable {
     let roomId: Int
     let name: String
-    let address: String?
     let moveInDate: String?
     let moveOutDate: String?
-    let thumbnailURL: String?
+    let fileURL: String?
 
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case address
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case thumbnailURL = "thumbnail_url"
+        case fileURL = "file_url"
     }
 }
 

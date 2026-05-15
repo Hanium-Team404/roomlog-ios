@@ -11,7 +11,6 @@ import SwiftUI
 private let sampleRoom = RoomDetail(
     id: 1,
     name: "거실",
-    address: nil,
     moveInDate: nil,
     moveOutDate: nil,
     thumbnailURL: nil,

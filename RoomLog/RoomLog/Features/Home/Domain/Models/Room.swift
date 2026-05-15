@@ -28,7 +28,6 @@ struct LatestScan {
 struct RoomDetail: Identifiable {
     let id: Int
     let name: String
-    let address: String?
     let moveInDate: Date?
     let moveOutDate: Date?
     let thumbnailURL: String?

@@ -50,7 +50,7 @@ final class HomeViewModel {
         let name = newHouseName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         do {
-            let house = try await provider.makeCreateHouseUseCase().execute(name: name)
+            let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: nil)
             houses.append(house)
             newHouseName = ""
         } catch {

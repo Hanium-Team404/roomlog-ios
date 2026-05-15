@@ -26,10 +26,9 @@ final class RoomRepository: RoomRepositoryProtocol {
         return try dto.unwrap().toDomain()
     }
 
-    func updateRoom(roomId: Int, name: String, address: String, moveInDate: Date, moveOutDate: Date?) async throws {
+    func updateRoom(roomId: Int, name: String, moveInDate: Date, moveOutDate: Date?) async throws {
         let body = UpdateRoomRequestDTO(
             name: name,
-            address: address,
             moveInDate: moveInDate.toServerDateString(),
             moveOutDate: moveOutDate?.toServerDateString()
         )

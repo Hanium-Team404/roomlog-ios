@@ -8,5 +8,5 @@
 import Foundation
 
 protocol UpdateRoomUseCaseProtocol {
-    func execute(roomId: Int, name: String, address: String, moveInDate: Date, moveOutDate: Date?) async throws
+    func execute(roomId: Int, name: String, moveInDate: Date, moveOutDate: Date?) async throws
 }

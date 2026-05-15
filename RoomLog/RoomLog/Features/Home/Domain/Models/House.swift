@@ -11,6 +11,7 @@ struct House: Hashable, Identifiable {
     var id: Int { houseId }
     let houseId: Int
     let name: String
+    let address: String?
 }
 
 struct HouseList {
