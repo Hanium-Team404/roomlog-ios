@@ -23,8 +23,12 @@ enum Config {
     }()
 
     static let kakaoNativeAppKey: String = {
-        guard let key = Config.infoDictionary["KAKAO_NATIVE_APP_KEY"] as? String else {
+        guard let raw = Config.infoDictionary["KAKAO_NATIVE_APP_KEY"] as? String else {
             fatalError("KAKAO_NATIVE_APP_KEY not found")
+        }
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !key.hasPrefix("${") else {
+            fatalError("KAKAO_NATIVE_APP_KEY is empty or unresolved")
         }
         return key
     }()
