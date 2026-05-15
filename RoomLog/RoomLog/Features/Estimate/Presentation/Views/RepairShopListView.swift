@@ -47,6 +47,14 @@ struct RepairShopListView: View {
                     .padding()
             }
         }
+        .alert("오류", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
     }
 }
 
@@ -345,7 +353,7 @@ private struct ShopMapCard: View {
     }
 }
 
-#Preview {
+#Preview("정상") {
     let di = DIContainer.configured()
     let mockDefect = DefectReportDetail(
         id: 1,
