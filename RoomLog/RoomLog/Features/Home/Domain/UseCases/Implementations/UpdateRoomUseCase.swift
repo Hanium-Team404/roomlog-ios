@@ -14,7 +14,7 @@ final class UpdateRoomUseCase: UpdateRoomUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(roomId: Int, name: String, address: String, moveInDate: Date, moveOutDate: Date?) async throws {
-        try await repository.updateRoom(roomId: roomId, name: name, address: address, moveInDate: moveInDate, moveOutDate: moveOutDate)
+    func execute(roomId: Int, name: String, moveInDate: Date, moveOutDate: Date?) async throws {
+        try await repository.updateRoom(roomId: roomId, name: name, moveInDate: moveInDate, moveOutDate: moveOutDate)
     }
 }
