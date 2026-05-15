@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "recommend_map_blue.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

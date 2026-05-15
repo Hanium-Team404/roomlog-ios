@@ -9,7 +9,10 @@ import SwiftUI
 
 struct DefectDetailView: View {
     let defect: DefectReportDetail
+    let roomId: Int
     let roomImageURL: String?
+
+    @Environment(\.di) var di
 
     private static let displayDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -185,7 +188,8 @@ private extension DefectDetailView {
 private extension DefectDetailView {
     var bottomButton: some View {
         Button(action: {
-            // TODO: 추천 업체 화면으로 이동
+            let pathStore = di.resolve(PathStore.self)
+            pathStore.defectPath.append(.defect(.repairShopList(roomId: roomId, defect: defect)))
         }) {
             Text("추천 업체 보기")
                 .font(.semibold, 17)
@@ -201,7 +205,7 @@ private extension DefectDetailView {
 
 #Preview {
     let defect = DefectReportDetail(
-        id: "1",
+        id: 1,
         imageURL: nil,
         type: "균열",
         severity: .high,
@@ -216,7 +220,7 @@ private extension DefectDetailView {
         z: nil
     )
     NavigationStack {
-        DefectDetailView(defect: defect, roomImageURL: nil)
+        DefectDetailView(defect: defect, roomId: 1, roomImageURL: nil)
     }
 }
 
