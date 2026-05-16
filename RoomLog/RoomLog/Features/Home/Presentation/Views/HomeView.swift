@@ -75,6 +75,7 @@ struct HomeView: View {
             
             Button("취소", role: .cancel) {
                 viewModel.newHouseName = ""
+                viewModel.newHouseAddress = ""
             }
             Button("만들기") {
                 Task {
