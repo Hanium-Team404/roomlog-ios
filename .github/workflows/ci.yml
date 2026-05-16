@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Config.xcconfig placeholder
+        run: |
+          echo 'BASE_URL = https:/$()/placeholder.com' > RoomLog/RoomLog/Core/Config/Config.xcconfig
+          echo 'KAKAO_NATIVE_APP_KEY = placeholder' >> RoomLog/RoomLog/Core/Config/Config.xcconfig
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project RoomLog/RoomLog.xcodeproj \
+            -scheme RoomLog \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
