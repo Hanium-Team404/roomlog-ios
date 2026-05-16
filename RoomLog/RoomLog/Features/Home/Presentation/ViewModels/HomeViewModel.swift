@@ -22,6 +22,7 @@ final class HomeViewModel {
     private(set) var errorMessage: String?
     var showAddHouseAlert: Bool = false
     var newHouseName: String = ""
+    var newHouseAddress: String = ""
 
     // MARK: - Init
 
@@ -48,11 +49,15 @@ final class HomeViewModel {
     @MainActor
     func createHouse() async {
         let name = newHouseName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
+        let address = newHouseAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !name.isEmpty, !address.isEmpty else { return }
+        
         do {
-            let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: nil)
+            let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: address)
             houses.append(house)
             newHouseName = ""
+            newHouseAddress = ""
         } catch {
             errorMessage = error.localizedDescription
         }
