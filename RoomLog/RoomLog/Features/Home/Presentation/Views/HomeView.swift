@@ -50,7 +50,7 @@ struct HomeView: View {
                     .frame(width: 128)
                     .padding(.top)
             }
-
+            
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     pathStore.homePath.append(.home(.houseList))
@@ -58,7 +58,7 @@ struct HomeView: View {
                     Image(.houseList)
                 }
             }
-
+            
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     viewModel.showAddHouseAlert = true
@@ -68,8 +68,10 @@ struct HomeView: View {
             }
         }
         .tint(.accent)
-        .alert("어떤 이름으로 저장할까요?", isPresented: $viewModel.showAddHouseAlert) {
+        .alert("새 집 추가", isPresented: $viewModel.showAddHouseAlert) {
             TextField("예: 망고의 집", text: $viewModel.newHouseName)
+            
+            TextField("예: 서울시 강남구 테헤란로 123", text: $viewModel.newHouseAddress)
             
             Button("취소", role: .cancel) {
                 viewModel.newHouseName = ""
@@ -81,6 +83,8 @@ struct HomeView: View {
                 }
             }
             .keyboardShortcut(.defaultAction)
+        } message: {
+            Text("주소는 수리 업체 추천에 사용돼요!\n집 이름과 간단한 주소를 입력해주세요.")
         }
     }
 
