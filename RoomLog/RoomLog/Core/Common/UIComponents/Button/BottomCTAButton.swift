@@ -19,7 +19,7 @@ struct BottomCTAButton<Label: View>: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 57)
         }
-        .glassEffect(.regular.interactive().tint(.accent), in: .rect(cornerRadius: 16))
+        .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
