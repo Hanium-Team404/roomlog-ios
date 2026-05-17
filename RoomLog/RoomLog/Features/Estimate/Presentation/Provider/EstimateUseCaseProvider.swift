@@ -11,6 +11,8 @@ protocol EstimateUseCaseProvider {
     func makeGetRepairShopsUseCase() -> GetRepairShopsUseCaseProtocol
     func makeGetRepairShopsByRoomUseCase() -> GetRepairShopsByRoomUseCaseProtocol
     func makeCreateEstimateUseCase() -> CreateEstimateUseCaseProtocol
+    func makeGetEstimatesUseCase() -> GetEstimatesUseCaseProtocol
+    func makeCompleteRepairUseCase() -> CompleteRepairUseCaseProtocol
 }
 
 final class EstimateUseCaseProviderImpl: EstimateUseCaseProvider {
@@ -18,6 +20,10 @@ final class EstimateUseCaseProviderImpl: EstimateUseCaseProvider {
 
     init(adapter: MoyaNetworkAdapter) {
         self.repository = EstimateRepository(adapter: adapter)
+    }
+
+    init(repository: EstimateRepositoryProtocol) {
+        self.repository = repository
     }
 
     func makeGetRepairShopsUseCase() -> GetRepairShopsUseCaseProtocol {
@@ -30,5 +36,13 @@ final class EstimateUseCaseProviderImpl: EstimateUseCaseProvider {
 
     func makeCreateEstimateUseCase() -> CreateEstimateUseCaseProtocol {
         CreateEstimateUseCase(repository: repository)
+    }
+
+    func makeGetEstimatesUseCase() -> GetEstimatesUseCaseProtocol {
+        GetEstimatesUseCase(repository: repository)
+    }
+
+    func makeCompleteRepairUseCase() -> CompleteRepairUseCaseProtocol {
+        CompleteRepairUseCase(repository: repository)
     }
 }
