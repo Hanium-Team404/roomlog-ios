@@ -75,15 +75,13 @@ struct HouseMapView: View {
 
                     ForEach(Array(houses.enumerated()), id: \.element.houseId) { index, house in
                         let pos = viewModel.positionFor(house: house, index: index)
-                        VStack(spacing: Layout.houseSpacing) {
-                            Text(house.name)
-                                .font(.medium, Layout.houseNameFontSize)
-                                .foregroundStyle(.neutral500)
-                            Image(.home)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: HouseMapViewModel.houseImageWidth)
-                        }
+                        HouseImageView(
+                            houseId: house.houseId,
+                            name: house.name,
+                            spacing: Layout.houseSpacing,
+                            nameFontSize: Layout.houseNameFontSize
+                        )
+                        .frame(width: HouseMapViewModel.houseImageWidth)
                         .scaleEffect(viewModel.draggingHouseId == house.houseId ? 1.1 : 1.0)
                         .shadow(
                             color: viewModel.draggingHouseId == house.houseId
