@@ -40,6 +40,12 @@ final class EstimateRepository: EstimateRepositoryProtocol {
         return (shops: result.repairShops.map { $0.toDomain() }, analysisId: result.analysisId)
     }
 
+    // TODO: 서버 연동 시 실제 API 호출로 교체
+    func getEstimates() async throws -> [Estimate] {
+        try await MockEstimateRepository().getEstimates()
+    }
+    func completeRepair(estimateId: Int) async throws {}
+
     func createEstimate(message: String, roomId: Int, analysisId: Int?, defectIds: [Int], provider: RepairShop) async throws {
         let body = CreateEstimateRequestDTO(
             message: message,
