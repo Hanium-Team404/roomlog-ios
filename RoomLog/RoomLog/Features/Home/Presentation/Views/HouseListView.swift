@@ -175,7 +175,7 @@ struct HouseListView: View {
     @ViewBuilder
     private func mainHouseCard(house: House) -> some View {
         HStack(spacing: 16) {
-            Image(.home)
+            Image(HouseImageView.imageResource(for: house.houseId))
                 .resizable()
                 .scaledToFit()
                 .frame(height: Layout.mainThumbnailHeight)
@@ -201,7 +201,7 @@ struct HouseListView: View {
     ) -> some View {
         let isCurrent = isEditing && isSelected
         VStack(spacing: Layout.cardGap) {
-            Image(.home)
+            Image(HouseImageView.imageResource(for: house.houseId))
                 .resizable()
                 .scaledToFit()
                 .frame(height: Layout.gridThumbnailHeight)
