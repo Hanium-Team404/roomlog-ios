@@ -14,11 +14,15 @@ struct HouseImageView: View {
     var spacing: CGFloat = 4
     var nameFontSize: Int = 18
 
-    private var imageResource: ImageResource {
+    static func imageResource(for houseId: Int) -> ImageResource {
         switch houseId % 2 {
         case 0: .home
-        default : .home1
+        default: .home1
         }
+    }
+
+    private var imageResource: ImageResource {
+        Self.imageResource(for: houseId)
     }
 
     var body: some View {
