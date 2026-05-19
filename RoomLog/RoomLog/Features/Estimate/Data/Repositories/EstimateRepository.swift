@@ -40,11 +40,27 @@ final class EstimateRepository: EstimateRepositoryProtocol {
         return (shops: result.repairShops.map { $0.toDomain() }, analysisId: result.analysisId)
     }
 
-    // TODO: 서버 연동 시 실제 API 호출로 교체
-    func getEstimates() async throws -> [Estimate] {
-        try await MockEstimateRepository().getEstimates()
+    func getEstimates(roomId: Int) async throws -> [Estimate] {
+        let response = try await adapter.request(EstimateTarget.getEstimates(roomId: roomId))
+        let apiResponse: APIResponse<EstimateListResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<EstimateListResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().estimates.map { $0.toDomain() }
     }
-    func completeRepair(estimateId: Int) async throws {}
+    func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws {
+        let body = CompleteRepairRequestDTO(repairCost: repairCost, note: note)
+        let response = try await adapter.request(EstimateTarget.completeRepair(estimateId: estimateId, request: body))
+        let apiResponse: APIResponse<CompleteRepairResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<CompleteRepairResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        _ = try apiResponse.unwrap()
+    }
 
     func createEstimate(message: String, roomId: Int, analysisId: Int?, defectIds: [Int], provider: RepairShop) async throws {
         let body = CreateEstimateRequestDTO(

@@ -14,7 +14,7 @@ final class CompleteRepairUseCase: CompleteRepairUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(estimateId: Int) async throws {
-        try await repository.completeRepair(estimateId: estimateId)
+    func execute(estimateId: Int, repairCost: Int, note: String?) async throws {
+        try await repository.completeRepair(estimateId: estimateId, repairCost: repairCost, note: note)
     }
 }

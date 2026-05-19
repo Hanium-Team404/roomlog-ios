@@ -17,16 +17,15 @@ final class MockEstimateRepository: EstimateRepositoryProtocol {
         (shops: mockShops, analysisId: nil)
     }
 
-    func getEstimates() async throws -> [Estimate] {
-        [
-            Estimate(id: 1, status: .sent, message: "균열 수리 문의", defectType: "벽지 찢어짐", defectSeverity: .high, defectLocation: "거실 벽면 북서부", repairCost: 15000, providerName: "홈케어 닥터스", providerPhone: "010-1234-5678", providerAddress: "서울시 강남구 테헤란로 123", createdAt: Date()),
-            Estimate(id: 2, status: .sent, message: "곰팡이 제거 문의", defectType: "벽지 찢어짐", defectSeverity: .high, defectLocation: "거실 벽면 북서부", repairCost: 15000, providerName: "홈케어 닥터스", providerPhone: "010-2345-6789", providerAddress: "서울시 서초구 반포대로 56", createdAt: Date(timeIntervalSinceNow: -86400 * 7)),
-            Estimate(id: 3, status: .completed, message: "도배 손상 문의", defectType: "벽지 찢어짐", defectSeverity: .medium, defectLocation: "거실 벽면 북서부", repairCost: 15000, providerName: "홈케어 닥터스", providerPhone: "010-3456-7890", providerAddress: "서울시 강남구 신사동 568", createdAt: Date(timeIntervalSinceNow: -86400 * 14)),
-            Estimate(id: 4, status: .completed, message: "균열 수리 문의", defectType: "벽지 찢어짐", defectSeverity: .low, defectLocation: "거실 벽면 북서부", repairCost: 15000, providerName: "홈케어 닥터스", providerPhone: "010-4567-8901", providerAddress: "서울시 서초구 방배로 78", createdAt: Date(timeIntervalSinceNow: -86400 * 30)),
+    func getEstimates(roomId: Int) async throws -> [Estimate] {
+        let mockDefect = EstimateDefect(defectId: 1, analysisId: nil, type: "CRACK", location: "거실 벽", severity: .high, area: 1, estimatedCost: 75000, description: nil)
+        return [
+            Estimate(id: 1, status: .sent, displayStatus: .inProgress, message: "균열 수리 문의", defects: [mockDefect], providerName: "홈케어 닥터스", providerPhone: "010-1234-5678", providerAddress: "서울시 강남구 테헤란로 123", createdAt: Date(), repairId: nil, repairCost: nil, repairedAt: nil),
+            Estimate(id: 2, status: .completed, displayStatus: .completed, message: "도배 손상 문의", defects: [mockDefect], providerName: "홈케어 닥터스", providerPhone: "010-3456-7890", providerAddress: "서울시 강남구 신사동 568", createdAt: Date(timeIntervalSinceNow: -86400 * 14), repairId: 1, repairCost: 80000, repairedAt: nil),
         ]
     }
 
-    func completeRepair(estimateId: Int) async throws {}
+    func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws {}
 
     func createEstimate(message: String, roomId: Int, analysisId: Int?, defectIds: [Int], provider: RepairShop) async throws {}
 }

@@ -16,7 +16,7 @@ protocol EstimateRepositoryProtocol {
     func createEstimate(message: String, roomId: Int, analysisId: Int?, defectIds: [Int], provider: RepairShop) async throws
     
     /// 견적 요청 목록 조회
-    func getEstimates() async throws -> [Estimate]
+    func getEstimates(roomId: Int) async throws -> [Estimate]
     
-    func completeRepair(estimateId: Int) async throws
+    func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws
 }

@@ -14,7 +14,7 @@ final class GetEstimatesUseCase: GetEstimatesUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute() async throws -> [Estimate] {
-        try await repository.getEstimates()
+    func execute(roomId: Int) async throws -> [Estimate] {
+        try await repository.getEstimates(roomId: roomId)
     }
 }

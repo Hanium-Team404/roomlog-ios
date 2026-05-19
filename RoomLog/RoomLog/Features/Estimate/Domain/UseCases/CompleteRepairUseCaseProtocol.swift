@@ -8,5 +8,5 @@
 import Foundation
 
 protocol CompleteRepairUseCaseProtocol {
-    func execute(estimateId: Int) async throws
+    func execute(estimateId: Int, repairCost: Int, note: String?) async throws
 }

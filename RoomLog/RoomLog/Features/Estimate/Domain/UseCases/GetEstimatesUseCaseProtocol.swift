@@ -8,5 +8,5 @@
 import Foundation
 
 protocol GetEstimatesUseCaseProtocol {
-    func execute() async throws -> [Estimate]
+    func execute(roomId: Int) async throws -> [Estimate]
 }
