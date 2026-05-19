@@ -2,7 +2,7 @@
 //  RepairHistoryView.swift
 //  RoomLog
 //
-//  Created by minkyo on 5/17/26.
+//  Created by 송민교 on 5/17/26.
 //
 
 import SwiftUI
@@ -10,21 +10,22 @@ import SwiftUI
 struct RepairHistoryView: View {
     @Environment(\.di) var di
     @State private var viewModel: RepairHistoryViewModel
+    @State private var selectedEstimate: Estimate?
 
-    init(provider: EstimateUseCaseProvider) {
+    init(roomId: Int, provider: EstimateUseCaseProvider) {
         self._viewModel = .init(
-            wrappedValue: RepairHistoryViewModel(provider: provider)
+            wrappedValue: RepairHistoryViewModel(roomId: roomId, provider: provider)
         )
     }
 
     var body: some View {
         Group {
-            if let report = viewModel.estimates.first {
-                content
+            if viewModel.estimates.isEmpty && !viewModel.isLoading {
+                emptyView
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                emptyView
+                content
             }
         }
         .navigationTitle("수리내역")
@@ -40,6 +41,28 @@ struct RepairHistoryView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .sheet(item: $selectedEstimate) { estimate in
+            EstimateDetailSheet(estimate: estimate) { repairCost, note in
+                await viewModel.completeRepair(estimateId: estimate.id, repairCost: repairCost, note: note)
+                selectedEstimate = nil
+            }
+        }
+        .overlay(alignment: .top) {
+            if viewModel.showSuccessToast {
+                SystemToastView(systemImage: "checkmark.circle.fill") {
+                    Text("수리 완료가 등록되었습니다.")
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.neutral600)
+                }
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { viewModel.showSuccessToast = false }
+                    }
+                }
+            }
+        }
     }
 
     private var content: some View {
@@ -47,6 +70,9 @@ struct RepairHistoryView: View {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.estimates) { estimate in
                     RepairHistoryCard(estimate: estimate)
+                        .onTapGesture {
+                            selectedEstimate = estimate
+                        }
                 }
             }
             .padding(.horizontal, 16)
@@ -60,6 +86,95 @@ struct RepairHistoryView: View {
                 .font(.medium, 16)
                 .foregroundStyle(Color.blueGray500)
         }
+    }
+}
+
+// MARK: - Estimate Detail Sheet
+
+private struct EstimateDetailSheet: View {
+    let estimate: Estimate
+    let onComplete: (Int, String?) async -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var repairCostText = ""
+    @State private var note = ""
+    @State private var isCompleting = false
+    @State private var showPriceError = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text("문의 내용")
+                .font(.semibold, 18)
+                .foregroundStyle(Color.neutral800)
+
+            ScrollView {
+                Text(estimate.message ?? "문자 전송 내역이 없습니다.")
+                    .font(.regular, 15)
+                    .foregroundStyle(Color.neutral600)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+            }
+            .frame(maxHeight: 160)
+            .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 12))
+
+            if estimate.displayStatus == .inProgress {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("수리 비용 (원)")
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.neutral600)
+                    TextField("수리 비용을 입력하세요", text: $repairCostText)
+                        .keyboardType(.numberPad)
+                        .padding(12)
+                        .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
+                    if showPriceError {
+                        Text("수리 비용을 입력해주세요.")
+                            .font(.regular, 13)
+                            .foregroundStyle(Color.red)
+                    }
+
+                    Text("메모")
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.neutral600)
+                    TextField("메모를 입력하세요 (선택)", text: $note)
+                        .padding(12)
+                        .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
+                }
+            }
+
+            Spacer()
+
+            if estimate.displayStatus == .inProgress {
+                Button {
+                    guard let cost = Int(repairCostText), cost > 0 else {
+                        showPriceError = true
+                        return
+                    }
+                    showPriceError = false
+                    isCompleting = true
+                    Task {
+                        await onComplete(cost, note.isEmpty ? nil : note)
+                        isCompleting = false
+                        dismiss()
+                    }
+                } label: {
+                    Group {
+                        if isCompleting {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("수리 완료")
+                                .font(.semibold, 17)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.mutedBlue, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(.white)
+                }
+                .disabled(isCompleting)
+            }
+        }
+        .padding(24)
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -86,19 +201,22 @@ private struct RepairHistoryCard: View {
 
     private var defectInfo: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Text(estimate.defectType)
-                    .font(.semibold, 16)
-                    .foregroundStyle(Color.neutral800)
-                SeverityBadge(severity: estimate.defectSeverity)
+            ForEach(estimate.defects) { defect in
+                HStack(spacing: 10) {
+                    Text(defect.localizedType)
+                        .font(.semibold, 16)
+                        .foregroundStyle(Color.neutral800)
+                    SeverityBadge(severity: defect.severity)
+                }
+                Text(defect.location)
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.neutral400)
             }
-            Text(estimate.defectLocation)
-                .font(.medium, 14)
-                .foregroundStyle(Color.neutral400)
         }
     }
 
     // MARK: - 날짜 + 가격 + 업체
+
     private var dateAndShopInfo: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 4) {
@@ -110,21 +228,31 @@ private struct RepairHistoryCard: View {
                     .foregroundStyle(Color.blueGray600)
             }
             HStack(spacing: 16) {
-                Text(formattedCost)
-                    .font(.semibold, 14)
-                    .foregroundStyle(Color.neutral700)
-                Divider()
-                    .frame(height: 16)
+                if let cost = estimate.repairCost {
+                    Text(formattedCost(cost))
+                        .font(.semibold, 14)
+                        .foregroundStyle(Color.neutral700)
+                    Divider()
+                        .frame(height: 16)
+                } else if let estimatedCost = estimate.defects.first?.estimatedCost {
+                    Text("예상 " + formattedCost(estimatedCost))
+                        .font(.semibold, 14)
+                        .foregroundStyle(Color.neutral500)
+                    Divider()
+                        .frame(height: 16)
+                }
                 Text(estimate.providerName)
                     .font(.medium, 14)
                     .foregroundStyle(Color.neutral700)
+                    .lineLimit(1)
             }
         }
     }
 
     // MARK: - 상태 뱃지
+
     private var statusBadge: some View {
-        Text(estimate.status.label)
+        Text(estimate.displayStatus.label)
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(statusForeground)
             .padding(.horizontal, 12)
@@ -133,37 +261,29 @@ private struct RepairHistoryCard: View {
     }
 
     private var statusForeground: Color {
-        switch estimate.status {
-        case .sent, .requested:
-            .white
-        case .completed, .failed:
-            Color.mutedBlue
+        switch estimate.displayStatus {
+        case .inProgress: .white
+        case .completed: Color.mutedBlue
         }
     }
 
     private var statusBackground: Color {
-        switch estimate.status {
-        case .sent, .requested:
-            Color.mutedBlue
-        case .completed, .failed:
-            Color.blueGray50
+        switch estimate.displayStatus {
+        case .inProgress: Color.mutedBlue
+        case .completed: Color.blueGray50
         }
     }
 
     // MARK: - Formatting
 
     private var formattedDate: String {
-        guard let date = estimate.createdAt else { return "" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM.dd"
-        formatter.locale = Locale(identifier: "ko_KR")
-        return formatter.string(from: date)
+        estimate.createdAt?.toShortDisplayString() ?? ""
     }
 
-    private var formattedCost: String {
+    private func formattedCost(_ value: Int) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        let s = formatter.string(from: NSNumber(value: estimate.repairCost)) ?? "\(estimate.repairCost)"
+        let s = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
         return "₩ \(s)"
     }
 }
@@ -173,7 +293,7 @@ private struct RepairHistoryCard: View {
 #Preview {
     let di = DIContainer.configured()
     NavigationStack {
-        RepairHistoryView(provider: di.resolve(EstimateUseCaseProvider.self))
+        RepairHistoryView(roomId: 1, provider: di.resolve(EstimateUseCaseProvider.self))
     }
     .environment(\.di, di)
 }

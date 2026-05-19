@@ -26,7 +26,7 @@ enum NavigationDestination: Hashable {
         case defectListMain(roomId: Int)
         case defectListDetail(defect: DefectReportDetail, roomId: Int, roomImageURL: String?)
         case repairShopList(roomId: Int, defect: DefectReportDetail)
-        case repairHistory
+        case repairHistory(roomId: Int)
     }
     
     enum MyPage: Hashable {

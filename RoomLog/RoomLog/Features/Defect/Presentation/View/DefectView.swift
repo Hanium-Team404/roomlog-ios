@@ -56,7 +56,7 @@ struct DefectView: View {
     private var bottomButton: some View {
         BottomCTAButton {
             let pathStore = di.resolve(PathStore.self)
-            pathStore.defectPath.append(.defect(.repairHistory))
+            pathStore.defectPath.append(.defect(.repairHistory(roomId: viewModel.roomId)))
         } label: {
             Text("수리 내역 보기")
                 .font(.semibold, 17)
