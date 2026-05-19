@@ -81,7 +81,7 @@ private extension DefectDetailView {
                 Text("심각도")
                     .font(.medium, 16)
                     .foregroundStyle(Color("dustyBlue"))
-                severityBadge
+                SeverityBadge(severity: defect.severity, size: .medium)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 12) {
@@ -97,15 +97,6 @@ private extension DefectDetailView {
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
         .background(cardBackground)
-    }
-
-    var severityBadge: some View {
-        Text(defect.severity.label)
-            .font(.system(size: 16, weight: .medium))
-            .foregroundStyle(defect.severity.badgeTextColor)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(defect.severity.badgeTextColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 12))
     }
 
     var formattedRepairCost: String {
@@ -187,19 +178,13 @@ private extension DefectDetailView {
 
 private extension DefectDetailView {
     var bottomButton: some View {
-        Button(action: {
+        BottomCTAButton {
             let pathStore = di.resolve(PathStore.self)
             pathStore.defectPath.append(.defect(.repairShopList(roomId: roomId, defect: defect)))
-        }) {
+        } label: {
             Text("추천 업체 보기")
                 .font(.semibold, 17)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color("mutedBlue"), in: Capsule())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 }
 
@@ -224,22 +209,3 @@ private extension DefectDetailView {
     }
 }
 
-// MARK: - Severity Style
-
-private extension Severity {
-    var label: String {
-        switch self {
-        case .high: "높음"
-        case .medium: "중간"
-        case .low: "낮음"
-        }
-    }
-
-    var badgeTextColor: Color {
-        switch self {
-        case .high: .red
-        case .medium: .orange
-        case .low: Color("mutedBlue")
-        }
-    }
-}

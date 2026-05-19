@@ -54,16 +54,13 @@ struct DefectView: View {
     }
 
     private var bottomButton: some View {
-        Button(action: {}) {
+        BottomCTAButton {
+            let pathStore = di.resolve(PathStore.self)
+            pathStore.defectPath.append(.defect(.repairHistory(roomId: viewModel.roomId)))
+        } label: {
             Text("수리 내역 보기")
                 .font(.semibold, 17)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color.mutedBlue, in: Capsule())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 }
 
@@ -228,7 +225,7 @@ private struct DefectReportRow: View {
                 Text(defect.type)
                     .font(.semibold, 16)
                     .foregroundStyle(Color.neutral800)
-                severityBadge
+                SeverityBadge(severity: defect.severity)
             }
 
             Text(defect.location)
@@ -244,15 +241,6 @@ private struct DefectReportRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.12), radius: 5, x: 0, y: 2)
-    }
-
-    private var severityBadge: some View {
-        Text(defect.severity.badgeLabel)
-            .font(.medium, 12)
-            .foregroundStyle(defect.severity.badgeColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(defect.severity.badgeColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 7))
     }
 
     private func chip(_ text: String) -> some View {
@@ -276,20 +264,3 @@ private struct DefectReportRow: View {
     }
 }
 
-private extension Severity {
-    var badgeLabel: String {
-        switch self {
-        case .high: "높음"
-        case .medium: "보통"
-        case .low: "낮음"
-        }
-    }
-
-    var badgeColor: Color {
-        switch self {
-        case .high: .red
-        case .medium: .orange
-        case .low: Color.mutedBlue
-        }
-    }
-}

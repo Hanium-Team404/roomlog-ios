@@ -13,6 +13,8 @@ enum EstimateTarget {
     case getRepairShops(analysisId: Int, type: String?, radius: String?, sort: String?)
     case getRepairShopsByRoom(roomId: Int, type: String?, radius: String?, sort: String?)
     case createEstimate(request: CreateEstimateRequestDTO)
+    case getEstimates(roomId: Int)
+    case completeRepair(estimateId: Int, request: CompleteRepairRequestDTO)
 }
 
 extension EstimateTarget: BaseTargetType {
@@ -22,16 +24,18 @@ extension EstimateTarget: BaseTargetType {
             return "/analyses/\(analysisId)/repair-shops"
         case .getRepairShopsByRoom(let roomId, _, _, _):
             return "/rooms/\(roomId)/repair-shops"
-        case .createEstimate:
+        case .createEstimate, .getEstimates:
             return "/estimates"
+        case .completeRepair(let estimateId, _):
+            return "/estimates/\(estimateId)/repairs"
         }
     }
 
     var method: Moya.Method {
         switch self {
-        case .getRepairShops, .getRepairShopsByRoom:
+        case .getRepairShops, .getRepairShopsByRoom, .getEstimates:
             return .get
-        case .createEstimate:
+        case .createEstimate, .completeRepair:
             return .post
         }
     }
@@ -46,6 +50,10 @@ extension EstimateTarget: BaseTargetType {
             if let sort { params["sort"] = sort }
             return params.isEmpty ? .requestPlain : .requestParameters(parameters: params, encoding: URLEncoding.queryString)
         case .createEstimate(let request):
+            return .requestJSONEncodable(request)
+        case .getEstimates(let roomId):
+            return .requestParameters(parameters: ["roomId": roomId], encoding: URLEncoding.queryString)
+        case .completeRepair(_, let request):
             return .requestJSONEncodable(request)
         }
     }
