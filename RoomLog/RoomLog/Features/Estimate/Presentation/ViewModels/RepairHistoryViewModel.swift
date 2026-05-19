@@ -39,8 +39,13 @@ final class RepairHistoryViewModel {
     func completeRepair(estimateId: Int, repairCost: Int, note: String?) async {
         do {
             try await provider.makeCompleteRepairUseCase().execute(estimateId: estimateId, repairCost: repairCost, note: note)
-            estimates = try await provider.makeGetEstimatesUseCase().execute(roomId: roomId)
             showSuccessToast = true
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        do {
+            estimates = try await provider.makeGetEstimatesUseCase().execute(roomId: roomId)
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -120,20 +120,25 @@ struct EstimateItemDTO: Codable {
         )
     }
 
-    private static let fractionalFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Asia/Seoul")
-        return f
-    }()
-
     private static func parseDate(_ string: String) -> Date? {
-        // 소수점 초가 있으면 fractional formatter, 없으면 공용 extension 활용
-        if string.contains(".") {
-            return fractionalFormatter.date(from: string)
+        guard string.contains(".") else {
+            return Date.fromServerDateTime(string)
         }
-        return Date.fromServerDateTime(string)
+        // 소수점 이하를 3자리로 잘라 표준 SSS 포맷으로 정규화
+        let normalized: String
+        if let dotIndex = string.firstIndex(of: ".") {
+            let fractionalStart = string.index(after: dotIndex)
+            let fractional = string[fractionalStart...]
+            let trimmed = String(fractional.prefix(3)).padding(toLength: 3, withPad: "0", startingAt: 0)
+            normalized = String(string[..<fractionalStart]) + trimmed
+        } else {
+            normalized = string
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        return formatter.date(from: normalized)
     }
 }
 
