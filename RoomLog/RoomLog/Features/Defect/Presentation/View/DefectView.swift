@@ -39,10 +39,23 @@ struct DefectView: View {
             VStack(alignment: .leading, spacing: 20) {
                 imageSection(report: report)
                 summarySection(report: report)
-                defectListSection(defects: report.defects) { defect in
-                    pathStore.defectPath.append(.defect(.defectListDetail(defect: defect, roomId: viewModel.roomId, roomImageURL: report.imageURL)))
-
-                }
+                defectListSection(
+                    defects: report.defects,
+                    onViewAll: {
+                        pathStore.defectPath.append(.defect(.defectAllList(
+                            roomId: viewModel.roomId,
+                            roomName: report.room.title,
+                            defects: report.defects
+                        )))
+                    },
+                    onTap: { defect in
+                        pathStore.defectPath.append(.defect(.defectListDetail(
+                            defect: defect,
+                            roomId: viewModel.roomId,
+                            roomImageURL: report.imageURL
+                        )))
+                    }
+                )
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -73,6 +86,7 @@ struct DefectView: View {
 }
 
 // MARK: - Section 1: 이미지 + 마커
+// TODO: - 추후 3d이미지로 불러오기 및 마커 수정 - @minkyo
 
 private extension DefectView {
     @ViewBuilder
@@ -169,14 +183,18 @@ private extension DefectView {
 
 private extension DefectView {
     @ViewBuilder
-    func defectListSection(defects: [DefectReportDetail], onTap: @escaping (DefectReportDetail) -> Void) -> some View {
+    func defectListSection(
+        defects: [DefectReportDetail],
+        onViewAll: @escaping () -> Void,
+        onTap: @escaping (DefectReportDetail) -> Void
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("감지된 하자")
                     .font(.semibold, 20)
                     .foregroundStyle(Color.neutral800)
                 Spacer()
-                Button(action: {}) {
+                Button(action: onViewAll) {
                     HStack(spacing: 4) {
                         Text("전체보기")
                             .font(.semibold, 14)
@@ -211,56 +229,6 @@ private struct SummaryStatView: View {
                 .foregroundStyle(Color.dustyBlue)
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - 하자 리스트 Row
-
-private struct DefectReportRow: View {
-    let defect: DefectReportDetail
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Text(defect.type)
-                    .font(.semibold, 16)
-                    .foregroundStyle(Color.neutral800)
-                SeverityBadge(severity: defect.severity)
-            }
-
-            Text(defect.location)
-                .font(.medium, 14)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 8) {
-                chip(formattedCost)
-                chip(formattedArea)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.12), radius: 5, x: 0, y: 2)
-    }
-
-    private func chip(_ text: String) -> some View {
-        Text(text)
-            .font(.medium, 14)
-            .foregroundStyle(Color.neutral700)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 7))
-    }
-
-    private var formattedCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        let s = formatter.string(from: NSNumber(value: defect.repairCost)) ?? "\(defect.repairCost)"
-        return "₩ \(s)"
-    }
-
-    private var formattedArea: String {
-        String(format: "%.2f m²", defect.defectArea)
     }
 }
 

@@ -32,4 +32,12 @@ enum Severity: Hashable {
         default: self = .low
         }
     }
+
+    var rank: Int {
+        switch self {
+        case .high: return 3
+        case .medium: return 2
+        case .low: return 1
+        }
+    }
 }

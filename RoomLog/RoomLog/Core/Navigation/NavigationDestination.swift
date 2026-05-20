@@ -24,6 +24,7 @@ enum NavigationDestination: Hashable {
         case mainView // 하자점검, 내방비교
         case defectList
         case defectListMain(roomId: Int)
+        case defectAllList(roomId: Int, roomName: String, defects: [DefectReportDetail])
         case defectListDetail(defect: DefectReportDetail, roomId: Int, roomImageURL: String?)
         case repairShopList(roomId: Int, defect: DefectReportDetail)
         case repairHistory(roomId: Int)
