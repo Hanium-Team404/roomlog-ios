@@ -22,6 +22,9 @@ struct DefectAllListView: View {
 
     private var sortedDefects: [DefectReportDetail] {
         defects.sorted { lhs, rhs in
+            if lhs.severity.rank == rhs.severity.rank {
+                return lhs.id < rhs.id
+            }
             switch sortOrder {
             case .severityHigh:
                 return lhs.severity.rank > rhs.severity.rank
