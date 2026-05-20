@@ -189,23 +189,9 @@ private extension DefectDetailView {
 }
 
 #Preview {
-    let defect = DefectReportDetail(
-        id: 1,
-        imageURL: nil,
-        type: "균열",
-        severity: .high,
-        description: "벽면에 균열이 발견되었습니다.",
-        repairCost: 80000,
-        defectArea: 0.3,
-        location: "거실 북쪽 벽",
-        discoveredDate: nil,
-        memo: nil,
-        x: nil,
-        y: nil,
-        z: nil
-    )
     NavigationStack {
-        DefectDetailView(defect: defect, roomId: 1, roomImageURL: nil)
+        DefectDetailView(defect: PreviewSampleData.defects[0], roomId: 1, roomImageURL: nil)
     }
+    .environment(\.di, DIContainer.configured())
 }
 

@@ -15,7 +15,6 @@ struct ViewerView: View {
         let pathStore = di.resolve(PathStore.self)
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                logoHeader
                 menuCards(pathStore: pathStore)
                 recentSection(pathStore: pathStore)
             }
@@ -24,7 +23,15 @@ struct ViewerView: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Image("Logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 28)
+            }
+        }
         .onAppear {
             if viewModel == nil {
                 let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectRoomDataUseCase()
@@ -35,23 +42,11 @@ struct ViewerView: View {
     }
 }
 
-// MARK: - Logo
-
-private extension ViewerView {
-    var logoHeader: some View {
-        Image("Logo")
-            .resizable()
-            .scaledToFit()
-            .frame(height: 32)
-            .frame(maxWidth: .infinity)
-    }
-}
-
 // MARK: - Menu Cards
 
 private extension ViewerView {
     func menuCards(pathStore: PathStore) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 20) {
             defectCard(pathStore: pathStore)
             compareCard(pathStore: pathStore)
         }
@@ -59,74 +54,69 @@ private extension ViewerView {
     }
 
     func defectCard(pathStore: PathStore) -> some View {
-        return ZStack {
-            Image("viewer_defect")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .layoutPriority(-1)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("하자 점검")
-                    .font(.bold, 24)
-                    .foregroundStyle(.white)
-                Text("내 방의 하자 정보를\n점검하고 관리해요")
-                    .font(.medium, 16)
-                    .foregroundStyle(Color.cloudDancer)
-                    .lineSpacing(6)
-                Button {
-                    pathStore.defectPath.append(.defect(.defectList))
-                } label: {
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 39, height: 39)
-                        .overlay {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color(red: 0.545, green: 0.451, blue: 0.408))
-                        }
+        Image("viewer_defect")
+            .resizable()
+            .scaledToFit()
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("하자 점검")
+                        .font(.bold, 24)
+                        .foregroundStyle(.white)
+                    Text("내 방의 하자 정보를\n점검하고 관리해요")
+                        .font(.medium, 16)
+                        .foregroundStyle(Color.cloudDancer)
+                        .lineSpacing(6)
+                    Button {
+                        pathStore.defectPath.append(.defect(.defectList))
+                    } label: {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 49, height: 49)
+                            .overlay {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Color(red: 0.545, green: 0.451, blue: 0.408))
+                            }
+                    }
+                    .padding(.top, 8)
                 }
+                .padding(.leading, 29)
+                .padding(.top, 32)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 29)
-            .padding(.top, 32)
-            .frame(maxHeight: .infinity, alignment: .top)
-        }
-        .frame(maxWidth: .infinity, minHeight: 210)
+            .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
     }
 
     func compareCard(pathStore: PathStore) -> some View {
-        return ZStack {
-            Image("viewer_compare")
-                .resizable()
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("내 방 비교")
-                    .font(.bold, 24)
-                    .foregroundStyle(Color.deepNavy)
-                Text("입주 전/후 방 상태를\n비교해보세요")
-                    .font(.medium, 16)
-                    .foregroundStyle(Color.dustyBlue)
-                    .lineSpacing(6)
-                
-                Button {
-                    // TODO: 내 방 비교 화면 연결
-                } label: {
-                    Circle()
-                        .fill(Color.mutedBlue)
-                        .frame(width: 39, height: 39)
-                        .overlay {
-                            Image(systemName: "chevron.right")
-                                .font(.semibold, 18)
-                                .foregroundStyle(Color.deepNavy)
-                        }
+        Image("viewer_compare")
+            .resizable()
+            .scaledToFit()
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("내 방 비교")
+                        .font(.bold, 24)
+                        .foregroundStyle(Color.deepNavy)
+                    Text("입주 전/후 방 상태를\n비교해보세요")
+                        .font(.medium, 16)
+                        .foregroundStyle(Color.dustyBlue)
+                        .lineSpacing(6)
+                    Button {
+                        // TODO: 내 방 비교 화면 연결
+                    } label: {
+                        Circle()
+                            .fill(Color(red: 0.79, green: 0.87, blue: 0.92))
+                            .frame(width: 49, height: 49)
+                            .overlay {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Color.deepNavy)
+                            }
+                    }
+                    .padding(.top, 8)
                 }
+                .padding(.leading, 29)
+                .padding(.top, 32)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 29)
-            .padding(.top, 32)
-            .frame(maxHeight: .infinity, alignment: .top)
-        }
-        .frame(maxWidth: .infinity, minHeight: 210)
+            .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
     }
 }
 
