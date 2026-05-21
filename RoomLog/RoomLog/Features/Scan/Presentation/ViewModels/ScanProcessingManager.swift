@@ -55,11 +55,11 @@ final class ScanProcessingManager {
 
     /// 촬영 완료 후 호출. wrapUp → 압축 → 업로드 → 폴링 → 다운로드 전체 수행.
     @MainActor
-    func startFullProcess(encoder: DatasetEncoder, houseId: Int, scanType: String) {
+    func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
         processingTask?.cancel()
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .zipping)
         processingTask = Task { [weak self] in
-            await self?.fullProcess(encoder: encoder, houseId: houseId, scanType: scanType)
+            await self?.fullProcess(encoder: encoder, houseId: houseId)
         }
     }
 
@@ -147,7 +147,7 @@ final class ScanProcessingManager {
     // MARK: - Full Process
 
     @MainActor
-    private func fullProcess(encoder: DatasetEncoder, houseId: Int, scanType: String) async {
+    private func fullProcess(encoder: DatasetEncoder, houseId: Int) async {
         guard let scanRepository else { return }
 
         // 1. WrapUp
@@ -169,7 +169,7 @@ final class ScanProcessingManager {
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
         let scanResult: ScanResult
         do {
-            scanResult = try await scanRepository.uploadScan(houseId: houseId, scanType: scanType, fileURL: zipURL)
+            scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
             cleanup(zipURL: zipURL, datasetDir: datasetDir)
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))

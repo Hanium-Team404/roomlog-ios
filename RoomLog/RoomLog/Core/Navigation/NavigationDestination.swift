@@ -15,7 +15,7 @@ enum NavigationDestination: Hashable {
     enum Home: Hashable {
         case roomList(houseId: Int, houseName: String)
         case roomDetail(roomId: Int)
-        case scan(houseId: Int, scanType: String)
+        case scan(houseId: Int)
         case plyPreview(fileURL: URL, scanId: Int, houseId: Int)
         case houseList
     }

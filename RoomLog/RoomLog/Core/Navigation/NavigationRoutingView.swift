@@ -49,11 +49,10 @@ private extension NavigationRoutingView {
                 provider: provider,
                 scanRepository: di.resolve(ScanRepositoryProtocol.self)
             )
-        case .scan(let houseId, let scanType):
+        case .scan(let houseId):
             let pathStore = di.resolve(PathStore.self)
             ScanView(
                 houseId: houseId,
-                scanType: scanType,
                 processingManager: di.resolve(ScanProcessingManager.self),
                 onStartConversion: {
                     _ = pathStore.homePath.popLast()

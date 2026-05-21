@@ -13,14 +13,12 @@ struct ScanView: View {
 
     init(
         houseId: Int,
-        scanType: String,
         processingManager: ScanProcessingManager,
         onStartConversion: @escaping () -> Void
     ) {
         self._viewModel = .init(
             wrappedValue: ScanViewModel(
                 houseId: houseId,
-                scanType: scanType,
                 processingManager: processingManager,
                 onStartConversion: onStartConversion
             )
