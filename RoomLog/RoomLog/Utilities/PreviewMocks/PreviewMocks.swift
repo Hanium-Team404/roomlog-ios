@@ -11,8 +11,8 @@ import Foundation
 // MARK: - Mock ScanRepository
 
 final class MockScanRepository: ScanRepositoryProtocol {
-    func uploadScan(houseId: Int, scanType: String, fileURL: URL) async throws -> ScanResult {
-        ScanResult(scanId: 1, status: "COMPLETED", fileURL: "", scanType: scanType)
+    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
+        ScanResult(scanId: 1, status: "COMPLETED", fileURL: "", scanType: "")
     }
 
     func getScanStatus(scanId: Int) async throws -> String {

@@ -34,7 +34,6 @@ struct RoomListView: View {
     @Environment(\.di) private var di
     @State private var viewModel: RoomListViewModel
     @State private var showProcessingStatus: Bool = false
-    @State private var showScanTypeSheet: Bool = false
 
     init(houseId: Int, houseName: String, provider: HomeUseCaseProvider) {
         self._viewModel = .init(
@@ -251,28 +250,13 @@ struct RoomListView: View {
             }
         } else {
             BottomCTAButton {
-                showScanTypeSheet = true
+                pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId)))
             } label: {
                 HStack(spacing: 8) {
                     Image(.scan)
                     Text(Strings.scanButton)
                         .font(.semibold, 16)
                 }
-            }
-            .confirmationDialog("스캔 유형을 선택하세요", isPresented: $showScanTypeSheet, titleVisibility: .visible) {
-                Button {
-                    pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId, scanType: "IN")))
-                } label: {
-                    Text("입주 전 스캔")
-                        .font(.medium, 16)
-                }
-                Button {
-                    pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId, scanType: "OUT")))
-                } label: {
-                    Text("퇴거 전 스캔")
-                        .font(.medium, 16)
-                }
-                Button("취소", role: .cancel) {}
             }
         }
     }

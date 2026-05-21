@@ -10,7 +10,7 @@ import Moya
 internal import Alamofire
 
 enum ScanTarget {
-    case uploadScan(houseId: Int, scanType: String, fileURL: URL)
+    case uploadScan(houseId: Int, fileURL: URL)
     case getScanStatus(scanId: Int)
     case getScanPreview(scanId: Int)
 }
@@ -38,7 +38,7 @@ extension ScanTarget: BaseTargetType {
 
     var task: Moya.Task {
         switch self {
-        case .uploadScan(let houseId, let scanType, let fileURL):
+        case .uploadScan(let houseId, let fileURL):
             let formData = MultipartFormData(
                 provider: .file(fileURL),
                 name: "file",
@@ -47,7 +47,7 @@ extension ScanTarget: BaseTargetType {
             )
             return .uploadCompositeMultipart(
                 [formData],
-                urlParameters: ["house_id": houseId, "scan_type": scanType]
+                urlParameters: ["house_id": houseId]
             )
         case .getScanStatus, .getScanPreview:
             return .requestPlain

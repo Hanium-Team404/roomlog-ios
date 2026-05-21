@@ -28,7 +28,6 @@ final class ScanViewModel: NSObject {
 
     let session = ARSession()
     let houseId: Int
-    let scanType: String
 
     private let processingManager: ScanProcessingManager
     private let onStartConversion: () -> Void
@@ -49,12 +48,10 @@ final class ScanViewModel: NSObject {
 
     init(
         houseId: Int,
-        scanType: String,
         processingManager: ScanProcessingManager,
         onStartConversion: @escaping () -> Void
     ) {
         self.houseId = houseId
-        self.scanType = scanType
         self.processingManager = processingManager
         self.onStartConversion = onStartConversion
         super.init()
@@ -64,7 +61,6 @@ final class ScanViewModel: NSObject {
     convenience init(preview phase: Phase) {
         self.init(
             houseId: 0,
-            scanType: "IN",
             processingManager: ScanProcessingManager(),
             onStartConversion: {}
         )
@@ -113,8 +109,7 @@ final class ScanViewModel: NSObject {
         guard let encoder else { return }
         processingManager.startFullProcess(
             encoder: encoder,
-            houseId: houseId,
-            scanType: scanType
+            houseId: houseId
         )
         self.encoder = nil
         onStartConversion()

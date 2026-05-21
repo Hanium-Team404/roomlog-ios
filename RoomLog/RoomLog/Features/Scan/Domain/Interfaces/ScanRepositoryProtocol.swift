@@ -8,7 +8,7 @@
 import Foundation
 
 protocol ScanRepositoryProtocol {
-    func uploadScan(houseId: Int, scanType: String, fileURL: URL) async throws -> ScanResult
+    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult
     func getScanStatus(scanId: Int) async throws -> String
     func getScanPreview(scanId: Int) async throws -> String
 }

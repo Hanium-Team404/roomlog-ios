@@ -20,9 +20,9 @@ final class ScanRepository: ScanRepositoryProtocol {
     }
 
     // MARK: - Function
-    func uploadScan(houseId: Int, scanType: String, fileURL: URL) async throws -> ScanResult {
+    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
         let response = try await adapter.request(
-            ScanTarget.uploadScan(houseId: houseId, scanType: scanType, fileURL: fileURL)
+            ScanTarget.uploadScan(houseId: houseId, fileURL: fileURL)
         )
         do {
             let dto = try decoder.decode(APIResponse<ScanResultResponseDTO>.self, from: response.data)
