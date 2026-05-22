@@ -10,25 +10,46 @@ import SwiftUI
 struct DefectView: View {
     @Environment(\.di) var di
     @State private var viewModel: DefectViewModel
+    private let skipAutoLoad: Bool
 
     init(roomId: Int, provider: DefectUseCaseProvider) {
         self._viewModel = .init(
             wrappedValue: DefectViewModel(roomId: roomId, provider: provider)
         )
+        self.skipAutoLoad = false
     }
+
+    #if DEBUG
+    init(viewModel: DefectViewModel) {
+        self._viewModel = .init(wrappedValue: viewModel)
+        self.skipAutoLoad = true
+    }
+    #endif
 
     var body: some View {
         Group {
-            if let report = viewModel.report {
-                content(report: report)
-            } else {
+            switch viewModel.phase {
+            case .loading:
                 ProgressView()
+            case .polling:
+                if let report = viewModel.report {
+                    pollingContent(report: report)
+                } else {
+                    ProgressView()
+                }
+            case .completed:
+                if let report = viewModel.report {
+                    content(report: report)
+                }
+            case .failed(let message):
+                errorView(message: message)
             }
         }
         .navigationTitle(viewModel.report.map { "\($0.room.title) 하자" } ?? "하자 점검")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.fetchReport()
+            guard !skipAutoLoad, viewModel.phase == .loading else { return }
+            await viewModel.startAnalysis()
         }
     }
 
@@ -75,15 +96,44 @@ struct DefectView: View {
                 .font(.semibold, 17)
         }
     }
+
+    // MARK: - Polling Content (3D 이미지만 표시 + 나머지 로딩)
+
+    @ViewBuilder
+    private func pollingContent(report: DefectReport) -> some View {
+        AnalysisLoadingView(message: "AI가 하자를 분석하고 있습니다...") {
+            imageSection(report: report)
+        }
+    }
+
+    // MARK: - Error View
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.blueGray300)
+            Text("분석에 실패했습니다")
+                .font(.semibold, 18)
+                .foregroundStyle(Color.neutral800)
+            Text(message)
+                .font(.medium, 14)
+                .foregroundStyle(Color.blueGray400)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await viewModel.startAnalysis() }
+            } label: {
+                Text("다시 시도")
+                    .font(.semibold, 16)
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
 
-#Preview {
-    let di = DIContainer.configured()
-    NavigationStack {
-        DefectView(roomId: 1, provider: di.resolve(DefectUseCaseProvider.self))
-    }
-    .environment(\.di, di)
-}
+
 
 // MARK: - Section 1: 이미지 + 마커
 // TODO: - 추후 3d이미지로 불러오기 및 마커 수정 - @minkyo
@@ -199,7 +249,7 @@ private extension DefectView {
                         Text("전체보기")
                             .font(.semibold, 14)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.semibold, 11)
                     }
                     .foregroundStyle(Color.mutedBlue)
                 }
@@ -232,3 +282,36 @@ private struct SummaryStatView: View {
     }
 }
 
+#Preview("기본") {
+    let di = DIContainer.configured()
+    NavigationStack {
+        DefectView(roomId: 1, provider: di.resolve(DefectUseCaseProvider.self))
+    }
+    .environment(\.di, di)
+}
+
+#Preview("Polling 상태") {
+    let di = DIContainer.configured()
+    let vm = DefectViewModel.preview(
+        phase: .polling,
+        report: PreviewSampleData.pollingReport,
+        provider: di.resolve(DefectUseCaseProvider.self)
+    )
+    NavigationStack {
+        DefectView(viewModel: vm)
+    }
+    .environment(\.di, di)
+}
+
+#Preview("실패 상태") {
+    let di = DIContainer.configured()
+    let vm = DefectViewModel.preview(
+        phase: .failed("서버에서 분석에 실패했습니다"),
+        report: nil,
+        provider: di.resolve(DefectUseCaseProvider.self)
+    )
+    NavigationStack {
+        DefectView(viewModel: vm)
+    }
+    .environment(\.di, di)
+}
