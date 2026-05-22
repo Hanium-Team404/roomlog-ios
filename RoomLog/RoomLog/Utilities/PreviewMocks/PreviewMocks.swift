@@ -102,5 +102,17 @@ enum PreviewSampleData {
             defects: defects
         )
     }
+
+    /// Polling 중 상태: 3D 이미지만 있고 하자 데이터는 비어있는 report
+    static var pollingReport: DefectReport {
+        DefectReport(
+            room: DefectRoomData(id: 1, title: "망고의 방", date: Date(), thumbnailURL: nil),
+            imageURL: nil,
+            defectCount: 0,
+            minRepairCost: 0,
+            repairArea: 0,
+            defects: []
+        )
+    }
 }
 #endif
