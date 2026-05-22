@@ -43,12 +43,11 @@ struct HomeView: View {
             homeState.hasHouses = !viewModel.houses.isEmpty
         }
         .toolbar {
-            ToolbarItem(placement: .title) {
-                Image(.logo)
+            ToolbarItem(placement: .principal) {
+                Image("Logo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 128)
-                    .padding(.top)
+                    .frame(height: 28)
             }
             
             ToolbarItem(placement: .topBarLeading) {

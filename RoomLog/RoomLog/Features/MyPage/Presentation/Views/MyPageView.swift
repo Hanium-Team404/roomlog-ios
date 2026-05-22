@@ -32,12 +32,11 @@ struct MyPageView: View {
         }
         .scrollIndicators(.hidden)
         .toolbar {
-            ToolbarItem(placement: .title) {
-                Image(.logo)
+            ToolbarItem(placement: .principal) {
+                Image("Logo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 128)
-                    .padding(.top)
+                    .frame(height: 28)
             }
         }
         .task { await viewModel.fetchUser() }
