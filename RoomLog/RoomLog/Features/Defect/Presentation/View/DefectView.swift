@@ -282,10 +282,23 @@ private struct SummaryStatView: View {
     }
 }
 
-#Preview("기본") {
+#Preview("로딩 상태") {
     let di = DIContainer.configured()
     NavigationStack {
         DefectView(roomId: 1, provider: di.resolve(DefectUseCaseProvider.self))
+    }
+    .environment(\.di, di)
+}
+
+#Preview("하자 분석 완료") {
+    let di = DIContainer.configured()
+    let vm = DefectViewModel.preview(
+        phase: .completed,
+        report: PreviewSampleData.defectReport,
+        provider: di.resolve(DefectUseCaseProvider.self)
+    )
+    NavigationStack {
+        DefectView(viewModel: vm)
     }
     .environment(\.di, di)
 }
