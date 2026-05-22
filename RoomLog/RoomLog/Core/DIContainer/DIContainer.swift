@@ -107,10 +107,19 @@ extension DIContainer {
             ScanRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
+        container.register(ComparisonUseCaseProvider.self) {
+            ComparisonUseCaseProviderImpl(repository: container.resolve(ComparisonRepositoryProtocol.self))
+        }
+
         // MARK: - Repository
         // TODO: 서버 연동 시 DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))로 교체
         container.register(DefectRepositoryProtocol.self) {
             MockDefectRepository()
+        }
+        
+        // TODO: 서버 연동 시 ComparisonRepository(adapter:)로 교체
+        container.register(ComparisonRepositoryProtocol.self) {
+            MockComparisonRepository()
         }
 
         // MARK: - Scan Processing
