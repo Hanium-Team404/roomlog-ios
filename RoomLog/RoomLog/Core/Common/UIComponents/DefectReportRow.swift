@@ -47,7 +47,7 @@ struct DefectReportRow: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         let s = formatter.string(from: NSNumber(value: defect.repairCost)) ?? "\(defect.repairCost)"
-        return "₩ \(s)"
+        return "예상금액 ₩ \(s)"
     }
 
     private var formattedArea: String {

@@ -100,7 +100,7 @@ private extension ViewerView {
                         .foregroundStyle(Color.dustyBlue)
                         .lineSpacing(6)
                     Button {
-                        // TODO: 내 방 비교 화면 연결
+                        pathStore.defectPath.append(.defect(.comparisonSelect))
                     } label: {
                         Circle()
                             .fill(Color(red: 0.79, green: 0.87, blue: 0.92))
