@@ -51,4 +51,14 @@ final class ScanRepository: ScanRepositoryProtocol {
             throw RepositoryError.decodingError(detail: String(describing: error))
         }
     }
+
+    func cancelScan(scanId: Int) async throws {
+        let response = try await adapter.request(ScanTarget.cancelScan(scanId: scanId))
+        do {
+            let dto = try decoder.decode(APIResponse<EmptyResult>.self, from: response.data)
+            _ = try dto.unwrap()
+        } catch let error as DecodingError {
+            throw RepositoryError.decodingError(detail: String(describing: error))
+        }
+    }
 }

@@ -13,6 +13,7 @@ enum ScanTarget {
     case uploadScan(houseId: Int, fileURL: URL)
     case getScanStatus(scanId: Int)
     case getScanPreview(scanId: Int)
+    case cancelScan(scanId: Int)
 }
 
 extension ScanTarget: BaseTargetType {
@@ -24,12 +25,14 @@ extension ScanTarget: BaseTargetType {
             return "/scans/\(scanId)/status"
         case .getScanPreview(let scanId):
             return "/scans/\(scanId)/preview"
+        case .cancelScan(let scanId):
+            return "/scans/\(scanId)/cancel"
         }
     }
 
     var method: Moya.Method {
         switch self {
-        case .uploadScan:
+        case .uploadScan, .cancelScan:
             return .post
         case .getScanStatus, .getScanPreview:
             return .get
@@ -49,7 +52,7 @@ extension ScanTarget: BaseTargetType {
                 [formData],
                 urlParameters: ["house_id": houseId]
             )
-        case .getScanStatus, .getScanPreview:
+        case .getScanStatus, .getScanPreview, .cancelScan:
             return .requestPlain
         }
     }
