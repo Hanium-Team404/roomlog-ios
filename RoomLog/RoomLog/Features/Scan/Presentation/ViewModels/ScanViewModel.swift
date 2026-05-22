@@ -24,6 +24,10 @@ final class ScanViewModel: NSObject {
 
     private(set) var phase: Phase = .idle
     private(set) var recordingSeconds: Int = 0
+    private(set) var showDepthWarning: Bool = false
+    private var warningFrames: Int = 0
+    private var okFrames: Int = 0
+    private var totalFrameCount: Int = 0
     private var isPreview: Bool = false
 
     let session = ARSession()
@@ -149,6 +153,59 @@ final class ScanViewModel: NSObject {
 
 extension ScanViewModel: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        updateDepthWarning(frame: frame)
         encoder?.add(frame: frame)
+    }
+
+    private func updateDepthWarning(frame: ARFrame) {
+        totalFrameCount += 1
+        guard totalFrameCount > 60 else { return }
+
+        guard let depthMap = frame.sceneDepth?.depthMap else {
+            warningFrames += 1
+            okFrames = 0
+            if !showDepthWarning && warningFrames >= 10 {
+                showDepthWarning = true
+            }
+            return
+        }
+
+        let width = CVPixelBufferGetWidth(depthMap)
+        let height = CVPixelBufferGetHeight(depthMap)
+        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(depthMap) else { return }
+        let buffer = base.assumingMemoryBound(to: Float32.self)
+
+        let cx = width / 2, cy = height / 2
+        let range = width / 6
+        let step = 3
+
+        var samples: [Float] = []
+        for y in stride(from: cy - range, to: cy + range, by: step) {
+            for x in stride(from: cx - range, to: cx + range, by: step) {
+                let d = buffer[y * width + x]
+                if d > 0 && !d.isNaN && d < 10 {
+                    samples.append(d)
+                }
+            }
+        }
+        samples.sort()
+        let medianDepth = samples.isEmpty ? 0 : samples[samples.count / 2]
+        let isBad = medianDepth < 0.20
+
+        if isBad {
+            warningFrames += 1
+            okFrames = 0
+            if !showDepthWarning && warningFrames >= 10 {
+                showDepthWarning = true
+            }
+        } else {
+            okFrames += 1
+            warningFrames = 0
+            if showDepthWarning && okFrames >= 20 {
+                showDepthWarning = false
+            }
+        }
     }
 }

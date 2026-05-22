@@ -66,11 +66,26 @@ struct ScanView: View {
     // MARK: - Scan Phase
 
     private var scanPhase: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             ARViewContainer(session: viewModel.session)
                 .ignoresSafeArea()
 
+            if viewModel.showDepthWarning {
+                VStack(spacing: 8) {
+                    Image(systemName: "hand.raised.fill")
+                        .font(.title2)
+                    Text("조금 더 떨어져주세요")
+                        .font(.semibold, 15)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .glassEffect(.regular, in: .capsule)
+                .animation(.easeInOut(duration: 0.3), value: viewModel.showDepthWarning)
+            }
+
             VStack(spacing: 20) {
+                Spacer()
                 statusBadge
                 controls
             }
@@ -88,7 +103,10 @@ struct ScanView: View {
         case .recording:
             Label(recordingTimeString, systemImage: "record.circle.fill")
                 .foregroundStyle(.red)
-                .badgeStyle()
+                .font(.subheadline)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassEffect(.regular, in: .capsule)
         case .recorded:
             EmptyView()
         }
@@ -116,8 +134,9 @@ struct ScanView: View {
         } label: {
             Circle()
                 .fill(.red)
-                .frame(width: 72, height: 72)
-                .overlay(Circle().strokeBorder(.white, lineWidth: 4))
+                .frame(width: 52, height: 52)
+                .frame(width: 68, height: 68)
+                .glassEffect(.regular.interactive(), in: .circle)
         }
     }
 
@@ -125,26 +144,12 @@ struct ScanView: View {
         Button {
             viewModel.stopRecording()
         } label: {
-            ZStack {
-                Circle()
-                    .strokeBorder(.white, lineWidth: 4)
-                    .frame(width: 72, height: 72)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.red)
-                    .frame(width: 30, height: 30)
-            }
+            RoundedRectangle(cornerRadius: 6)
+                .fill(.red)
+                .frame(width: 32, height: 32)
+                .frame(width: 68, height: 68)
+                .glassEffect(.regular.interactive(), in: .circle)
         }
     }
 }
 
-// MARK: - View Extension
-
-private extension View {
-    func badgeStyle() -> some View {
-        self
-            .font(.subheadline)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: Capsule())
-    }
-}
