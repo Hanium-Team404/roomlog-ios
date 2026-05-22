@@ -12,7 +12,7 @@ import Foundation
 
 final class MockScanRepository: ScanRepositoryProtocol {
     func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
-        ScanResult(scanId: 1, status: "COMPLETED", fileURL: "", scanType: "")
+        ScanResult(scanId: 1, status: "COMPLETED", fileURL: "")
     }
 
     func getScanStatus(scanId: Int) async throws -> String {
@@ -77,9 +77,9 @@ extension DIContainer {
 
 enum PreviewSampleData {
     static let rooms: [RoomSummary] = [
-        RoomSummary(id: 1, name: "거실", thumbnailURL: nil, latestScan: LatestScan(scanId: 1, scanType: "IN"), recentScanDate: Date(), latestScanStatus: "COMPLETED"),
+        RoomSummary(id: 1, name: "거실", thumbnailURL: nil, latestScan: LatestScan(scanId: 1), recentScanDate: Date(), latestScanStatus: "COMPLETED"),
         RoomSummary(id: 2, name: "안방", thumbnailURL: nil, latestScan: nil, recentScanDate: Date().addingTimeInterval(-86400), latestScanStatus: nil),
-        RoomSummary(id: 3, name: "주방", thumbnailURL: nil, latestScan: LatestScan(scanId: 3, scanType: "OUT"), recentScanDate: Date().addingTimeInterval(-172800), latestScanStatus: "COMPLETED"),
+        RoomSummary(id: 3, name: "주방", thumbnailURL: nil, latestScan: LatestScan(scanId: 3), recentScanDate: Date().addingTimeInterval(-172800), latestScanStatus: "COMPLETED"),
     ]
 
     static let defects: [DefectReportDetail] = [

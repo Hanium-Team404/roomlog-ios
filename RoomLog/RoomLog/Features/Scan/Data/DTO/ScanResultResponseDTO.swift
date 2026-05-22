@@ -24,8 +24,7 @@ struct ScanResultResponseDTO: Codable {
         ScanResult(
             scanId: scanId,
             status: status,
-            fileURL: fileURL,
-            scanType: ""
+            fileURL: fileURL
         )
     }
 }
