@@ -49,7 +49,7 @@ private extension ComparisonResultView {
                         VStack(spacing: 2) {
                             Text(defect.type)
                                 .font(.semibold, 12)
-                            Text(String(format: "%.2f m2", defect.defectArea))
+                            Text(String(format: "%.2f m²", defect.defectArea))
                                 .font(.medium, 11)
                         }
                         .foregroundStyle(Color.neutral800)

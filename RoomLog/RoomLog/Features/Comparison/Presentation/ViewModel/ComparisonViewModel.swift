@@ -24,6 +24,7 @@ final class ComparisonViewModel {
 
     func fetchScans() async {
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
         do {
             scans = try await provider.makeGetComparisonScansUseCase().execute()
@@ -33,10 +34,10 @@ final class ComparisonViewModel {
     }
 
     var moveInScans: [ComparisonScan] {
-        scans.filter { $0.scanType == "IN" }
+        scans.filter { $0.scanType == .moveIn }
     }
 
     var moveOutScans: [ComparisonScan] {
-        scans.filter { $0.scanType == "OUT" }
+        scans.filter { $0.scanType == .moveOut }
     }
 }

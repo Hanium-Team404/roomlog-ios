@@ -10,11 +10,7 @@ import SwiftUI
 struct ComparisonSelectView: View {
     @Environment(\.di) var di
     @State private var viewModel: ComparisonViewModel
-    @State private var step: Step = .moveIn
-
-    enum Step {
-        case moveIn, moveOut
-    }
+    @State private var scanType: ScanType = .moveIn
 
     init(provider: ComparisonUseCaseProvider) {
         self._viewModel = .init(
@@ -47,8 +43,8 @@ struct ComparisonSelectView: View {
 private extension ComparisonSelectView {
     var stepIndicator: some View {
         HStack(spacing: 24) {
-            stepLabel(number: 1, title: "입주 방 선택", isActive: step == .moveIn)
-            stepLabel(number: 2, title: "퇴거 방 선택", isActive: step == .moveOut)
+            stepLabel(number: 1, title: "입주 방 선택", isActive: scanType == .moveIn)
+            stepLabel(number: 2, title: "퇴거 방 선택", isActive: scanType == .moveOut)
         }
     }
 
@@ -70,11 +66,11 @@ private extension ComparisonSelectView {
 
 private extension ComparisonSelectView {
     var currentScans: [ComparisonScan] {
-        step == .moveIn ? viewModel.moveInScans : viewModel.moveOutScans
+        scanType == .moveIn ? viewModel.moveInScans : viewModel.moveOutScans
     }
 
     var selectedScan: ComparisonScan? {
-        step == .moveIn ? viewModel.selectedMoveInScan : viewModel.selectedMoveOutScan
+        scanType == .moveIn ? viewModel.selectedMoveInScan : viewModel.selectedMoveOutScan
     }
 
     var scanList: some View {
@@ -86,7 +82,7 @@ private extension ComparisonSelectView {
                         isSelected: selectedScan?.id == scan.id
                     )
                     .onTapGesture {
-                        if step == .moveIn {
+                        if scanType == .moveIn {
                             viewModel.selectedMoveInScan = scan
                         } else {
                             viewModel.selectedMoveOutScan = scan
@@ -104,12 +100,12 @@ private extension ComparisonSelectView {
 private extension ComparisonSelectView {
     @ViewBuilder
     func bottomButton(pathStore: PathStore) -> some View {
-        let isEnabled = (step == .moveIn && viewModel.selectedMoveInScan != nil)
-            || (step == .moveOut && viewModel.selectedMoveOutScan != nil)
+        let isEnabled = (scanType == .moveIn && viewModel.selectedMoveInScan != nil)
+            || (scanType == .moveOut && viewModel.selectedMoveOutScan != nil)
 
         BottomCTAButton {
-            if step == .moveIn {
-                step = .moveOut
+            if scanType == .moveIn {
+                scanType = .moveOut
             } else if let moveIn = viewModel.selectedMoveInScan,
                       let moveOut = viewModel.selectedMoveOutScan {
                 pathStore.defectPath.append(
@@ -117,7 +113,7 @@ private extension ComparisonSelectView {
                 )
             }
         } label: {
-            Text(step == .moveIn ? "다음" : "방 비교하기")
+            Text(scanType == .moveIn ? "다음" : "방 비교하기")
                 .font(.semibold, 17)
         }
         .opacity(isEnabled ? 1 : 0.5)

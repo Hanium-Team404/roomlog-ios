@@ -12,5 +12,10 @@ struct ComparisonScan: Hashable, Identifiable {
     let roomName: String
     let scanDate: Date
     let thumbnailURL: String?
-    let scanType: String // "IN" or "OUT"
+    let scanType: ScanType // "IN" or "OUT"
+}
+
+public enum ScanType: String, Codable {
+    case moveIn = "IN"
+    case moveOut = "OUT"
 }
