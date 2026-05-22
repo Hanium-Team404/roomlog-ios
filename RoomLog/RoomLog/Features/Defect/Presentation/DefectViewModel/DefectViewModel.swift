@@ -34,9 +34,6 @@ final class DefectViewModel {
 
     // MARK: - Function
     func fetchReport() async {
-        phase = .loading
-
-        // 3D 이미지는 즉시 표시하기 위해 기본 정보 먼저 로드
         do {
             report = try await provider.makeGetDefectReportUseCase().execute(roomId: roomId)
             phase = .completed
@@ -48,6 +45,7 @@ final class DefectViewModel {
 
     /// 목데이터용: polling 시뮬레이션 (API 연동 시 실제 polling으로 교체)
     func startAnalysis() async {
+        guard phase != .polling, phase != .loading else { return }
         phase = .polling
 
         // 3D 이미지용 기본 report 먼저 로드
