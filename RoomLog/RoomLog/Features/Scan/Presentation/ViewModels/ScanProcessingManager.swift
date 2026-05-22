@@ -215,6 +215,7 @@ final class ScanProcessingManager {
         while !Task.isCancelled {
             attempts += 1
             if attempts > PollConfig.maxAttempts {
+                try? await scanRepository.cancelScan(scanId: scanId)
                 activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("처리 시간이 초과되었습니다"))
                 clearPendingScan()
                 return
