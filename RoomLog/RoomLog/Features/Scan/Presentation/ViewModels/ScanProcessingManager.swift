@@ -77,9 +77,16 @@ final class ScanProcessingManager {
     /// 진행 중인 스캔 취소
     @MainActor
     func cancel() {
+        let scanId = activeScan?.scanId ?? 0
         processingTask?.cancel()
         activeScan = nil
         clearPendingScan()
+
+        if scanId > 0 {
+            Task { [weak self] in
+                try? await self?.scanRepository?.cancelScan(scanId: scanId)
+            }
+        }
     }
 
     /// 완료된 스캔 소비 (저장 완료 후 호출)

@@ -22,6 +22,8 @@ final class MockScanRepository: ScanRepositoryProtocol {
     func getScanPreview(scanId: Int) async throws -> String {
         ""
     }
+
+    func cancelScan(scanId: Int) async throws {}
 }
 
 // MARK: - Mock HomeUseCaseProvider
