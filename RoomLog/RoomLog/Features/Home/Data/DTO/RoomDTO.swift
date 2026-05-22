@@ -64,15 +64,13 @@ struct RoomSummaryDTO: Codable {
 
 struct LatestScanDTO: Codable {
     let scanId: Int
-    let scanType: String
 
     enum CodingKeys: String, CodingKey {
         case scanId = "scan_id"
-        case scanType = "scan_type"
     }
 
     func toDomain() -> LatestScan {
-        LatestScan(scanId: scanId, scanType: scanType)
+        LatestScan(scanId: scanId)
     }
 }
 
@@ -99,12 +97,10 @@ struct CreateRoomResponseDTO: Codable {
 struct LinkedScanDTO: Codable {
     let scanId: Int
     let status: String
-    let scanType: String
 
     enum CodingKeys: String, CodingKey {
         case scanId = "scan_id"
         case status
-        case scanType = "scan_type"
     }
 }
 

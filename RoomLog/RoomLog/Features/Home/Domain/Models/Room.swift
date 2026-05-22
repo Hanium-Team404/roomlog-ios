@@ -20,7 +20,6 @@ struct RoomSummary: Identifiable {
 
 struct LatestScan {
     let scanId: Int
-    let scanType: String
 }
 
 // MARK: - Room Detail (상세 조회용)
