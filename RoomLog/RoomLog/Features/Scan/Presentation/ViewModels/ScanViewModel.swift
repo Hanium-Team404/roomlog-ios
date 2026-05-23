@@ -79,6 +79,15 @@ final class ScanViewModel: NSObject {
         guard !isPreview else { return }
         session.delegate = self
         session.run(configuration)
+        prepareEncoder()
+    }
+
+    private func prepareEncoder() {
+        do {
+            encoder = try DatasetEncoder(arConfiguration: configuration)
+        } catch {
+            print("ScanViewModel: 인코더 사전 준비 실패. \(error.localizedDescription)")
+        }
     }
 
     func tearDown() {
@@ -89,11 +98,8 @@ final class ScanViewModel: NSObject {
     // MARK: - Recording
 
     func startRecording() {
-        do {
-            encoder = try DatasetEncoder(arConfiguration: configuration)
-        } catch {
-            return
-        }
+        if encoder == nil { prepareEncoder() }
+        guard encoder != nil else { return }
         startIMU()
         recordingSeconds = 0
         recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -124,6 +130,7 @@ final class ScanViewModel: NSObject {
         recordingTimer = nil
         encoder = nil
         phase = .idle
+        prepareEncoder()
     }
 
     // MARK: - IMU
@@ -154,6 +161,7 @@ final class ScanViewModel: NSObject {
 extension ScanViewModel: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         updateDepthWarning(frame: frame)
+        guard phase == .recording else { return }
         encoder?.add(frame: frame)
     }
 

@@ -9,7 +9,7 @@ import Foundation
 
 struct ScanPreviewResponseDTO: Codable {
     let scanId: Int
-    let roomId: Int
+    let roomId: Int?
     let fileURL: String
     let createdAt: String
 
