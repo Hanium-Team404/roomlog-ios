@@ -26,6 +26,7 @@ final class HouseListViewModel {
     var selectedHouseId: Int?
     var showSetMainSuccess: Bool = false
     var showDeleteConfirm: Bool = false
+    var houseToEdit: House?
 
     // MARK: - Init
 
@@ -59,6 +60,19 @@ final class HouseListViewModel {
             showSetMainSuccess = true
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    func updateHouse(houseId: Int, name: String, address: String?) async throws {
+        let updated = try await provider.makeUpdateHouseUseCase().execute(
+            houseId: houseId, name: name, address: address
+        )
+        if let index = houses.firstIndex(where: { $0.houseId == houseId }) {
+            houses[index] = updated
+        }
+        if mainHouse?.houseId == houseId {
+            mainHouse = updated
         }
     }
 

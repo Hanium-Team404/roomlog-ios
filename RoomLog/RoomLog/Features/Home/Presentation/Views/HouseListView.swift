@@ -116,6 +116,11 @@ struct HouseListView: View {
         } message: {
             Text(Strings.deleteMessage)
         }
+        .sheet(item: $viewModel.houseToEdit) { house in
+            HouseSheet(house: house) { name, address in
+                try await viewModel.updateHouse(houseId: house.houseId, name: name, address: address)
+            }
+        }
         .overlay(alignment: .top) {
             if viewModel.showSetMainSuccess {
                 successToast
@@ -188,6 +193,10 @@ struct HouseListView: View {
 
             Spacer()
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.houseToEdit = house
+        }
     }
 
     // MARK: - Grid Item
@@ -236,6 +245,8 @@ struct HouseListView: View {
         .onTapGesture {
             if isEditing {
                 onSelect()
+            } else {
+                viewModel.houseToEdit = house
             }
         }
     }

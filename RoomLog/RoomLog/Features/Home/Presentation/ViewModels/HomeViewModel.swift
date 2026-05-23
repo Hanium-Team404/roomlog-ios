@@ -20,9 +20,7 @@ final class HomeViewModel {
     private(set) var mainHouse: House?
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
-    var showAddHouseAlert: Bool = false
-    var newHouseName: String = ""
-    var newHouseAddress: String = ""
+    var showCreateSheet: Bool = false
 
     // MARK: - Init
 
@@ -47,19 +45,8 @@ final class HomeViewModel {
     }
 
     @MainActor
-    func createHouse() async {
-        let name = newHouseName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let address = newHouseAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        guard !name.isEmpty, !address.isEmpty else { return }
-        
-        do {
-            let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: address)
-            houses.append(house)
-            newHouseName = ""
-            newHouseAddress = ""
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+    func createHouse(name: String, address: String?) async throws {
+        let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: address)
+        houses.append(house)
     }
 }

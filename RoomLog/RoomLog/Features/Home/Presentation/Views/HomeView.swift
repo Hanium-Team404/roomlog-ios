@@ -60,31 +60,18 @@ struct HomeView: View {
             
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    viewModel.showAddHouseAlert = true
+                    viewModel.showCreateSheet = true
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
         .tint(.accent)
-        .alert("새 집 추가", isPresented: $viewModel.showAddHouseAlert) {
-            TextField("예: 망고의 집", text: $viewModel.newHouseName)
-            
-            TextField("예: 서울시 강남구 테헤란로 123", text: $viewModel.newHouseAddress)
-            
-            Button("취소", role: .cancel) {
-                viewModel.newHouseName = ""
-                viewModel.newHouseAddress = ""
+        .sheet(isPresented: $viewModel.showCreateSheet) {
+            HouseSheet { name, address in
+                try await viewModel.createHouse(name: name, address: address)
+                homeState.hasHouses = !viewModel.houses.isEmpty
             }
-            Button("만들기") {
-                Task {
-                    await viewModel.createHouse()
-                    homeState.hasHouses = !viewModel.houses.isEmpty
-                }
-            }
-            .keyboardShortcut(.defaultAction)
-        } message: {
-            Text("주소는 수리 업체 추천에 사용돼요!\n집 이름과 간단한 주소를 입력해주세요.")
         }
     }
 

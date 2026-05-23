@@ -24,6 +24,7 @@ final class RoomDetailViewModel {
     private(set) var isLoading: Bool = false
     private(set) var isDownloading: Bool = false
     private(set) var errorMessage: String?
+    var showEditSheet: Bool = false
 
     let roomId: Int
 
@@ -79,6 +80,27 @@ final class RoomDetailViewModel {
         }
 
         isLoading = false
+    }
+
+    @MainActor
+    func updateRoom(name: String, moveInDate: Date, moveOutDate: Date?) async throws {
+        guard let detail = roomDetail else { return }
+        try await provider.makeUpdateRoomUseCase().execute(
+            roomId: roomId,
+            name: name,
+            moveInDate: moveInDate,
+            moveOutDate: moveOutDate
+        )
+        roomDetail = RoomDetail(
+            id: detail.id,
+            name: name,
+            moveInDate: moveInDate,
+            moveOutDate: moveOutDate,
+            thumbnailURL: detail.thumbnailURL,
+            fileURL: detail.fileURL,
+            createdAt: detail.createdAt,
+            latestScan: detail.latestScan
+        )
     }
 
     /// roomDetail.fileURL이 있으면 그대로, 없으면 latestScan으로 scan preview 조회
