@@ -64,17 +64,22 @@ struct ScanPreviewView: View {
         }
         .navigationTitle("3D 미리보기")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("다시 스캔") {
+                Button {
                     showRescanAlert = true
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
                 }
                 .disabled(isSaving)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("저장하기") {
+                Button {
                     roomName = ""
                     showSaveAlert = true
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
                 }
                 .disabled(isSaving)
             }

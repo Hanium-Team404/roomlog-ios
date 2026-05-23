@@ -248,6 +248,15 @@ struct RoomListView: View {
             .sheet(isPresented: $showProcessingStatus) {
                 scanStatusSheet(active: active)
             }
+        } else if processingManager.activeScan != nil {
+            BottomCTAButton { } label: {
+                HStack(spacing: 8) {
+                    Image(.scan)
+                    Text("다른 집에서 스캔 진행 중")
+                        .font(.semibold, 16)
+                }
+            }
+            .disabled(true)
         } else {
             BottomCTAButton {
                 pathStore.homePath.append(.home(.scan(houseId: viewModel.houseId)))
