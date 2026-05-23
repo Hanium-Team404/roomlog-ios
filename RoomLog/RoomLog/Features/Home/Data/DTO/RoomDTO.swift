@@ -46,7 +46,7 @@ struct RoomSummaryDTO: Codable {
         case name
         case fileURL = "file_url"
         case latestScan = "latest_scan"
-        case recentScanDate = "recent_scan_date"
+        case recentScanDate = "move_in_date"
         case latestScanStatus = "latest_scan_status"
     }
 
@@ -56,7 +56,7 @@ struct RoomSummaryDTO: Codable {
             name: name,
             thumbnailURL: fileURL,
             latestScan: latestScan?.toDomain(),
-            recentScanDate: recentScanDate.flatMap { Date.fromServerDateTime($0) },
+            recentScanDate: recentScanDate.flatMap { Date.fromServerDate($0) },
             latestScanStatus: latestScanStatus
         )
     }
