@@ -42,6 +42,22 @@ struct RoomDetailView: View {
         }
         .navigationTitle(viewModel.roomDetail?.name ?? "방 상세")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.showEditSheet = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+            }
+        }
+        .sheet(isPresented: $viewModel.showEditSheet) {
+            if let detail = viewModel.roomDetail {
+                RoomEditSheet(roomDetail: detail) { name, moveInDate, moveOutDate in
+                    try await viewModel.updateRoom(name: name, moveInDate: moveInDate, moveOutDate: moveOutDate)
+                }
+            }
+        }
         .task { await viewModel.load() }
     }
 
