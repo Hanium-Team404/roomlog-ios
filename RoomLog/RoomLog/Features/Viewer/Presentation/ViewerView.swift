@@ -31,13 +31,51 @@ struct ViewerView: View {
                     .scaledToFit()
                     .frame(height: 28)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                houseDropdown
+            }
         }
         .onAppear {
             if viewModel == nil {
-                let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectRoomDataUseCase()
-                viewModel = ViewerViewModel(useCase: useCase)
+                viewModel = ViewerViewModel(
+                    defectProvider: di.resolve(DefectUseCaseProvider.self),
+                    homeProvider: di.resolve(HomeUseCaseProvider.self)
+                )
             }
-            Task { await viewModel?.fetchRooms() }
+            Task {
+                await viewModel?.fetchHouses()
+                await viewModel?.fetchRooms()
+            }
+        }
+    }
+}
+
+// MARK: - House Dropdown
+
+private extension ViewerView {
+    var houseDropdown: some View {
+        Menu {
+            ForEach(viewModel?.houses ?? []) { house in
+                Button {
+                    viewModel?.selectedHouse = house
+                    Task { await viewModel?.fetchRooms() }
+                } label: {
+                    HStack {
+                        Text(house.name)
+                        if viewModel?.selectedHouse?.id == house.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel?.selectedHouse != nil ? "\(viewModel!.selectedHouseDisplayName)의 집" : "집 선택")
+                    .font(.medium, 16)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(Color.neutral800)
         }
     }
 }
