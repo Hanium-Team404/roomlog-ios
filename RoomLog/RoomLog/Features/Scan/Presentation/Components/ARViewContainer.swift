@@ -70,7 +70,7 @@ struct ARViewContainer: UIViewRepresentable {
             let geometry = SCNGeometry(sources: [vertexSource], elements: [faceElement])
 
             let material = SCNMaterial()
-            material.diffuse.contents = UIColor.systemCyan.withAlphaComponent(0.9)
+            material.diffuse.contents = UIColor.accent
             material.isDoubleSided = true
             material.fillMode = .fill
             material.transparency = 0.6
