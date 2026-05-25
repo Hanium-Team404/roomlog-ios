@@ -120,6 +120,11 @@ final class ScanViewModel: NSObject {
 
     func startConversion() {
         guard let encoder else { return }
+
+        // 현재 세션의 mesh anchors를 encoder에 저장
+        let meshAnchors = session.currentFrame?.anchors.compactMap { $0 as? ARMeshAnchor } ?? []
+        encoder.saveMesh(anchors: meshAnchors)
+
         processingManager.startFullProcess(
             encoder: encoder,
             houseId: houseId
