@@ -8,6 +8,7 @@
 import Foundation
 
 @Observable
+@MainActor
 final class ViewerViewModel {
     private(set) var rooms: [DefectRoomData] = []
     private(set) var houses: [House] = []
@@ -26,7 +27,7 @@ final class ViewerViewModel {
         do {
             let houseList = try await homeProvider.makeGetHousesUseCase().execute()
             houses = houseList.houses
-            if selectedHouse == nil {
+            if selectedHouse == nil || !houseList.houses.contains(where: { $0.id == selectedHouse?.id }) {
                 selectedHouse = houseList.mainHouse ?? houseList.houses.first
             }
         } catch {
