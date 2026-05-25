@@ -27,7 +27,10 @@ final class ViewerViewModel {
         do {
             let houseList = try await homeProvider.makeGetHousesUseCase().execute()
             houses = houseList.houses
-            if selectedHouse == nil || !houseList.houses.contains(where: { $0.id == selectedHouse?.id }) {
+            if let currentId = selectedHouse?.id,
+               let refreshed = houseList.houses.first(where: { $0.id == currentId }) {
+                selectedHouse = refreshed
+            } else {
                 selectedHouse = houseList.mainHouse ?? houseList.houses.first
             }
         } catch {
