@@ -43,7 +43,10 @@ final class ViewerViewModel {
     }
 
     func fetchRooms() async {
-        guard let houseId = selectedHouse?.id else { return }
+        guard let houseId = selectedHouse?.id else {
+            rooms = []
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {
