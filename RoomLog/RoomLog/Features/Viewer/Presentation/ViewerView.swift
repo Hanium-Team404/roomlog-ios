@@ -38,8 +38,8 @@ struct ViewerView: View {
         .onAppear {
             if viewModel == nil {
                 viewModel = ViewerViewModel(
-                    defectProvider: di.resolve(DefectUseCaseProvider.self),
-                    homeProvider: di.resolve(HomeUseCaseProvider.self)
+                    homeProvider: di.resolve(HomeUseCaseProvider.self),
+                    homeState: di.resolve(HomeState.self)
                 )
             }
             Task {
@@ -70,7 +70,7 @@ private extension ViewerView {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(viewModel?.selectedHouse != nil ? "\(viewModel!.selectedHouseDisplayName)의 집" : "집 선택")
+                Text(viewModel?.selectedHouse != nil ? "\(viewModel!.selectedHouseDisplayName)" : "집 선택")
                     .font(.medium, 16)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 10, weight: .medium))
@@ -214,23 +214,17 @@ private extension ViewerView {
 // MARK: - 최근 점검 Row
 
 private struct RecentRoomRow: View {
-    let room: DefectRoomData
+    let room: RoomSummary
     let onTap: () -> Void
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy.MM.dd"
-        return f
-    }()
 
     var body: some View {
         HStack(spacing: 16) {
             thumbnailView
             VStack(alignment: .leading, spacing: 16) {
-                Text(room.title)
+                Text(room.name)
                     .font(.semibold, 16)
                     .foregroundStyle(Color.neutral800)
-                Text(Self.dateFormatter.string(from: room.date))
+                Text(room.recentScanDate?.toShortDisplayString() ?? "-")
                     .font(.medium, 14)
                     .foregroundStyle(Color.blueGray300)
             }
@@ -259,10 +253,10 @@ private struct RecentRoomRow: View {
     }
 
     private var placeholder: some View {
-        Color(.systemGray5)
+        Color.blueGray50
             .overlay {
                 Image(systemName: "house.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.blueGray300)
             }
     }
 }
