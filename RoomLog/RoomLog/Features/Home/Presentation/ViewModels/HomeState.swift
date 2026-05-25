@@ -11,4 +11,5 @@ import Observation
 @Observable
 final class HomeState {
     var hasHouses: Bool = false
+    var selectedHouse: House?
 }

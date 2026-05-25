@@ -28,6 +28,7 @@ struct HomeView: View {
 
     var body: some View {
         HouseMapView(houses: viewModel.houses, mainHouseId: viewModel.mainHouse?.houseId, namespace: houseNamespace) { house in
+            homeState.selectedHouse = house
             pathStore.homePath.append(.home(.roomList(houseId: house.houseId, houseName: house.name)))
         }
         .navigationDestination(for: NavigationDestination.self) { dest in

@@ -10,17 +10,21 @@ import Foundation
 @Observable
 @MainActor
 final class ViewerViewModel {
-    private(set) var rooms: [DefectRoomData] = []
+    private(set) var rooms: [RoomSummary] = []
     private(set) var houses: [House] = []
     private(set) var isLoading = false
-    var selectedHouse: House?
 
-    private let defectProvider: DefectUseCaseProvider
     private let homeProvider: HomeUseCaseProvider
+    private let homeState: HomeState
 
-    init(defectProvider: DefectUseCaseProvider, homeProvider: HomeUseCaseProvider) {
-        self.defectProvider = defectProvider
+    init(homeProvider: HomeUseCaseProvider, homeState: HomeState) {
         self.homeProvider = homeProvider
+        self.homeState = homeState
+    }
+
+    var selectedHouse: House? {
+        get { homeState.selectedHouse }
+        set { homeState.selectedHouse = newValue }
     }
 
     func fetchHouses() async {
@@ -39,10 +43,15 @@ final class ViewerViewModel {
     }
 
     func fetchRooms() async {
+        guard let houseId = selectedHouse?.id else {
+            rooms = []
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {
-            rooms = try await defectProvider.makeGetDefectRoomDataUseCase().execute()
+            let houseRooms = try await homeProvider.makeGetHouseRoomsUseCase().execute(houseId: houseId)
+            rooms = houseRooms.rooms
         } catch {
             // TODO: 에러 처리
         }
