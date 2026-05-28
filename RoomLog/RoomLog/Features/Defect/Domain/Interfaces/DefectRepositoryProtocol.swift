@@ -15,4 +15,10 @@ protocol DefectRepositoryProtocol {
 
     /// 하자 상세 조회
     func getDefectReportDetail(roomId: Int) async throws -> DefectReportDetail
+
+    /// 분석 생성 (단일 방 or 두 방 비교) — (analysisId, status)
+    func requestAnalysis(inRoomId: Int, outRoomId: Int?) async throws -> (analysisId: Int, status: String)
+
+    /// 분석 상태 조회
+    func getAnalysisStatus(analysisId: Int) async throws -> String
 }
