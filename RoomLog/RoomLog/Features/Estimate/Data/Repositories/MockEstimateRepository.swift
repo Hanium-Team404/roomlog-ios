@@ -28,4 +28,34 @@ final class MockEstimateRepository: EstimateRepositoryProtocol {
     func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws {}
 
     func createEstimate(message: String, roomId: Int, analysisId: Int?, defectIds: [Int], provider: RepairShop) async throws {}
+
+    func previewEstimate(message: String, analysisId: Int, providerExternalId: String) async throws -> EstimatePreview {
+        EstimatePreview(
+            providerName: "프로 인테리어",
+            providerPhone: "010-1234-5678",
+            providerAddress: "서울시 강남구 테헤란로 123",
+            providerExternalId: providerExternalId,
+            defects: [
+                EstimatePreviewDefect(defectId: 1, type: .crack, location: "거실 벽", severity: .high, estimatedCost: 75000)
+            ],
+            defectCount: 1,
+            totalCost: 75000,
+            analysisId: analysisId,
+            roomId: 1,
+            messagePreview: message
+        )
+    }
+
+    func getEstimateDetail(estimateId: Int) async throws -> EstimateDetail {
+        EstimateDetail(
+            id: estimateId,
+            status: .sent,
+            message: "균열 수리 문의",
+            defectIds: [1],
+            providerName: "홈케어 닥터스",
+            providerPhone: "010-1234-5678",
+            providerAddress: "서울시 강남구 테헤란로 123",
+            createdAt: Date()
+        )
+    }
 }

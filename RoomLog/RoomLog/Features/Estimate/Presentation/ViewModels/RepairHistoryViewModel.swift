@@ -13,6 +13,8 @@ final class RepairHistoryViewModel {
     // MARK: - State
     private(set) var estimates: [Estimate] = []
     private(set) var isLoading = false
+    private(set) var selectedDetail: EstimateDetail?
+    private(set) var isLoadingDetail = false
     var errorMessage: String?
     var showSuccessToast = false
 
@@ -34,6 +36,20 @@ final class RepairHistoryViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func fetchEstimateDetail(estimateId: Int) async {
+        isLoadingDetail = true
+        defer { isLoadingDetail = false }
+        do {
+            selectedDetail = try await provider.makeGetEstimateDetailUseCase().execute(estimateId: estimateId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func clearDetail() {
+        selectedDetail = nil
     }
 
     func completeRepair(estimateId: Int, repairCost: Int, note: String?) async {

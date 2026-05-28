@@ -120,7 +120,7 @@ struct EstimateItemDTO: Codable {
         )
     }
 
-    private static func parseDate(_ string: String) -> Date? {
+    static func parseDate(_ string: String) -> Date? {
         guard string.contains(".") else {
             return Date.fromServerDateTime(string)
         }
@@ -148,7 +148,7 @@ struct EstimateDefectDTO: Codable {
     let type: String
     let location: String
     let severity: String
-    let area: Int?
+    let area: Double?
     let estimatedCost: Int?
     let description: String?
 
@@ -170,6 +170,142 @@ struct EstimateDefectDTO: Codable {
             estimatedCost: estimatedCost,
             description: description
         )
+    }
+}
+
+// MARK: - Estimate Preview
+
+struct EstimatePreviewRequestDTO: Encodable {
+    let message: String
+    let analysisId: Int
+    let providerExternalId: String
+
+    enum CodingKeys: String, CodingKey {
+        case message
+        case analysisId = "analysis_id"
+        case providerExternalId = "provider_external_id"
+    }
+}
+
+struct EstimatePreviewResponseDTO: Codable {
+    let provider: PreviewProviderDTO
+    let defects: [PreviewDefectDTO]
+    let summary: PreviewSummaryDTO
+    let analysisId: Int
+    let roomId: Int
+    let messagePreview: String
+
+    enum CodingKeys: String, CodingKey {
+        case provider, defects, summary
+        case analysisId = "analysis_id"
+        case roomId = "room_id"
+        case messagePreview = "message_preview"
+    }
+
+    func toDomain() -> EstimatePreview {
+        EstimatePreview(
+            providerName: provider.providerName,
+            providerPhone: provider.providerPhone,
+            providerAddress: provider.providerAddress,
+            providerExternalId: provider.providerExternalId,
+            defects: defects.map { $0.toDomain() },
+            defectCount: summary.defectCount,
+            totalCost: summary.totalCost,
+            analysisId: analysisId,
+            roomId: roomId,
+            messagePreview: messagePreview
+        )
+    }
+}
+
+struct PreviewProviderDTO: Codable {
+    let providerExternalId: String
+    let providerName: String
+    let providerPhone: String
+    let providerAddress: String
+
+    enum CodingKeys: String, CodingKey {
+        case providerExternalId = "provider_external_id"
+        case providerName = "provider_name"
+        case providerPhone = "provider_phone"
+        case providerAddress = "provider_address"
+    }
+}
+
+struct PreviewDefectDTO: Codable {
+    let type: String
+    let location: String
+    let severity: String
+    let defectId: Int
+    let estimatedCost: Int
+
+    enum CodingKeys: String, CodingKey {
+        case type, location, severity
+        case defectId = "defect_id"
+        case estimatedCost = "estimated_cost"
+    }
+
+    func toDomain() -> EstimatePreviewDefect {
+        EstimatePreviewDefect(
+            defectId: defectId,
+            type: DefectType(rawString: type),
+            location: location,
+            severity: Severity(rawString: severity),
+            estimatedCost: estimatedCost
+        )
+    }
+}
+
+struct PreviewSummaryDTO: Codable {
+    let defectCount: Int
+    let totalCost: Int
+
+    enum CodingKeys: String, CodingKey {
+        case defectCount = "defect_count"
+        case totalCost = "total_cost"
+    }
+}
+
+// MARK: - Estimate Detail
+
+struct EstimateDetailResponseDTO: Codable {
+    let status: String
+    let message: String?
+    let defects: [EstimateDetailDefectDTO]
+    let estimateId: Int
+    let providerName: String
+    let providerPhone: String?
+    let providerAddress: String?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case status, message, defects
+        case estimateId = "estimate_id"
+        case providerName = "provider_name"
+        case providerPhone = "provider_phone"
+        case providerAddress = "provider_address"
+        case createdAt = "created_at"
+    }
+
+    func toDomain() -> EstimateDetail {
+        EstimateDetail(
+            id: estimateId,
+            status: EstimateStatus(rawString: status),
+            message: message,
+            defectIds: defects.map(\.defectId),
+            providerName: providerName,
+            providerPhone: providerPhone,
+            providerAddress: providerAddress,
+            createdAt: EstimateItemDTO.parseDate(createdAt)
+        )
+    }
+}
+
+struct EstimateDetailDefectDTO: Codable {
+    let defectId: Int
+
+    enum CodingKeys: String, CodingKey {
+        case defectId = "defect_id"
     }
 }
 

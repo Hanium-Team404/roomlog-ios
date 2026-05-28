@@ -12,8 +12,10 @@ internal import Alamofire
 enum EstimateTarget {
     case getRepairShops(analysisId: Int, type: String?, radius: String?, sort: String?)
     case getRepairShopsByRoom(roomId: Int, type: String?, radius: String?, sort: String?)
+    case previewEstimate(request: EstimatePreviewRequestDTO)
     case createEstimate(request: CreateEstimateRequestDTO)
     case getEstimates(roomId: Int)
+    case getEstimateDetail(estimateId: Int)
     case completeRepair(estimateId: Int, request: CompleteRepairRequestDTO)
 }
 
@@ -24,8 +26,12 @@ extension EstimateTarget: BaseTargetType {
             return "/analyses/\(analysisId)/repair-shops"
         case .getRepairShopsByRoom(let roomId, _, _, _):
             return "/rooms/\(roomId)/repair-shops"
+        case .previewEstimate:
+            return "/estimates/preview"
         case .createEstimate, .getEstimates:
             return "/estimates"
+        case .getEstimateDetail(let estimateId):
+            return "/estimates/\(estimateId)"
         case .completeRepair(let estimateId, _):
             return "/estimates/\(estimateId)/repairs"
         }
@@ -33,9 +39,9 @@ extension EstimateTarget: BaseTargetType {
 
     var method: Moya.Method {
         switch self {
-        case .getRepairShops, .getRepairShopsByRoom, .getEstimates:
+        case .getRepairShops, .getRepairShopsByRoom, .getEstimates, .getEstimateDetail:
             return .get
-        case .createEstimate, .completeRepair:
+        case .previewEstimate, .createEstimate, .completeRepair:
             return .post
         }
     }
@@ -49,10 +55,14 @@ extension EstimateTarget: BaseTargetType {
             if let radius { params["radius"] = radius }
             if let sort { params["sort"] = sort }
             return params.isEmpty ? .requestPlain : .requestParameters(parameters: params, encoding: URLEncoding.queryString)
+        case .previewEstimate(let request):
+            return .requestJSONEncodable(request)
         case .createEstimate(let request):
             return .requestJSONEncodable(request)
         case .getEstimates(let roomId):
             return .requestParameters(parameters: ["roomId": roomId], encoding: URLEncoding.queryString)
+        case .getEstimateDetail:
+            return .requestPlain
         case .completeRepair(_, let request):
             return .requestJSONEncodable(request)
         }

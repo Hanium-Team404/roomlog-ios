@@ -25,6 +25,8 @@ final class RepairShopListViewModel {
     var showConfirmation = false
     var showSMSComposer = false
     private(set) var composedMessage = ""
+    private(set) var preview: EstimatePreview?
+    private(set) var isLoadingPreview = false
 
     // MARK: - Context
     let roomId: Int
@@ -41,12 +43,12 @@ final class RepairShopListViewModel {
 
     // MARK: - Derived
 
-    var messageTitle: String { defect.type }
+    var messageTitle: String { defect.type.displayName }
 
     var messageBody: String {
         let cost = Self.costFormatter.string(from: NSNumber(value: defect.repairCost)) ?? "\(defect.repairCost)"
         let area = String(format: "%.2f", defect.defectArea)
-        return "\(defect.location) \(defect.type) (\(area)m²) 으로 인해 예상 비용인 \(cost)원 정도로 수리가 가능할지 문의 남깁니다."
+        return "\(defect.location) \(defect.type.displayName) (\(area)m²) 으로 인해 예상 비용인 \(cost)원 정도로 수리가 가능할지 문의 남깁니다."
     }
 
     private static let costFormatter: NumberFormatter = {
@@ -60,9 +62,9 @@ final class RepairShopListViewModel {
     func fetchShops() async {
         isLoading = true
         defer { isLoading = false }
-        print("[Estimate] fetchShops start — roomId=\(roomId), type=\(defect.type)")
+        print("[Estimate] fetchShops start — roomId=\(roomId)")
         do {
-            let result = try await provider.makeGetRepairShopsByRoomUseCase().execute(roomId: roomId, type: defect.type)
+            let result = try await provider.makeGetRepairShopsByRoomUseCase().execute(roomId: roomId)
             shops = result.shops
             analysisId = result.analysisId
             print("[Estimate] fetchShops OK — count=\(result.shops.count), analysisId=\(String(describing: result.analysisId))")
@@ -76,10 +78,23 @@ final class RepairShopListViewModel {
         selectedShop = selectedShop?.id == shop.id ? nil : shop
     }
 
-    func requestInquiry() {
-        guard selectedShop != nil else { return }
-        composedMessage = "\(messageTitle)\n\n\(messageBody)"
-        showConfirmation = true
+    func requestInquiry() async {
+        guard let shop = selectedShop, let analysisId else { return }
+        isLoadingPreview = true
+        defer { isLoadingPreview = false }
+        do {
+            let message = "\(messageTitle)\n\n\(messageBody)"
+            let result = try await provider.makePreviewEstimateUseCase().execute(
+                message: message,
+                analysisId: analysisId,
+                providerExternalId: shop.externalId
+            )
+            preview = result
+            composedMessage = result.messagePreview
+            showConfirmation = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func confirmSend() async {
