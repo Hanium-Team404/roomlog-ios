@@ -9,73 +9,58 @@ import SwiftUI
 
 struct DefectListView: View {
     @Environment(\.di) var di
-    @State private var viewModel: DefectListViewModel?
+    @State private var viewModel: DefectListViewModel
+
+    init(houseId: Int, homeProvider: HomeUseCaseProvider) {
+        self._viewModel = .init(
+            wrappedValue: DefectListViewModel(houseId: houseId, homeProvider: homeProvider)
+        )
+    }
 
     var body: some View {
         Group {
-            if let viewModel {
-                content(viewModel: viewModel)
-            } else {
+            if viewModel.isLoading && viewModel.items.isEmpty {
                 ProgressView()
+            } else if viewModel.items.isEmpty {
+                ContentUnavailableView("하자 점검 내역이 없습니다", systemImage: "magnifyingglass")
+            } else {
+                let pathStore = di.resolve(PathStore.self)
+                List(viewModel.items, id: \.id) { item in
+                    DefectListRow(item: item) {
+                        pathStore.defectPath.append(.defect(.defectListMain(roomId: item.id)))
+                    }
+                }
+                .listStyle(.plain)
             }
         }
         .navigationTitle("하자 점검")
         .navigationBarTitleDisplayMode(.large)
-        .onAppear {
-            if viewModel == nil {
-                let useCase = di.resolve(DefectUseCaseProvider.self).makeGetDefectRoomDataUseCase()
-                viewModel = DefectListViewModel(useCase: useCase)
-            }
-            Task { await viewModel?.fetchItems() }
-        }
-    }
-
-    @ViewBuilder
-    private func content(viewModel: DefectListViewModel) -> some View {
-        if viewModel.isLoading && viewModel.items.isEmpty {
-            ProgressView()
-        } else if viewModel.items.isEmpty {
-            ContentUnavailableView("하자 점검 내역이 없습니다", systemImage: "magnifyingglass")
-        } else {
-            let pathStore = di.resolve(PathStore.self)
-            List(viewModel.items, id: \.id) { item in
-                DefectListRow(item: item) {
-                    pathStore.defectPath.append(.defect(.defectListMain(roomId: item.id)))
-                }
-            }
-            .listStyle(.plain)
+        .task {
+            await viewModel.fetchItems()
         }
     }
 }
 
-#Preview {
-    NavigationStack {
-        DefectListView()
-    }
-    .environment(\.di, DIContainer.configured())
-}
-
-// MARK: - 하자 List들
+// MARK: - 하자 List Row
 
 private struct DefectListRow: View {
-    let item: DefectRoomData
+    let item: RoomSummary
     let onTap: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             thumbnailView
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.body)
-                    .fontWeight(.medium)
-                    .lineLimit(2)
-                Text(item.date.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(item.name)
+                    .font(.semibold, 16)
+                    .foregroundStyle(Color.neutral800)
+                Text(item.recentScanDate?.toShortDisplayString() ?? "-")
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.blueGray300)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.blueGray300)
                 .font(.caption)
         }
         .padding(.vertical, 4)
@@ -83,14 +68,36 @@ private struct DefectListRow: View {
         .onTapGesture { onTap() }
     }
 
-    @ViewBuilder
     private var thumbnailView: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(Color(.systemGray5))
-            .frame(width: 60, height: 60)
+        Group {
+            if let urlString = item.thumbnailURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: 60, height: 60)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var placeholder: some View {
+        Color.blueGray50
             .overlay {
                 Image(systemName: "house.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.blueGray300)
             }
     }
+}
+
+#Preview {
+    NavigationStack {
+        DefectListView(houseId: 1, homeProvider: DIContainer.configured().resolve(HomeUseCaseProvider.self))
+    }
+    .environment(\.di, DIContainer.configured())
 }

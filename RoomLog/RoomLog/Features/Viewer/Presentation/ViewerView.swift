@@ -105,7 +105,9 @@ private extension ViewerView {
                         .foregroundStyle(Color.cloudDancer)
                         .lineSpacing(6)
                     Button {
-                        pathStore.defectPath.append(.defect(.defectList))
+                        if let houseId = viewModel?.selectedHouse?.id {
+                            pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                        }
                     } label: {
                         Circle()
                             .fill(.white)
@@ -169,7 +171,9 @@ private extension ViewerView {
                     .foregroundStyle(Color.neutral800)
                 Spacer()
                 Button {
-                    pathStore.defectPath.append(.defect(.defectList))
+                    if let houseId = viewModel?.selectedHouse?.id {
+                        pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Text("전체보기")

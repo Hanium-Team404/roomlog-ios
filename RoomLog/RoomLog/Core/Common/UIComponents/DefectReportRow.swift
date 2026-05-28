@@ -13,7 +13,7 @@ struct DefectReportRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Text(defect.type)
+                Text(defect.type.displayName)
                     .font(.semibold, 16)
                     .foregroundStyle(Color.neutral800)
                 SeverityBadge(severity: defect.severity)
