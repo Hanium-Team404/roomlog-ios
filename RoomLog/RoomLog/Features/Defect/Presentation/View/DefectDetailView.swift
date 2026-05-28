@@ -35,7 +35,7 @@ struct DefectDetailView: View {
         .safeAreaInset(edge: .bottom) {
             bottomButton
         }
-        .navigationTitle(defect.type)
+        .navigationTitle(defect.type.displayName)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
