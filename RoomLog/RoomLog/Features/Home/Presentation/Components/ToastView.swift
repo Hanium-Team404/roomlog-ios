@@ -26,3 +26,18 @@ struct ToastView<Label: View>: View {
         .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
     }
 }
+
+#Preview {
+    ToastView {
+        HStack(spacing: 0) {
+            Text("집을 추가한 뒤 ").foregroundStyle(.neutral600)
+            Text("Viewer").foregroundStyle(.dustyBlue)
+            Text("를 사용하실 수 있습니다").foregroundStyle(.neutral600)
+        }
+        .font(.medium, 14)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+    .padding(.horizontal, 24)
+}
+
