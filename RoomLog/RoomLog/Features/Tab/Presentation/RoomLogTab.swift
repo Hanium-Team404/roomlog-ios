@@ -56,26 +56,27 @@ struct RoomLogTab: View {
         .overlay(alignment: .top) {
             if showViewerLockedToast {
                 ToastView {
-                        Group {
-                            Text("집을 추가한 뒤 ")
-                                .foregroundStyle(.neutral600)
-                            Text("Viewer")
-                                .foregroundStyle(.dustyBlue)
-                            Text("를 사용하실 수 있습니다")
-                                .foregroundStyle(.neutral600)
-                        }
-                        .font(.medium, 14)
+                    HStack(spacing: 0) {
+                        Text("집을 추가한 뒤 ")
+                            .foregroundStyle(.neutral600)
+                        Text("Viewer")
+                            .foregroundStyle(.dustyBlue)
+                        Text("를 사용하실 수 있습니다")
+                            .foregroundStyle(.neutral600)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 60)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation {
-                                showViewerLockedToast = false
-                            }
-                        }
+                    .font(.medium, 14)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .padding(.horizontal, 24)
+                .safeAreaPadding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .task {
+                    try? await Task.sleep(for: .seconds(2.5))
+                    withAnimation {
+                        showViewerLockedToast = false
                     }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showViewerLockedToast)
