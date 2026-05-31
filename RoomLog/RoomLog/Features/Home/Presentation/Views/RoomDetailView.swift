@@ -27,7 +27,7 @@ struct RoomDetailView: View {
 
     var body: some View {
         ZStack {
-            if viewModel.isLoading && viewModel.roomDetail == nil {
+            if viewModel.isLoading {
                 ProgressView("방 정보를 불러오는 중...")
             } else if let errorMessage = viewModel.errorMessage {
                 errorView(message: errorMessage)
