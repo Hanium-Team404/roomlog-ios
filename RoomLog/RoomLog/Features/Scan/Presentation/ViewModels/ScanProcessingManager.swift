@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import ZIPFoundation
 
 @Observable
@@ -43,6 +44,7 @@ final class ScanProcessingManager {
     private var scanRepository: ScanRepositoryProtocol?
     private let fileCache = PLYFileCache.shared
     private var processingTask: Task<Void, Never>?
+    private var isInBackground = false
 
     // MARK: - Setup
 
@@ -118,6 +120,12 @@ final class ScanProcessingManager {
         default:
             return false
         }
+    }
+
+    /// 앱 lifecycle 전환 시 호출
+    @MainActor
+    func handleScenePhase(_ phase: ScenePhase) {
+        isInBackground = (phase != .active)
     }
 
     #if DEBUG
@@ -213,6 +221,12 @@ final class ScanProcessingManager {
         var attempts = 0
         var consecutiveErrors = 0
         while !Task.isCancelled {
+            // 백그라운드 상태에서는 API 호출을 건너뛰고 대기만 한다
+            if isInBackground {
+                try? await Task.sleep(for: .seconds(PollConfig.intervalSeconds))
+                continue
+            }
+
             attempts += 1
             if attempts > PollConfig.maxAttempts {
                 try? await scanRepository.cancelScan(scanId: scanId)

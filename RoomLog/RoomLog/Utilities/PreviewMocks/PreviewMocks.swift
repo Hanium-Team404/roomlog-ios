@@ -12,7 +12,7 @@ import Foundation
 
 final class MockScanRepository: ScanRepositoryProtocol {
     func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
-        ScanResult(scanId: 1, status: "COMPLETED", fileURL: "")
+        ScanResult(scanId: 1, status: "COMPLETED")
     }
 
     func getScanStatus(scanId: Int) async throws -> String {

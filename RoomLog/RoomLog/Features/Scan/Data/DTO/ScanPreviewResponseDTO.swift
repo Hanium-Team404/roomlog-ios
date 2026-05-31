@@ -16,7 +16,7 @@ struct ScanPreviewResponseDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case scanId = "scan_id"
         case roomId = "room_id"
-        case fileURL = "file_url"
+        case fileURL = "ply_url"
         case createdAt = "created_at"
     }
 }
