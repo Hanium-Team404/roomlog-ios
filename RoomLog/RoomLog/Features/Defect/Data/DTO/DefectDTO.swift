@@ -34,7 +34,7 @@ struct DefectReportResponseDTO: Codable {
 
     enum CodingKeys: String, CodingKey {
         case name, defects
-        case fileUrl = "file_url"
+        case fileUrl = "ply_url"
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
         case defectCount = "defect_count"
@@ -96,6 +96,7 @@ struct DefectDetailDTO: Codable {
     let defectId: Int
     let analysisId: Int
     let estimatedCost: Int
+    let imageUrl: String?
     let region3d: [Region3dDTO]?
 
     enum CodingKeys: String, CodingKey {
@@ -103,14 +104,16 @@ struct DefectDetailDTO: Codable {
         case defectId = "defect_id"
         case analysisId = "analysis_id"
         case estimatedCost = "estimated_cost"
+        case imageUrl = "image_url"
         case region3d = "region_3d"
     }
 
     func toDomain() -> DefectReportDetail {
         let firstPoint = region3d?.first
+        let points = region3d?.map { DefectPoint3D(x: $0.x, y: $0.y, z: $0.z) } ?? []
         return DefectReportDetail(
             id: defectId,
-            imageURL: nil,
+            imageURL: imageUrl,
             type: DefectType(rawString: type),
             severity: Severity(rawString: severity),
             description: description,
@@ -121,7 +124,8 @@ struct DefectDetailDTO: Codable {
             memo: nil,
             x: firstPoint?.x,
             y: firstPoint?.y,
-            z: firstPoint?.z
+            z: firstPoint?.z,
+            region3d: points
         )
     }
 }

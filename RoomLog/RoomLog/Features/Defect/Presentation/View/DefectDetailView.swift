@@ -45,7 +45,8 @@ struct DefectDetailView: View {
 private extension DefectDetailView {
     var roomImageView: some View {
         Group {
-            if let urlString = roomImageURL, let url = URL(string: urlString) {
+            if let urlString = defect.imageURL ?? roomImageURL,
+               let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
@@ -58,7 +59,7 @@ private extension DefectDetailView {
                 imagePlaceholder
             }
         }
-        .frame(height: 262)
+        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
