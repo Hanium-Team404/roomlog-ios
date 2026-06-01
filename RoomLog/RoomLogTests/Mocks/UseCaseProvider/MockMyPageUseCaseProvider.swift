@@ -10,6 +10,10 @@ import Foundation
 
 final class MockMyPageUseCaseProvider: MyPageUseCaseProvider {
 
+    // MARK: - Call Tracking
+
+    var updateUserCallCount = 0
+
     // MARK: - Stub Results
 
     var getUserResult: Result<User, Error> = .success(
@@ -24,7 +28,7 @@ final class MockMyPageUseCaseProvider: MyPageUseCaseProvider {
         StubGetUserUseCase(result: getUserResult)
     }
     func makeUpdateUserUseCase() -> UpdateUserUseCaseProtocol {
-        StubUpdateUserUseCase(result: updateUserResult)
+        StubUpdateUserUseCase(result: updateUserResult, onExecute: { self.updateUserCallCount += 1 })
     }
     func makeDeleteUserUseCase() -> DeleteUserUseCaseProtocol {
         StubDeleteUserUseCase(result: deleteUserResult)
@@ -40,7 +44,11 @@ private struct StubGetUserUseCase: GetUserUseCaseProtocol {
 
 private struct StubUpdateUserUseCase: UpdateUserUseCaseProtocol {
     let result: Result<Void, Error>
-    func execute(nickname: String) async throws { try result.get() }
+    let onExecute: () -> Void
+    func execute(nickname: String) async throws {
+        onExecute()
+        try result.get()
+    }
 }
 
 private struct StubDeleteUserUseCase: DeleteUserUseCaseProtocol {

@@ -64,6 +64,7 @@ final class MyPageViewModelTests: XCTestCase {
         await sut.updateNickname()
 
         XCTAssertNil(sut.user)
+        XCTAssertEqual(provider.updateUserCallCount, 0, "공백 입력 시 API를 호출하지 않아야 합니다")
     }
 
     func test_updateNickname_실패시_에러상태가_된다() async {

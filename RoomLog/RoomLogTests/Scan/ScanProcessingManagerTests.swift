@@ -127,4 +127,22 @@ final class ScanProcessingManagerTests: XCTestCase {
 
         XCTAssertEqual(mockRepo.getScanStatusCallCount, 0)
     }
+
+    func test_handleScenePhase_active시_폴링이_재개된다() {
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        // 백그라운드 → 폴링 시작 → 포그라운드 복귀
+        sut.handleScenePhase(.background)
+        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.handleScenePhase(.active)
+
+        let expectation = expectation(description: "폴링 재개 대기")
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2)
+
+        XCTAssertGreaterThan(mockRepo.getScanStatusCallCount, 0, "포그라운드 복귀 후 폴링이 재개되어야 합니다")
+    }
 }
