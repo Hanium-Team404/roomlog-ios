@@ -20,6 +20,13 @@ struct DefectReportDetail: Hashable {
     let x: Float?
     let y: Float?
     let z: Float?
+    let region3d: [DefectPoint3D]
+}
+
+struct DefectPoint3D: Hashable {
+    let x: Float
+    let y: Float
+    let z: Float
 }
 
 enum DefectType: Hashable {

@@ -140,36 +140,14 @@ struct DefectView: View {
 private extension DefectView {
     @ViewBuilder
     func imageSection(report: DefectReport) -> some View {
-        ZStack {
+        Group {
             if let localURL = viewModel.plyLocalURL {
-                PLYSceneView(fileURL: localURL)
+                PLYSceneView(fileURL: localURL, defects: report.defects)
             } else if report.imageURL != nil {
-                // PLY 다운로드 중
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 imagePlaceholder
-            }
-
-            GeometryReader { geo in
-                ForEach(report.defects, id: \.id) { defect in
-                    if let x = defect.x, let y = defect.y {
-                        VStack(spacing: 2) {
-                            Text(defect.type.displayName)
-                                .font(.semibold, 14)
-                            Text(String(format: "%.2f m²", defect.defectArea))
-                                .font(.semibold, 14)
-                        }
-                        .foregroundStyle(Color.neutral800)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-                        .position(
-                            x: CGFloat(x) * geo.size.width,
-                            y: CGFloat(y) * geo.size.height
-                        )
-                    }
-                }
             }
         }
         .aspectRatio(3/4, contentMode: .fit)

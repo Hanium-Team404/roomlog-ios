@@ -390,7 +390,8 @@ private struct ShopMapCard: View {
         location: "거실 벽면 하단부",
         discoveredDate: nil,
         memo: nil,
-        x: nil, y: nil, z: nil
+        x: nil, y: nil, z: nil,
+        region3d: []
     )
 
     NavigationStack {
