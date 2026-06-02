@@ -158,12 +158,7 @@ private extension DefectView {
     }
 
     var imagePlaceholder: some View {
-        Color(.systemGray5)
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-            }
+        ImagePlaceholder(iconFont: .largeTitle)
     }
 }
 

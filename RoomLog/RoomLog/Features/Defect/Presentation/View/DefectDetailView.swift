@@ -51,7 +51,17 @@ private extension DefectDetailView {
                     switch phase {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
-                    default:
+                    case .failure:
+                        imagePlaceholder
+                            .overlay {
+                                Text("이미지를 불러올 수 없습니다")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                    case .empty:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    @unknown default:
                         imagePlaceholder
                     }
                 }
@@ -64,12 +74,7 @@ private extension DefectDetailView {
     }
 
     var imagePlaceholder: some View {
-        Color(.systemGray5)
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-            }
+        ImagePlaceholder(iconFont: .largeTitle)
     }
 }
 
