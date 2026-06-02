@@ -136,7 +136,9 @@ final class DatasetEncoder {
         do {
             try imuEncoder.done()
         } catch {
+            #if DEBUG
             print("DatasetEncoder: IMU 파일 닫기 실패. \(error.localizedDescription)")
+            #endif
             status = .videoEncodingError
         }
 
@@ -168,14 +170,16 @@ final class DatasetEncoder {
         do {
             try csv.write(to: cameraMatrixPath, atomically: true, encoding: .utf8)
         } catch {
+            #if DEBUG
             print("DatasetEncoder: could not write camera matrix. \(error.localizedDescription)")
+            #endif
             status = .videoEncodingError
         }
     }
 
     private static func createDirectory(id: inout UUID) throws -> URL {
         let directoryName = hashUUID(id: id)
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let documentsURL = URL.documentsDirectory
         let directory = documentsURL.appendingPathComponent(directoryName, isDirectory: true)
 
         if FileManager.default.fileExists(atPath: directory.path) {
