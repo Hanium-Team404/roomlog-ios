@@ -290,7 +290,10 @@ struct RoomListView: View {
             onDismiss: {
                 processingManager.cancel()
                 showProcessingStatus = false
-            }
+            },
+            onRetry: processingManager.canRetryUpload ? {
+                processingManager.retryUpload()
+            } : nil
         )
     }
 

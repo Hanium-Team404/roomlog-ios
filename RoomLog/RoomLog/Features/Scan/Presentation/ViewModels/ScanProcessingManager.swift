@@ -38,6 +38,8 @@ final class ScanProcessingManager {
     // MARK: - State
 
     private(set) var activeScan: ActiveScan?
+    /// 업로드 실패 후 재시도용 zip 파일. nil이면 재시도 불가.
+    private var pendingRetryZipURL: URL?
 
     // MARK: - Dependencies
 
@@ -83,6 +85,7 @@ final class ScanProcessingManager {
         processingTask?.cancel()
         activeScan = nil
         clearPendingScan()
+        discardPendingRetry()
 
         if scanId > 0 {
             Task { [weak self] in
@@ -97,6 +100,24 @@ final class ScanProcessingManager {
         processingTask?.cancel()
         activeScan = nil
         clearPendingScan()
+        discardPendingRetry()
+    }
+
+    /// 업로드 실패 후 사용 가능한 재시도 여부
+    @MainActor
+    var canRetryUpload: Bool { pendingRetryZipURL != nil }
+
+    /// 업로드 실패 후 동일한 zip으로 업로드 재시도
+    @MainActor
+    func retryUpload() {
+        guard let zipURL = pendingRetryZipURL,
+              let scan = activeScan else { return }
+        let houseId = scan.houseId
+        processingTask?.cancel()
+        activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
+        processingTask = Task { [weak self] in
+            await self?.retryUploadProcess(zipURL: zipURL, houseId: houseId)
+        }
     }
 
     /// 특정 houseId에 완료된 스캔이 있는지 확인
@@ -186,8 +207,13 @@ final class ScanProcessingManager {
         do {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
-            cleanup(zipURL: zipURL, datasetDir: datasetDir)
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                cleanup(zipURL: zipURL, datasetDir: datasetDir)
+                return
+            }
+            // 재시도 가능하도록 zip은 보존하고 datasetDir만 정리
+            try? FileManager.default.removeItem(at: datasetDir)
+            pendingRetryZipURL = zipURL
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
             return
         }
@@ -204,6 +230,37 @@ final class ScanProcessingManager {
     private func cleanup(zipURL: URL, datasetDir: URL) {
         try? FileManager.default.removeItem(at: zipURL)
         try? FileManager.default.removeItem(at: datasetDir)
+    }
+
+    @MainActor
+    private func discardPendingRetry() {
+        if let zipURL = pendingRetryZipURL {
+            try? FileManager.default.removeItem(at: zipURL)
+            pendingRetryZipURL = nil
+        }
+    }
+
+    // MARK: - Retry
+
+    @MainActor
+    private func retryUploadProcess(zipURL: URL, houseId: Int) async {
+        guard let scanRepository else { return }
+        let scanResult: ScanResult
+        do {
+            scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
+        } catch {
+            if Task.isCancelled { return }
+            activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
+            return
+        }
+        try? FileManager.default.removeItem(at: zipURL)
+        pendingRetryZipURL = nil
+        if Task.isCancelled { return }
+
+        let scanId = scanResult.scanId
+        savePendingScan(scanId: scanId, houseId: houseId)
+        activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
+        await pollAndDownload(scanId: scanId, houseId: houseId)
     }
 
     // MARK: - Poll & Download
