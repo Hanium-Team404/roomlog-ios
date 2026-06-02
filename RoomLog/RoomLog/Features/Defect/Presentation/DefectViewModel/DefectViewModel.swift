@@ -26,7 +26,6 @@ final class DefectViewModel {
     // MARK: - Provider
     let roomId: Int
     private let provider: DefectUseCaseProvider
-    private var pollingTask: Task<Void, Never>?
 
     // MARK: - Local Analysis Tracking
     private static let analysisIdPrefix = "pendingAnalysisId_room_"
@@ -58,13 +57,16 @@ final class DefectViewModel {
         // 1. 기존 하자 데이터 조회
         do {
             report = try await provider.makeGetDefectReportUseCase().execute(roomId: roomId)
-            if report?.defects.isEmpty == false {
-                Self.clearAnalysisId(for: roomId)
+            if Self.savedAnalysisId(for: roomId) == nil {
                 phase = .completed
                 return
             }
+        } catch let error as RepositoryError where !error.isRetryable {
+            // 디코딩 에러 등 재시도 불가 → 실패
+            phase = .failed(error.userMessage)
+            return
         } catch {
-            // 데이터 없음 — 계속 진행
+            // 서버 에러(404 포함) → 분석 필요할 수 있으므로 계속 진행
         }
 
         // 2. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
@@ -78,14 +80,15 @@ final class DefectViewModel {
                     return
                 case "FAILED":
                     Self.clearAnalysisId(for: roomId)
-                    // FAILED → 새 분석 허용, 아래로 진행
                 default:
-                    // PENDING / PROCESSING → 새 분석 안 하고 polling 재개
                     await resumePolling(analysisId: savedId)
                     return
                 }
+            } catch let error as RepositoryError where !error.isRetryable {
+                phase = .failed(error.userMessage)
+                return
             } catch {
-                // 조회 실패 (404 등) → 저장값 무효, 새 분석 허용
+                // 서버 에러 → 저장값 무효로 판단, 새 분석 허용
                 Self.clearAnalysisId(for: roomId)
             }
         }
@@ -230,11 +233,6 @@ final class DefectViewModel {
         } catch {
             print("[Defect] PLY download failed: \(error)")
         }
-    }
-
-    func cancelPolling() {
-        pollingTask?.cancel()
-        pollingTask = nil
     }
 
     #if DEBUG

@@ -64,7 +64,13 @@ final class EstimateRepository: EstimateRepositoryProtocol {
 
     func previewEstimate(message: String, analysisId: Int, providerExternalId: String) async throws -> EstimatePreview {
         let body = EstimatePreviewRequestDTO(message: message, analysisId: analysisId, providerExternalId: providerExternalId)
-        let response = try await adapter.request(EstimateTarget.previewEstimate(request: body))
+        let response: Response
+        do {
+            response = try await adapter.request(EstimateTarget.previewEstimate(request: body))
+        } catch {
+            let nsError = error as NSError
+            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription)
+        }
         let apiResponse: APIResponse<EstimatePreviewResponseDTO>
         do {
             apiResponse = try decoder.decode(APIResponse<EstimatePreviewResponseDTO>.self, from: response.data)
@@ -75,7 +81,13 @@ final class EstimateRepository: EstimateRepositoryProtocol {
     }
 
     func getEstimateDetail(estimateId: Int) async throws -> EstimateDetail {
-        let response = try await adapter.request(EstimateTarget.getEstimateDetail(estimateId: estimateId))
+        let response: Response
+        do {
+            response = try await adapter.request(EstimateTarget.getEstimateDetail(estimateId: estimateId))
+        } catch {
+            let nsError = error as NSError
+            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription)
+        }
         let apiResponse: APIResponse<EstimateDetailResponseDTO>
         do {
             apiResponse = try decoder.decode(APIResponse<EstimateDetailResponseDTO>.self, from: response.data)

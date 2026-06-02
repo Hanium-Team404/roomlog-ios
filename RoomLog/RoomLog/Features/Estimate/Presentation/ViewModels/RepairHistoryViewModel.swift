@@ -44,6 +44,7 @@ final class RepairHistoryViewModel {
         do {
             selectedDetail = try await provider.makeGetEstimateDetailUseCase().execute(estimateId: estimateId)
         } catch {
+            selectedDetail = nil
             errorMessage = error.localizedDescription
         }
     }

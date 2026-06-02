@@ -21,6 +21,12 @@ struct DefectListView: View {
         Group {
             if viewModel.isLoading && viewModel.items.isEmpty {
                 ProgressView()
+            } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
+                ContentUnavailableView(
+                    "하자 점검 내역을 불러오지 못했습니다",
+                    systemImage: "wifi.exclamationmark",
+                    description: Text(errorMessage)
+                )
             } else if viewModel.items.isEmpty {
                 ContentUnavailableView("하자 점검 내역이 없습니다", systemImage: "magnifyingglass")
             } else {

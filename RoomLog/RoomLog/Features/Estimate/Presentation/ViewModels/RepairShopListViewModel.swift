@@ -79,7 +79,11 @@ final class RepairShopListViewModel {
     }
 
     func requestInquiry() async {
-        guard let shop = selectedShop, let analysisId else { return }
+        guard let shop = selectedShop else { return }
+        guard let analysisId else {
+            errorMessage = "분석 정보가 없어 문의 미리보기를 생성할 수 없습니다."
+            return
+        }
         isLoadingPreview = true
         defer { isLoadingPreview = false }
         do {
