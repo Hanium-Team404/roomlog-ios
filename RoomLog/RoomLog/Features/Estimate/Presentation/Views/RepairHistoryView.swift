@@ -66,10 +66,9 @@ struct RepairHistoryView: View {
                 }
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { viewModel.showSuccessToast = false }
-                    }
+                .task {
+                    try? await Task.sleep(for: .seconds(2))
+                    withAnimation { viewModel.showSuccessToast = false }
                 }
             }
         }

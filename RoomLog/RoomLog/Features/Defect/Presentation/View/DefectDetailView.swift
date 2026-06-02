@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct DefectDetailView: View {
     let defect: DefectReportDetail
@@ -47,22 +48,19 @@ private extension DefectDetailView {
         Group {
             if let urlString = defect.imageURL ?? roomImageURL,
                let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
+                LazyImage(url: url) { state in
+                    if let image = state.image {
                         image.resizable().aspectRatio(contentMode: .fill)
-                    case .failure:
+                    } else if state.error != nil {
                         imagePlaceholder
                             .overlay {
                                 Text("이미지를 불러올 수 없습니다")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                    case .empty:
+                    } else {
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    @unknown default:
-                        imagePlaceholder
                     }
                 }
             } else {

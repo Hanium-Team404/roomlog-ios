@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct RoomListView: View {
 
@@ -186,13 +187,12 @@ struct RoomListView: View {
     @ViewBuilder
     private func thumbnailView(url: String?) -> some View {
         if let urlString = url, let imageURL = URL(string: urlString) {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
+            LazyImage(url: imageURL) { state in
+                if let image = state.image {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                default:
+                } else {
                     thumbnailPlaceholder
                 }
             }
@@ -290,7 +290,10 @@ struct RoomListView: View {
             onDismiss: {
                 processingManager.cancel()
                 showProcessingStatus = false
-            }
+            },
+            onRetry: processingManager.canRetryUpload ? {
+                processingManager.retryUpload()
+            } : nil
         )
     }
 

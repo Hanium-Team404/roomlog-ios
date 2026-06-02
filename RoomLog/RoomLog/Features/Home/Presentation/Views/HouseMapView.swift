@@ -150,7 +150,8 @@ struct HouseMapView: View {
 
     private func scrollToCenter(target: CGPoint? = nil) {
         let point = target ?? viewModel.centerTarget(houses: houses, mainHouseId: mainHouseId)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        Task {
+            try? await Task.sleep(for: .seconds(0.1))
             scrollProxy.scrollTo(canvasPoint: point)
         }
     }
@@ -181,9 +182,7 @@ struct HouseMapView: View {
             let dy = -edgeRatio(topDist) * maxSpeed + edgeRatio(bottomDist) * maxSpeed
 
             if abs(dx) > 0.1 || abs(dy) > 0.1 {
-                DispatchQueue.main.async {
-                    scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
-                }
+                scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
             }
         }
     }

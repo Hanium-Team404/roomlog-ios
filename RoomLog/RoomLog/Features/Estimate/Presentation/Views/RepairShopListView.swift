@@ -1,4 +1,5 @@
 import SwiftUI
+import NukeUI
 
 struct RepairShopListView: View {
     @Environment(\.di) var di
@@ -304,13 +305,12 @@ private struct ShopCard: View {
     }
 
     private var shopImage: some View {
-        AsyncImage(url: URL(string: shop.imageURL ?? "")) { phase in
-            switch phase {
-            case .success(let image):
+        LazyImage(url: URL(string: shop.imageURL ?? "")) { state in
+            if let image = state.image {
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            default:
+            } else {
                 Color.blueGray50
                     .overlay(
                         Image(systemName: "photo")
