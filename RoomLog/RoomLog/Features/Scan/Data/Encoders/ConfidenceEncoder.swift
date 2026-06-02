@@ -21,7 +21,9 @@ final class ConfidenceEncoder {
         do {
             try FileManager.default.createDirectory(at: outDirectory, withIntermediateDirectories: true)
         } catch {
+            #if DEBUG
             print("ConfidenceEncoder: 디렉토리 생성 실패. \(error.localizedDescription)")
+            #endif
             status = .encodingError
         }
     }
@@ -42,7 +44,9 @@ final class ConfidenceEncoder {
         do {
             try ciContext.writePNGRepresentation(of: image, to: framePath, format: .L8, colorSpace: colorSpace)
         } catch {
+            #if DEBUG
             print("ConfidenceEncoder: PNG 저장 실패 (frame \(frameNumber)). \(error.localizedDescription)")
+            #endif
             status = .encodingError
         }
     }

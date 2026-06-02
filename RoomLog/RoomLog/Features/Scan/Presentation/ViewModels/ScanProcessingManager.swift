@@ -311,7 +311,9 @@ final class ScanProcessingManager {
             do {
                 let status = try await scanRepository.getScanStatus(scanId: scanId).uppercased()
                 consecutiveErrors = 0
+                #if DEBUG
                 print("[ScanProcessing] scanId=\(scanId) status=\(status)")
+                #endif
                 if status == "COMPLETED" {
                     break
                 } else if status == "FAILED" {

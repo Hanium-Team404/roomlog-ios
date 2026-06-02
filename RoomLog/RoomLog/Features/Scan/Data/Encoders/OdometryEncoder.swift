@@ -35,7 +35,9 @@ final class OdometryEncoder {
         do {
             try fileHandle.close()
         } catch {
+            #if DEBUG
             print("OdometryEncoder: 파일 닫기 실패. \(error.localizedDescription)")
+            #endif
         }
     }
 }

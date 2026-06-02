@@ -20,7 +20,9 @@ final class DepthEncoder {
         do {
             try FileManager.default.createDirectory(at: outDirectory, withIntermediateDirectories: true)
         } catch {
+            #if DEBUG
             print("DepthEncoder: 디렉토리 생성 실패. \(error.localizedDescription)")
+            #endif
             status = .frameEncodingError
         }
     }
@@ -41,7 +43,9 @@ final class DepthEncoder {
         defer { CVPixelBufferUnlockBaseAddress(frame, .readOnly) }
 
         guard let baseAddress = CVPixelBufferGetBaseAddress(frame) else {
+            #if DEBUG
             print("DepthEncoder: base address 접근 실패 (frame \(frameNumber))")
+            #endif
             status = .frameEncodingError
             return
         }
@@ -83,7 +87,9 @@ final class DepthEncoder {
         }
 
         if !success {
+            #if DEBUG
             print("DepthEncoder: PNG 저장 실패 (frame \(frameNumber))")
+            #endif
             status = .frameEncodingError
         }
     }
