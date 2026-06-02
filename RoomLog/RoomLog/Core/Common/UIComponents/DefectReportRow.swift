@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct DefectReportRow: View {
     let defect: DefectReportDetail
@@ -15,11 +16,10 @@ struct DefectReportRow: View {
             // 하자 이미지 썸네일
             Group {
                 if let urlString = defect.imageURL, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
+                    LazyImage(url: url) { state in
+                        if let image = state.image {
                             image.resizable().aspectRatio(contentMode: .fill)
-                        default:
+                        } else {
                             thumbnailPlaceholder
                         }
                     }

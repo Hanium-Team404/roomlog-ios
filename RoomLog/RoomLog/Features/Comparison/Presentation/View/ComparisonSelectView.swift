@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct ComparisonSelectView: View {
     @Environment(\.di) var di
@@ -161,8 +162,8 @@ struct ScanSelectionRow: View {
     private var thumbnailView: some View {
         Group {
             if let urlString = scan.thumbnailURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
+                LazyImage(url: url) { state in
+                    if let image = state.image {
                         image.resizable().aspectRatio(contentMode: .fill)
                     } else {
                         placeholder
