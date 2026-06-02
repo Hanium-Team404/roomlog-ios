@@ -30,16 +30,17 @@ struct DefectPoint3D: Hashable {
 }
 
 enum DefectType: Hashable {
-    case scratch, crack, peeling, stain, breakage
+    case scratch, crack, peeling, stain, breakage, unknown(String)
 
     init(rawString: String) {
-        switch rawString.uppercased() {
+        let normalized = rawString.uppercased()
+        switch normalized {
         case "SCRATCH": self = .scratch
         case "CRACK": self = .crack
         case "PEELING": self = .peeling
         case "STAIN": self = .stain
         case "BREAKAGE": self = .breakage
-        default: self = .scratch
+        default: self = .unknown(normalized)
         }
     }
 
@@ -50,6 +51,7 @@ enum DefectType: Hashable {
         case .peeling: return "PEELING"
         case .stain: return "STAIN"
         case .breakage: return "BREAKAGE"
+        case .unknown(let raw): return raw
         }
     }
 
@@ -60,6 +62,7 @@ enum DefectType: Hashable {
         case .peeling: return "박리"
         case .stain: return "얼룩"
         case .breakage: return "파손"
+        case .unknown: return "기타"
         }
     }
 }
