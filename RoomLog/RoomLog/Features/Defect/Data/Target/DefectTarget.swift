@@ -13,6 +13,8 @@ enum DefectTarget {
     case getDefectRoomData
     case getDefectReport(roomId: Int)
     case getDefectReportDetail(roomId: Int)
+    case createAnalysis(inRoomId: Int, outRoomId: Int?)
+    case getAnalysisStatus(analysisId: Int)
 }
 
 extension DefectTarget: BaseTargetType {
@@ -22,14 +24,32 @@ extension DefectTarget: BaseTargetType {
             return "/rooms"
         case .getDefectReport(let roomId), .getDefectReportDetail(let roomId):
             return "/rooms/\(roomId)/defects"
+        case .createAnalysis:
+            return "/analyses"
+        case .getAnalysisStatus(let analysisId):
+            return "/analyses/\(analysisId)/status"
         }
     }
 
     var method: Moya.Method {
-        return .get
+        switch self {
+        case .createAnalysis:
+            return .post
+        default:
+            return .get
+        }
     }
 
     var task: Moya.Task {
-        return .requestPlain
+        switch self {
+        case .createAnalysis(let inRoomId, let outRoomId):
+            var params: [String: Any] = ["in_room_id": inRoomId]
+            if let outRoomId {
+                params["out_room_id"] = outRoomId
+            }
+            return .requestParameters(parameters: params, encoding: JSONEncoding.default)
+        default:
+            return .requestPlain
+        }
     }
 }

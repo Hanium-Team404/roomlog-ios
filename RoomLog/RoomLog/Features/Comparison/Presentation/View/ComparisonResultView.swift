@@ -47,7 +47,7 @@ private extension ComparisonResultView {
                 ForEach(PreviewSampleData.defects.prefix(3), id: \.id) { defect in
                     if let x = defect.x, let y = defect.y {
                         VStack(spacing: 2) {
-                            Text(defect.type)
+                            Text(defect.type.displayName)
                                 .font(.semibold, 12)
                             Text(String(format: "%.2f m²", defect.defectArea))
                                 .font(.medium, 11)

@@ -70,8 +70,8 @@ private extension NavigationRoutingView {
         switch route {
         case .mainView:
             ViewerView()
-        case .defectList:
-            DefectListView()
+        case .defectList(let houseId):
+            DefectListView(houseId: houseId, homeProvider: di.resolve(HomeUseCaseProvider.self))
         case .defectListMain(let roomId):
             DefectView(roomId: roomId, provider: di.resolve(DefectUseCaseProvider.self))
         case .defectAllList(let roomId, let roomName, let defects):

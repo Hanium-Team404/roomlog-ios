@@ -112,9 +112,8 @@ extension DIContainer {
         }
 
         // MARK: - Repository
-        // TODO: 서버 연동 시 DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))로 교체
         container.register(DefectRepositoryProtocol.self) {
-            MockDefectRepository()
+            DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
         
         // TODO: 서버 연동 시 ComparisonRepository(adapter:)로 교체

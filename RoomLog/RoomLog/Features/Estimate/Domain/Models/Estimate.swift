@@ -28,7 +28,7 @@ struct EstimateDefect: Identifiable, Hashable {
     let type: String
     let location: String
     let severity: Severity
-    let area: Int?
+    let area: Double?
     let estimatedCost: Int?
     let description: String?
 
@@ -45,6 +45,44 @@ struct EstimateDefect: Identifiable, Hashable {
         default: return type
         }
     }
+}
+
+// MARK: - Estimate Preview
+
+struct EstimatePreview {
+    let providerName: String
+    let providerPhone: String
+    let providerAddress: String
+    let providerExternalId: String
+    let defects: [EstimatePreviewDefect]
+    let defectCount: Int
+    let totalCost: Int
+    let analysisId: Int
+    let roomId: Int
+    let messagePreview: String
+}
+
+struct EstimatePreviewDefect: Identifiable, Hashable {
+    let defectId: Int
+    let type: DefectType
+    let location: String
+    let severity: Severity
+    let estimatedCost: Int
+
+    var id: Int { defectId }
+}
+
+// MARK: - Estimate Detail
+
+struct EstimateDetail {
+    let id: Int
+    let status: EstimateStatus
+    let message: String?
+    let defectIds: [Int]
+    let providerName: String
+    let providerPhone: String?
+    let providerAddress: String?
+    let createdAt: Date?
 }
 
 enum EstimateStatus: Hashable {

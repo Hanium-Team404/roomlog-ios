@@ -19,4 +19,10 @@ protocol EstimateRepositoryProtocol {
     func getEstimates(roomId: Int) async throws -> [Estimate]
     
     func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws
+
+    /// 견적 미리보기
+    func previewEstimate(message: String, analysisId: Int, providerExternalId: String) async throws -> EstimatePreview
+
+    /// 견적 상세 조회
+    func getEstimateDetail(estimateId: Int) async throws -> EstimateDetail
 }

@@ -11,6 +11,8 @@ protocol DefectUseCaseProvider {
     func makeGetDefectRoomDataUseCase() -> GetDefectRoomDataUseCaseProtocol
     func makeGetDefectReportUseCase() -> GetDefectReportUseCaseProtocol
     func makeGetDefectReportDetailUseCase() -> GetDefectReportDetailUseCaseProtocol
+    func makeRequestAnalysisUseCase() -> RequestAnalysisUseCaseProtocol
+    func makeGetAnalysisStatusUseCase() -> GetAnalysisStatusUseCaseProtocol
 }
 
 final class DefectUseCaseProviderImpl: DefectUseCaseProvider {
@@ -33,5 +35,13 @@ final class DefectUseCaseProviderImpl: DefectUseCaseProvider {
 
     func makeGetDefectReportDetailUseCase() -> GetDefectReportDetailUseCaseProtocol {
         GetDefectReportDetailUseCase(repository: defectRepository)
+    }
+
+    func makeRequestAnalysisUseCase() -> RequestAnalysisUseCaseProtocol {
+        RequestAnalysisUseCase(repository: defectRepository)
+    }
+
+    func makeGetAnalysisStatusUseCase() -> GetAnalysisStatusUseCaseProtocol {
+        GetAnalysisStatusUseCase(repository: defectRepository)
     }
 }

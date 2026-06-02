@@ -178,13 +178,31 @@ private extension RepairShopListView {
 
             VStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(viewModel.messageTitle)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
-                    Text(viewModel.messageBody)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.blueGray600)
-                        .lineSpacing(4)
+                    if let preview = viewModel.preview {
+                        Text(preview.providerName)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary)
+                        Text(preview.messagePreview)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.blueGray600)
+                            .lineSpacing(4)
+                        HStack(spacing: 16) {
+                            Text("하자 \(preview.defectCount)건")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.blueGray500)
+                            Text("예상 비용 ₩ \(preview.totalCost.formatted())")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.blueGray500)
+                        }
+                    } else {
+                        Text(viewModel.messageTitle)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary)
+                        Text(viewModel.messageBody)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.blueGray600)
+                            .lineSpacing(4)
+                    }
                 }
                 .padding(.top, 8)
                 .padding(.bottom, 24)
@@ -227,19 +245,25 @@ private extension RepairShopListView {
 private extension RepairShopListView {
     var bottomButton: some View {
         Button {
-            viewModel.requestInquiry()
+            Task { await viewModel.requestInquiry() }
         } label: {
-            Text("문자 문의하기")
-                .font(.semibold, 17)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(
-                    viewModel.selectedShop != nil ? Color.mutedBlue : Color.blueGray300,
-                    in: Capsule()
-                )
+            Group {
+                if viewModel.isLoadingPreview {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("문자 문의하기")
+                        .font(.semibold, 17)
+                }
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                viewModel.selectedShop != nil ? Color.mutedBlue : Color.blueGray300,
+                in: Capsule()
+            )
         }
-        .disabled(viewModel.selectedShop == nil || viewModel.isSubmitting)
+        .disabled(viewModel.selectedShop == nil || viewModel.isSubmitting || viewModel.isLoadingPreview)
         .padding(.horizontal, 16)
         .padding(.bottom, 32)
     }
@@ -358,7 +382,7 @@ private struct ShopMapCard: View {
     let mockDefect = DefectReportDetail(
         id: 1,
         imageURL: nil,
-        type: "벽지 찢어짐",
+        type: .scratch,
         severity: .medium,
         description: "거실 벽면 하단부 찢어짐",
         repairCost: 15000,
@@ -366,7 +390,8 @@ private struct ShopMapCard: View {
         location: "거실 벽면 하단부",
         discoveredDate: nil,
         memo: nil,
-        x: nil, y: nil, z: nil
+        x: nil, y: nil, z: nil,
+        region3d: []
     )
 
     NavigationStack {

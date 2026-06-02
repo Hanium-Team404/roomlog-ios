@@ -35,7 +35,7 @@ struct DefectDetailView: View {
         .safeAreaInset(edge: .bottom) {
             bottomButton
         }
-        .navigationTitle(defect.type)
+        .navigationTitle(defect.type.displayName)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -45,12 +45,23 @@ struct DefectDetailView: View {
 private extension DefectDetailView {
     var roomImageView: some View {
         Group {
-            if let urlString = roomImageURL, let url = URL(string: urlString) {
+            if let urlString = defect.imageURL ?? roomImageURL,
+               let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
-                    default:
+                    case .failure:
+                        imagePlaceholder
+                            .overlay {
+                                Text("이미지를 불러올 수 없습니다")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                    case .empty:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    @unknown default:
                         imagePlaceholder
                     }
                 }
@@ -58,17 +69,12 @@ private extension DefectDetailView {
                 imagePlaceholder
             }
         }
-        .frame(height: 262)
+        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     var imagePlaceholder: some View {
-        Color(.systemGray5)
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-            }
+        ImagePlaceholder(iconFont: .largeTitle)
     }
 }
 
