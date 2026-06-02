@@ -125,7 +125,7 @@ struct ZoomableScrollView<Content: View>: UIViewControllerRepresentable {
 
         // 이전 스크롤 위치가 있으면 복원
         if let saved = scrollProxy?.lastOffset {
-            DispatchQueue.main.async {
+            Task {
                 scrollView.contentOffset = saved
             }
         }
