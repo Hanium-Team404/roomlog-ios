@@ -79,6 +79,20 @@ extension MoyaNetworkAdapter {
         let status = response.statusCode
         let icon = (200..<300).contains(status) ? "🟢" : "🔴"
         print("\(icon) [Network] ← \(status) \(method) \(url)")
+
+        // 에러 응답이면 서버 에러 코드 파싱
+        if !(200..<300).contains(status) {
+            if let errorInfo = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                let code = errorInfo.error?.code ?? "없음"
+                let message = errorInfo.message ?? ""
+                let serverError = ServerErrorCode(rawValue: code)
+                print("  ⚠️ [\(code)] \(serverError.userMessage)")
+                if !message.isEmpty {
+                    print("  💬 서버 메시지: \(message)")
+                }
+            }
+        }
+
         if let str = String(data: data, encoding: .utf8) {
             let preview = str.prefix(500)
             print("  📄 Response: \(preview)\(str.count > 500 ? "..." : "")")
@@ -211,6 +225,17 @@ extension MoyaNetworkAdapter {
         parameters: [String: Any]
     ) throws -> URLRequest {
         try URLEncoding.queryString.encode(request, with: parameters)
+    }
+}
+
+// MARK: - Error Response (로깅용)
+
+private struct APIErrorResponse: Codable {
+    let message: String?
+    let error: ErrorBody?
+
+    struct ErrorBody: Codable {
+        let code: String?
     }
 }
 

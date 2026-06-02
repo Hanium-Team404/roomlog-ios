@@ -69,7 +69,7 @@ final class EstimateRepository: EstimateRepositoryProtocol {
             response = try await adapter.request(EstimateTarget.previewEstimate(request: body))
         } catch {
             let nsError = error as NSError
-            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription)
+            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription, errorCode: nil)
         }
         let apiResponse: APIResponse<EstimatePreviewResponseDTO>
         do {
@@ -86,7 +86,7 @@ final class EstimateRepository: EstimateRepositoryProtocol {
             response = try await adapter.request(EstimateTarget.getEstimateDetail(estimateId: estimateId))
         } catch {
             let nsError = error as NSError
-            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription)
+            throw RepositoryError.serverError(code: nsError.code, message: nsError.localizedDescription, errorCode: nil)
         }
         let apiResponse: APIResponse<EstimateDetailResponseDTO>
         do {
