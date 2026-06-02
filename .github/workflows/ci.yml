@@ -23,6 +23,9 @@ jobs:
           echo 'BASE_URL = https:/$()/placeholder.com' > RoomLog/RoomLog/Core/Config/Config.xcconfig
           echo 'KAKAO_NATIVE_APP_KEY = placeholder' >> RoomLog/RoomLog/Core/Config/Config.xcconfig
 
+      - name: Clean SPM cache
+        run: rm -rf ~/Library/Caches/org.swift.swiftpm/repositories
+
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:

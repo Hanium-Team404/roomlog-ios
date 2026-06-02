@@ -13,6 +13,7 @@ struct ScanStatusSheet: View {
     var onPreview: ((URL) -> Void)?
     var onCancel: (() -> Void)?
     var onDismiss: (() -> Void)?
+    var onRetry: (() -> Void)?
 
     @State private var showCancelAlert: Bool = false
 
@@ -126,11 +127,26 @@ struct ScanStatusSheet: View {
             .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
             .padding(.horizontal, 32)
         case .failed:
-            Button {
-                onDismiss?()
-            } label: {
-                Text("닫기")
-                    .font(.semibold, 16)
+            VStack(spacing: 12) {
+                if let onRetry {
+                    Button {
+                        onRetry()
+                    } label: {
+                        Text("다시 시도")
+                            .font(.semibold, 16)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                    }
+                    .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
+                    .padding(.horizontal, 32)
+                }
+                Button {
+                    onDismiss?()
+                } label: {
+                    Text("닫기")
+                        .font(.semibold, 16)
+                }
             }
         }
     }

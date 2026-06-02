@@ -44,7 +44,7 @@ struct RoomSummaryDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case fileURL = "file_url"
+        case fileURL = "thumbnail_url"
         case latestScan = "latest_scan"
         case recentScanDate = "move_in_date"
         case latestScanStatus = "latest_scan_status"
@@ -88,7 +88,7 @@ struct CreateRoomResponseDTO: Codable {
         case name
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case fileURL = "file_url"
+        case fileURL = "ply_url"
         case createdAt = "created_at"
         case linkedScan = "linked_scan"
     }
@@ -118,7 +118,7 @@ struct RoomDetailResponseDTO: Codable {
         case name
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case fileURL = "file_url"
+        case fileURL = "ply_url"
         case createdAt = "created_at"
         case latestScan = "latest_scan"
     }
@@ -175,7 +175,7 @@ struct UpdateRoomResponseDTO: Codable {
         case name
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
-        case fileURL = "file_url"
+        case fileURL = "ply_url"
     }
 }
 

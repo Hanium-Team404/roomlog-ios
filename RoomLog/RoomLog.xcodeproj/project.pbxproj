@@ -7,13 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0BAC0D0E2FCF31680067B330 /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 0BAC0D0D2FCF31680067B330 /* Nuke */; };
+		0BAC0D102FCF31680067B330 /* NukeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0BAC0D0F2FCF31680067B330 /* NukeUI */; };
 		0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */; };
 		0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0BEFDD962F84FDF900CDE2A6 /* Moya */; };
 		DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		0BACFED32FCD459C0067B330 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0B1EC4382F7BB970001FE02F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B1EC43F2F7BB970001FE02F;
+			remoteInfo = RoomLog;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0B1EC4402F7BB970001FE02F /* RoomLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoomLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0BACFECF2FCD459C0067B330 /* RoomLogTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RoomLogTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAF056CA2FA9C5D600708069 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Config.xcconfig; path = RoomLog/Core/Config/Config.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -36,6 +49,11 @@
 			path = RoomLog;
 			sourceTree = "<group>";
 		};
+		0BACFED02FCD459C0067B330 /* RoomLogTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RoomLogTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,9 +61,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0BAC0D102FCF31680067B330 /* NukeUI in Frameworks */,
 				0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */,
 				0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */,
 				DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */,
+				0BAC0D0E2FCF31680067B330 /* Nuke in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BACFECC2FCD459C0067B330 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -56,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				0B1EC4422F7BB970001FE02F /* RoomLog */,
+				0BACFED02FCD459C0067B330 /* RoomLogTests */,
 				0B1EC4412F7BB970001FE02F /* Products */,
 				AAF056CA2FA9C5D600708069 /* Config.xcconfig */,
 			);
@@ -65,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				0B1EC4402F7BB970001FE02F /* RoomLog.app */,
+				0BACFECF2FCD459C0067B330 /* RoomLogTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,10 +121,35 @@
 				0BEFDD962F84FDF900CDE2A6 /* Moya */,
 				0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */,
 				DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */,
+				0BAC0D0D2FCF31680067B330 /* Nuke */,
+				0BAC0D0F2FCF31680067B330 /* NukeUI */,
 			);
 			productName = RoomLog;
 			productReference = 0B1EC4402F7BB970001FE02F /* RoomLog.app */;
 			productType = "com.apple.product-type.application";
+		};
+		0BACFECE2FCD459C0067B330 /* RoomLogTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BACFED52FCD459C0067B330 /* Build configuration list for PBXNativeTarget "RoomLogTests" */;
+			buildPhases = (
+				0BACFECB2FCD459C0067B330 /* Sources */,
+				0BACFECC2FCD459C0067B330 /* Frameworks */,
+				0BACFECD2FCD459C0067B330 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0BACFED42FCD459C0067B330 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0BACFED02FCD459C0067B330 /* RoomLogTests */,
+			);
+			name = RoomLogTests;
+			packageProductDependencies = (
+			);
+			productName = RoomLogTests;
+			productReference = 0BACFECF2FCD459C0067B330 /* RoomLogTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -104,11 +158,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					0B1EC43F2F7BB970001FE02F = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					0BACFECE2FCD459C0067B330 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 0B1EC43F2F7BB970001FE02F;
 					};
 				};
 			};
@@ -125,6 +183,7 @@
 				0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */,
 				0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */,
+				0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0B1EC4412F7BB970001FE02F /* Products */;
@@ -132,12 +191,20 @@
 			projectRoot = "";
 			targets = (
 				0B1EC43F2F7BB970001FE02F /* RoomLog */,
+				0BACFECE2FCD459C0067B330 /* RoomLogTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0B1EC43E2F7BB970001FE02F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BACFECD2FCD459C0067B330 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -154,7 +221,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0BACFECB2FCD459C0067B330 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0BACFED42FCD459C0067B330 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B1EC43F2F7BB970001FE02F /* RoomLog */;
+			targetProxy = 0BACFED32FCD459C0067B330 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0B1EC4492F7BB971001FE02F /* Debug */ = {
@@ -288,7 +370,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2UH92ZBFJ6;
+				DEVELOPMENT_TEAM = 9NLDD768V4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoomLog/Info.plist;
@@ -297,14 +379,14 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.404.ddodle.RoomLog;
+				PRODUCT_BUNDLE_IDENTIFIER = com.4040.ddodle.RoomLog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -328,7 +410,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2UH92ZBFJ6;
+				DEVELOPMENT_TEAM = 9NLDD768V4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoomLog/Info.plist;
@@ -337,14 +419,14 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.404.ddodle.RoomLog;
+				PRODUCT_BUNDLE_IDENTIFIER = com.4040.ddodle.RoomLog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -357,6 +439,50 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0BACFED62FCD459C0067B330 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9NLDD768V4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ddodle.RoomLogTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoomLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RoomLog";
+			};
+			name = Debug;
+		};
+		0BACFED72FCD459C0067B330 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9NLDD768V4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ddodle.RoomLogTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoomLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RoomLog";
 			};
 			name = Release;
 		};
@@ -381,9 +507,26 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		0BACFED52FCD459C0067B330 /* Build configuration list for PBXNativeTarget "RoomLogTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BACFED62FCD459C0067B330 /* Debug */,
+				0BACFED72FCD459C0067B330 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Nuke";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.0.6;
+			};
+		};
 		0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
@@ -411,6 +554,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0BAC0D0D2FCF31680067B330 /* Nuke */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = Nuke;
+		};
+		0BAC0D0F2FCF31680067B330 /* NukeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = NukeUI;
+		};
 		0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;

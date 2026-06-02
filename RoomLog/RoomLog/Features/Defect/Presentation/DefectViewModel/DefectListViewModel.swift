@@ -10,15 +10,17 @@ import Foundation
 @Observable
 final class DefectListViewModel {
     // MARK: - State
-    private(set) var items: [DefectRoomData] = []
+    private(set) var items: [RoomSummary] = []
     private(set) var isLoading = false
     var errorMessage: String?
 
     // MARK: - Dependency
-    private let useCase: GetDefectRoomDataUseCaseProtocol
+    let houseId: Int
+    private let homeProvider: HomeUseCaseProvider
 
-    init(useCase: GetDefectRoomDataUseCaseProtocol) {
-        self.useCase = useCase
+    init(houseId: Int, homeProvider: HomeUseCaseProvider) {
+        self.houseId = houseId
+        self.homeProvider = homeProvider
     }
 
     // MARK: - Function
@@ -26,7 +28,8 @@ final class DefectListViewModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            items = try await useCase.execute()
+            let houseRooms = try await homeProvider.makeGetHouseRoomsUseCase().execute(houseId: houseId)
+            items = houseRooms.rooms
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -6,8 +6,32 @@
 - 새 파일 생성 시 `Created by` 헤더는 현재 git user 이름을 사용한다.
 - 빌드는 직접 하지 않는다. 코드 수정과 설명만 한다.
 - 이슈/PR 생성 시 `.github/` 디렉토리의 템플릿 형식을 반드시 따른다.
-- PR 제목은 `[Feat]`, `[Fix]`, `[Refactor]` 등 대괄호 태그 접두사를 사용한다.
 - 확인 없이 먼저 행동하지 않는다. 시키지 않은 작업(커밋 amend, force push 등)을 임의로 하지 않는다.
+
+## Git Convention
+
+### Commit Message
+
+형식: `<type>: <설명>` (예: `feat: 카카오 로그인 화면 추가`)
+
+| Type | 용도 |
+|----------|------|
+| `feat` | 새로운 기능 추가 |
+| `fix` | 버그 수정 |
+| `design` | UI(CSS) 수정 |
+| `typo` | 오타 수정 |
+| `mod` | 폴더 구조 이동 및 파일 이름 수정 |
+| `add` | 파일 추가 (예: 이미지) |
+| `del` | 파일 삭제 |
+| `refactor` | 코드 리팩토링 |
+| `init` | 프로젝트 세팅 |
+| `chore` | 배포, 빌드 등 기타 작업 |
+| `merge` | 브랜치 병합 |
+
+### PR Title
+
+대괄호 태그 접두사를 사용하며, 커밋 type과 일관성을 맞춘다.
+예: `[Feat] 카카오 로그인 화면 추가`, `[Fix] 토큰 갱신 시 401 무한 루프 수정`, `[Refactor] NetworkClient 의존성 분리`
 
 ## Project Overview
 

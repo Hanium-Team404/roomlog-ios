@@ -11,6 +11,7 @@ struct RepairHistoryView: View {
     @Environment(\.di) var di
     @State private var viewModel: RepairHistoryViewModel
     @State private var selectedEstimate: Estimate?
+    @State private var showDetail = false
 
     init(roomId: Int, provider: EstimateUseCaseProvider) {
         self._viewModel = .init(
@@ -41,10 +42,19 @@ struct RepairHistoryView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        .sheet(item: $selectedEstimate) { estimate in
-            EstimateDetailSheet(estimate: estimate) { repairCost, note in
-                await viewModel.completeRepair(estimateId: estimate.id, repairCost: repairCost, note: note)
-                selectedEstimate = nil
+        .sheet(isPresented: $showDetail) {
+            viewModel.clearDetail()
+            selectedEstimate = nil
+        } content: {
+            if let estimate = selectedEstimate {
+                EstimateDetailSheet(
+                    estimate: estimate,
+                    detail: viewModel.selectedDetail,
+                    isLoadingDetail: viewModel.isLoadingDetail
+                ) { repairCost, note in
+                    await viewModel.completeRepair(estimateId: estimate.id, repairCost: repairCost, note: note)
+                    showDetail = false
+                }
             }
         }
         .overlay(alignment: .top) {
@@ -56,10 +66,9 @@ struct RepairHistoryView: View {
                 }
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { viewModel.showSuccessToast = false }
-                    }
+                .task {
+                    try? await Task.sleep(for: .seconds(2))
+                    withAnimation { viewModel.showSuccessToast = false }
                 }
             }
         }
@@ -72,6 +81,8 @@ struct RepairHistoryView: View {
                     RepairHistoryCard(estimate: estimate)
                         .onTapGesture {
                             selectedEstimate = estimate
+                            showDetail = true
+                            Task { await viewModel.fetchEstimateDetail(estimateId: estimate.id) }
                         }
                 }
             }
@@ -93,6 +104,8 @@ struct RepairHistoryView: View {
 
 private struct EstimateDetailSheet: View {
     let estimate: Estimate
+    let detail: EstimateDetail?
+    let isLoadingDetail: Bool
     let onComplete: (Int, String?) async -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -101,21 +114,62 @@ private struct EstimateDetailSheet: View {
     @State private var isCompleting = false
     @State private var showPriceError = false
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy.MM.dd HH:mm"
+        f.locale = Locale(identifier: "ko_KR")
+        return f
+    }()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+            // 문의 날짜
+            if let createdAt = detail?.createdAt ?? estimate.createdAt {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.blueGray500)
+                    Text(Self.dateFormatter.string(from: createdAt))
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.blueGray500)
+                }
+            }
+
             Text("문의 내용")
                 .font(.semibold, 18)
                 .foregroundStyle(Color.neutral800)
 
-            ScrollView {
-                Text(estimate.message ?? "문자 전송 내역이 없습니다.")
-                    .font(.regular, 15)
-                    .foregroundStyle(Color.neutral600)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+            if isLoadingDetail {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: 100)
+            } else {
+                ScrollView {
+                    Text(detail?.message ?? estimate.message ?? "문자 전송 내역이 없습니다.")
+                        .font(.regular, 15)
+                        .foregroundStyle(Color.neutral600)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                }
+                .frame(maxHeight: 160)
+                .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 12))
             }
-            .frame(maxHeight: 160)
-            .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 12))
+
+            // 업체 정보
+            VStack(alignment: .leading, spacing: 6) {
+                Text(detail?.providerName ?? estimate.providerName)
+                    .font(.semibold, 16)
+                    .foregroundStyle(Color.neutral800)
+                if let phone = detail?.providerPhone ?? estimate.providerPhone, !phone.isEmpty {
+                    Text(phone)
+                        .font(.regular, 14)
+                        .foregroundStyle(Color.blueGray500)
+                }
+                if let address = detail?.providerAddress ?? estimate.providerAddress, !address.isEmpty {
+                    Text(address)
+                        .font(.regular, 14)
+                        .foregroundStyle(Color.blueGray500)
+                }
+            }
 
             if estimate.displayStatus == .inProgress {
                 VStack(alignment: .leading, spacing: 12) {

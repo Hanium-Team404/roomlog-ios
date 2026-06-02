@@ -47,7 +47,7 @@ final class VideoEncoder: @unchecked Sendable {
                 return
             }
             spinCount += 1
-            try? await Task.sleep(nanoseconds: 10_000_000)
+            try? await Task.sleep(for: .milliseconds(10))
         }
         encode(frame: frame)
     }
@@ -106,14 +106,10 @@ final class VideoEncoder: @unchecked Sendable {
             return
         }
         videoWriterInput?.markAsFinished()
-        await withCheckedContinuation { continuation in
-            writer.finishWriting { [weak self] in
-                if self?.videoWriter?.status == .failed { self?.status = .error }
-                self?.videoWriter = nil
-                self?.videoWriterInput = nil
-                self?.videoAdapter = nil
-                continuation.resume()
-            }
-        }
+        await writer.finishWriting()
+        if writer.status == .failed { status = .error }
+        videoWriter = nil
+        videoWriterInput = nil
+        videoAdapter = nil
     }
 }

@@ -49,7 +49,7 @@ struct DefectView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             guard !skipAutoLoad, viewModel.phase == .loading else { return }
-            await viewModel.startAnalysis()
+            await viewModel.loadOrAnalyze()
         }
     }
 
@@ -135,58 +135,30 @@ struct DefectView: View {
 
 
 
-// MARK: - Section 1: 이미지 + 마커
-// TODO: - 추후 3d이미지로 불러오기 및 마커 수정 - @minkyo
+// MARK: - Section 1: 3D PLY 뷰어 + 마커
 
 private extension DefectView {
     @ViewBuilder
     func imageSection(report: DefectReport) -> some View {
-        ZStack {
-            if let urlString = report.imageURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        imagePlaceholder
-                    }
-                }
+        Group {
+            if let localURL = viewModel.plyLocalURL {
+                PLYSceneView(fileURL: localURL, defects: report.defects)
+            } else if report.imageURL != nil {
+                ProgressView("3D 모델 로딩 중...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 imagePlaceholder
             }
-
-            GeometryReader { geo in
-                ForEach(report.defects, id: \.id) { defect in
-                    if let x = defect.x, let y = defect.y {
-                        VStack(spacing: 2) {
-                            Text(defect.type)
-                                .font(.semibold, 14)
-                            Text(String(format: "%.2f m²", defect.defectArea))
-                                .font(.semibold, 14)
-                        }
-                        .foregroundStyle(Color.neutral800)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-                        .position(
-                            x: CGFloat(x) * geo.size.width,
-                            y: CGFloat(y) * geo.size.height
-                        )
-                    }
-                }
-            }
         }
-        .frame(height: 262)
+        .aspectRatio(3/4, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .task {
+            await viewModel.downloadPLYIfNeeded()
+        }
     }
 
     var imagePlaceholder: some View {
-        Color(.systemGray5)
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-            }
+        ImagePlaceholder(iconFont: .largeTitle)
     }
 }
 

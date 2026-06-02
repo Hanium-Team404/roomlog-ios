@@ -43,10 +43,33 @@ final class DefectRepository: DefectRepositoryProtocol {
         } catch {
             throw RepositoryError.decodingError(detail: error.localizedDescription)
         }
-        return try apiResponse.unwrap().toDomain()
+        return try apiResponse.unwrap().toDomain(roomId: roomId)
     }
 
     func getDefectReportDetail(roomId: Int) async throws -> DefectReportDetail {
         throw RepositoryError.decodingError(detail: "개별 하자 조회 API 미지원")
+    }
+
+    func requestAnalysis(inRoomId: Int, outRoomId: Int?) async throws -> (analysisId: Int, status: String) {
+        let response = try await adapter.request(DefectTarget.createAnalysis(inRoomId: inRoomId, outRoomId: outRoomId))
+        let apiResponse: APIResponse<CreateAnalysisResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<CreateAnalysisResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        let result = try apiResponse.unwrap()
+        return (analysisId: result.analysisId, status: result.status)
+    }
+
+    func getAnalysisStatus(analysisId: Int) async throws -> String {
+        let response = try await adapter.request(DefectTarget.getAnalysisStatus(analysisId: analysisId))
+        let apiResponse: APIResponse<AnalysisStatusResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<AnalysisStatusResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().status
     }
 }

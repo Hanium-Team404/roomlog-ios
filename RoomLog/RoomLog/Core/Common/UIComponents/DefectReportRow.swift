@@ -6,32 +6,59 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct DefectReportRow: View {
     let defect: DefectReportDetail
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Text(defect.type)
-                    .font(.semibold, 16)
-                    .foregroundStyle(Color.neutral800)
-                SeverityBadge(severity: defect.severity)
+        HStack(spacing: 12) {
+            // 하자 이미지 썸네일
+            Group {
+                if let urlString = defect.imageURL, let url = URL(string: urlString) {
+                    LazyImage(url: url) { state in
+                        if let image = state.image {
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } else {
+                            thumbnailPlaceholder
+                        }
+                    }
+                } else {
+                    thumbnailPlaceholder
+                }
             }
+            .aspectRatio(1, contentMode: .fit)
+            .containerRelativeFrame(.horizontal) { width, _ in width * 0.22 }
+            .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            Text(defect.location)
-                .font(.medium, 14)
-                .foregroundStyle(.secondary)
+            // 하자 정보
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    Text(defect.type.displayName)
+                        .font(.semibold, 16)
+                        .foregroundStyle(Color.neutral800)
+                    SeverityBadge(severity: defect.severity)
+                }
 
-            HStack(spacing: 8) {
-                chip(formattedCost)
-                chip(formattedArea)
+                Text(defect.location)
+                    .font(.medium, 14)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                HStack(spacing: 8) {
+                    chip(formattedCost)
+                    chip(formattedArea)
+                }
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.12), radius: 5, x: 0, y: 2)
+    }
+
+    private var thumbnailPlaceholder: some View {
+        ImagePlaceholder()
     }
 
     private func chip(_ text: String) -> some View {

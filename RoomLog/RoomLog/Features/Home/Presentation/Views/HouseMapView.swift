@@ -35,12 +35,14 @@ struct HouseMapView: View {
     let houses: [House]
     var mainHouseId: Int?
     var namespace: Namespace.ID
+    var recenterTrigger: Int = 0
     var onHouseTap: (House) -> Void
 
     @State private var viewModel = HouseMapViewModel()
     @State private var isScrollEnabled: Bool = true
     @State private var scrollProxy = ScrollProxy()
     @State private var autoScrollTimer: Timer?
+    @State private var hasCenteredOnce: Bool = false
 
     // MARK: - Body
 
@@ -100,9 +102,24 @@ struct HouseMapView: View {
             }
             .ignoresSafeArea()
             .onAppear {
-                scrollToCenter()
+                if !hasCenteredOnce {
+                    scrollToCenter()
+                    hasCenteredOnce = true
+                }
             }
-            .onChange(of: houses) {
+            .onChange(of: houses) { oldHouses, newHouses in
+                if newHouses.count > oldHouses.count {
+                    let oldIds = Set(oldHouses.map { $0.houseId })
+                    guard let added = newHouses.first(where: { !oldIds.contains($0.houseId) }),
+                          let index = newHouses.firstIndex(where: { $0.houseId == added.houseId }) else {
+                        return
+                    }
+                    scrollToCenter(target: viewModel.positionFor(house: added, index: index))
+                } else if newHouses.count < oldHouses.count {
+                    scrollToCenter()
+                }
+            }
+            .onChange(of: recenterTrigger) {
                 scrollToCenter()
             }
             .onDisappear {
@@ -131,10 +148,11 @@ struct HouseMapView: View {
 
     // MARK: - Scroll
 
-    private func scrollToCenter() {
-        let target = viewModel.centerTarget(houses: houses, mainHouseId: mainHouseId)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            scrollProxy.scrollTo(canvasPoint: target)
+    private func scrollToCenter(target: CGPoint? = nil) {
+        let point = target ?? viewModel.centerTarget(houses: houses, mainHouseId: mainHouseId)
+        Task {
+            try? await Task.sleep(for: .seconds(0.1))
+            scrollProxy.scrollTo(canvasPoint: point)
         }
     }
 
@@ -164,9 +182,7 @@ struct HouseMapView: View {
             let dy = -edgeRatio(topDist) * maxSpeed + edgeRatio(bottomDist) * maxSpeed
 
             if abs(dx) > 0.1 || abs(dy) > 0.1 {
-                DispatchQueue.main.async {
-                    scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
-                }
+                scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
             }
         }
     }

@@ -16,6 +16,7 @@ struct RoomLogTab: View {
     @State private var showViewerLockedToast: Bool = false
     @Environment(\.di) var di
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     private enum TabIdentifier: Hashable {
         case home, viewer, profile
@@ -27,7 +28,17 @@ struct RoomLogTab: View {
         let homeState = di.resolve(HomeState.self)
         let _ = di.resolve(ScanProcessingManager.self)
 
-        TabView(selection: $selectedTab) {
+        let tabSelection = Binding<TabIdentifier>(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .home && selectedTab == .home {
+                    homeState.recenterMapTrigger += 1
+                }
+                selectedTab = newValue
+            }
+        )
+
+        TabView(selection: tabSelection) {
             Tab("Home", systemImage: "house", value: .home) {
                 NavigationStack(path: Bindable(pathStore).homePath) {
                     HomeView(provider: di.resolve(HomeUseCaseProvider.self))
@@ -56,29 +67,33 @@ struct RoomLogTab: View {
         .overlay(alignment: .top) {
             if showViewerLockedToast {
                 ToastView {
-                        Group {
-                            Text("집을 추가한 뒤 ")
-                                .foregroundStyle(.neutral600)
-                            Text("Viewer")
-                                .foregroundStyle(.dustyBlue)
-                            Text("를 사용하실 수 있습니다")
-                                .foregroundStyle(.neutral600)
-                        }
-                        .font(.medium, 14)
+                    HStack(spacing: 0) {
+                        Text("집을 추가한 뒤 ")
+                            .foregroundStyle(.neutral600)
+                        Text("Viewer")
+                            .foregroundStyle(.dustyBlue)
+                        Text("를 사용하실 수 있습니다")
+                            .foregroundStyle(.neutral600)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 60)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation {
-                                showViewerLockedToast = false
-                            }
-                        }
+                    .font(.medium, 14)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .padding(.horizontal, 24)
+                .safeAreaPadding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .task {
+                    try? await Task.sleep(for: .seconds(2.5))
+                    withAnimation {
+                        showViewerLockedToast = false
                     }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showViewerLockedToast)
+        .onChange(of: scenePhase) { _, newPhase in
+            di.resolve(ScanProcessingManager.self).handleScenePhase(newPhase)
+        }
     }
 }
 

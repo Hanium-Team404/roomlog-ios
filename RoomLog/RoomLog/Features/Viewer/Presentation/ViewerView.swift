@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NukeUI
 
 struct ViewerView: View {
     @Environment(\.di) var di
@@ -105,7 +106,9 @@ private extension ViewerView {
                         .foregroundStyle(Color.cloudDancer)
                         .lineSpacing(6)
                     Button {
-                        pathStore.defectPath.append(.defect(.defectList))
+                        if let houseId = viewModel?.selectedHouse?.id {
+                            pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                        }
                     } label: {
                         Circle()
                             .fill(.white)
@@ -169,7 +172,9 @@ private extension ViewerView {
                     .foregroundStyle(Color.neutral800)
                 Spacer()
                 Button {
-                    pathStore.defectPath.append(.defect(.defectList))
+                    if let houseId = viewModel?.selectedHouse?.id {
+                        pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Text("전체보기")
@@ -237,8 +242,8 @@ private struct RecentRoomRow: View {
     private var thumbnailView: some View {
         Group {
             if let urlString = room.thumbnailURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
+                LazyImage(url: url) { state in
+                    if let image = state.image {
                         image.resizable().aspectRatio(contentMode: .fill)
                     } else {
                         placeholder
