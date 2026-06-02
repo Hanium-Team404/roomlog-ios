@@ -44,7 +44,7 @@ struct RoomSummaryDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case name
-        case fileURL = "ply_url"
+        case fileURL = "thumbnail_url"
         case latestScan = "latest_scan"
         case recentScanDate = "move_in_date"
         case latestScanStatus = "latest_scan_status"
