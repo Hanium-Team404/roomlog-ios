@@ -68,6 +68,7 @@ final class ScanProcessingManager {
     @MainActor
     func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
         processingTask?.cancel()
+        discardPendingRetry()
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .zipping)
         processingTask = Task { [weak self] in
             await self?.fullProcess(encoder: encoder, houseId: houseId)
