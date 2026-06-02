@@ -28,6 +28,13 @@ final class ScanProcessingManager {
         let phase: ProcessingPhase
     }
 
+    /// 업로드 실패 후 재시도용 zip과 그 소유 houseId를 함께 보관.
+    /// 다른 집의 새 스캔이 시작돼도 cross-house 업로드가 일어나지 않도록 한 단위로 묶는다.
+    private struct PendingRetry {
+        let houseId: Int
+        let zipURL: URL
+    }
+
     // MARK: - Persistence Keys
 
     private enum Defaults {
@@ -38,8 +45,8 @@ final class ScanProcessingManager {
     // MARK: - State
 
     private(set) var activeScan: ActiveScan?
-    /// 업로드 실패 후 재시도용 zip 파일. nil이면 재시도 불가.
-    private var pendingRetryZipURL: URL?
+    /// 업로드 실패 후 재시도용 정보. nil이면 재시도 불가.
+    private var pendingRetry: PendingRetry?
 
     // MARK: - Dependencies
 
@@ -103,16 +110,23 @@ final class ScanProcessingManager {
         discardPendingRetry()
     }
 
-    /// 업로드 실패 후 사용 가능한 재시도 여부
+    /// 업로드 실패 후 사용 가능한 재시도 여부.
+    /// `activeScan`이 `.failed` 상태이고 보관된 retry의 houseId가 일치할 때만 true.
     @MainActor
-    var canRetryUpload: Bool { pendingRetryZipURL != nil }
+    var canRetryUpload: Bool {
+        guard let pendingRetry, let activeScan else { return false }
+        guard case .failed = activeScan.phase else { return false }
+        return activeScan.houseId == pendingRetry.houseId
+    }
 
     /// 업로드 실패 후 동일한 zip으로 업로드 재시도
     @MainActor
     func retryUpload() {
-        guard let zipURL = pendingRetryZipURL,
-              let scan = activeScan else { return }
-        let houseId = scan.houseId
+        guard let pendingRetry,
+              let scan = activeScan,
+              scan.houseId == pendingRetry.houseId else { return }
+        let houseId = pendingRetry.houseId
+        let zipURL = pendingRetry.zipURL
         processingTask?.cancel()
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
         processingTask = Task { [weak self] in
@@ -213,7 +227,7 @@ final class ScanProcessingManager {
             }
             // 재시도 가능하도록 zip은 보존하고 datasetDir만 정리
             try? FileManager.default.removeItem(at: datasetDir)
-            pendingRetryZipURL = zipURL
+            pendingRetry = PendingRetry(houseId: houseId, zipURL: zipURL)
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
             return
         }
@@ -234,9 +248,9 @@ final class ScanProcessingManager {
 
     @MainActor
     private func discardPendingRetry() {
-        if let zipURL = pendingRetryZipURL {
-            try? FileManager.default.removeItem(at: zipURL)
-            pendingRetryZipURL = nil
+        if let pendingRetry {
+            try? FileManager.default.removeItem(at: pendingRetry.zipURL)
+            self.pendingRetry = nil
         }
     }
 
@@ -254,7 +268,7 @@ final class ScanProcessingManager {
             return
         }
         try? FileManager.default.removeItem(at: zipURL)
-        pendingRetryZipURL = nil
+        pendingRetry = nil
         if Task.isCancelled { return }
 
         let scanId = scanResult.scanId
