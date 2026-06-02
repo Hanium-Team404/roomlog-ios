@@ -28,7 +28,17 @@ struct RoomLogTab: View {
         let homeState = di.resolve(HomeState.self)
         let _ = di.resolve(ScanProcessingManager.self)
 
-        TabView(selection: $selectedTab) {
+        let tabSelection = Binding<TabIdentifier>(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .home && selectedTab == .home {
+                    homeState.recenterMapTrigger += 1
+                }
+                selectedTab = newValue
+            }
+        )
+
+        TabView(selection: tabSelection) {
             Tab("Home", systemImage: "house", value: .home) {
                 NavigationStack(path: Bindable(pathStore).homePath) {
                     HomeView(provider: di.resolve(HomeUseCaseProvider.self))

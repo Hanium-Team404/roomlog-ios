@@ -98,6 +98,7 @@ struct ZoomableScrollView<Content: View>: UIViewControllerRepresentable {
         scrollView.backgroundColor = .clear
         scrollView.contentSize = contentSize
         scrollView.decelerationRate = .fast
+        scrollView.scrollsToTop = false
 
         let hostingController = UIHostingController(rootView: content())
         hostingController.view.backgroundColor = .clear
@@ -189,8 +190,17 @@ struct ZoomableScrollView<Content: View>: UIViewControllerRepresentable {
     }
 }
 
+/// `setContentOffset(_:animated:)` 형태의 외부 트리거(탭바 재탭 등)에 의한 자동 스크롤을 무시한다.
+/// 내부 코드에서는 `contentOffset = ...` 형태(animated: false)로만 설정하므로 정상 동작에 영향이 없다.
+final class NonAnimatedSetOffsetScrollView: UIScrollView {
+    override func setContentOffset(_ contentOffset: CGPoint, animated: Bool) {
+        if animated { return }
+        super.setContentOffset(contentOffset, animated: animated)
+    }
+}
+
 final class ZoomableScrollViewController: UIViewController {
-    let scrollView = UIScrollView()
+    let scrollView = NonAnimatedSetOffsetScrollView()
 
     override func loadView() {
         view = scrollView

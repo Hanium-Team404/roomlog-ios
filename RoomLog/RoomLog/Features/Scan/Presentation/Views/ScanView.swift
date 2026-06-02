@@ -43,6 +43,7 @@ struct ScanView: View {
     var body: some View {
         scanPhase
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
             .onAppear { viewModel.setup() }
             .onDisappear { viewModel.tearDown() }
             .onChange(of: viewModel.phase) {

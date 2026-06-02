@@ -12,4 +12,5 @@ import Observation
 final class HomeState {
     var hasHouses: Bool = false
     var selectedHouse: House?
+    var recenterMapTrigger: Int = 0
 }

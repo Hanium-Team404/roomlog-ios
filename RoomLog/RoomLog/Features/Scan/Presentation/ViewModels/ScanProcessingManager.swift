@@ -187,6 +187,7 @@ final class ScanProcessingManager {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
             cleanup(zipURL: zipURL, datasetDir: datasetDir)
+            if Task.isCancelled { return }
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
             return
         }
