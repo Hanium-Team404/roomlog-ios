@@ -83,7 +83,9 @@ final class VideoEncoder: @unchecked Sendable {
             writer.startWriting()
             writer.startSession(atSourceTime: .zero)
         } catch {
+            #if DEBUG
             print("VideoEncoder: AVAssetWriter 생성 실패. \(error.localizedDescription)")
+            #endif
             status = .error
         }
     }
@@ -93,7 +95,9 @@ final class VideoEncoder: @unchecked Sendable {
         if firstFrameTime == nil { firstFrameTime = frame.time }
         let time = CMTime(seconds: frame.time - anchor, preferredTimescale: timeScale)
         if videoAdapter?.append(frame.buffer, withPresentationTime: time) == false {
+            #if DEBUG
             print("VideoEncoder: pixel buffer append 실패.")
+            #endif
             status = .error
         }
     }
@@ -101,7 +105,9 @@ final class VideoEncoder: @unchecked Sendable {
     private func doneRecording() async {
         guard let writer = videoWriter else { return }
         guard writer.status != .failed else {
+            #if DEBUG
             print("VideoEncoder: 인코딩 중 오류 발생.")
+            #endif
             status = .error
             return
         }

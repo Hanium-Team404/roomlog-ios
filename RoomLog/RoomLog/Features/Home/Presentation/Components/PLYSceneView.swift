@@ -58,7 +58,9 @@ struct PLYSceneView: UIViewRepresentable {
         for defect in defects {
             guard !defect.region3d.isEmpty else { continue }
             let points = defect.region3d
+            #if DEBUG
             print("[PLY] defect \(defect.id): \(points.count) points")
+            #endif
 
             // 1. 파란색 영역 — 꼭짓점을 순서대로 이어 polygon
             let regionNode = createPolygonNode(points: points)

@@ -89,7 +89,9 @@ final class ScanViewModel: NSObject {
         do {
             encoder = try DatasetEncoder(arConfiguration: configuration)
         } catch {
+            #if DEBUG
             print("ScanViewModel: 인코더 사전 준비 실패. \(error.localizedDescription)")
+            #endif
         }
     }
 
