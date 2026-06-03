@@ -32,6 +32,7 @@ enum NavigationDestination: Hashable {
         case repairHistory(roomId: Int)
         
         /// 내방비교 case
+        case comparisonHistory
         case comparisonSelect
         case comparisonResult(moveInRoomId: Int, moveOutRoomId: Int)
     }

@@ -82,6 +82,8 @@ private extension NavigationRoutingView {
             RepairShopListView(roomId: roomId, defect: defect, provider: di.resolve(EstimateUseCaseProvider.self))
         case .repairHistory(let roomId):
             RepairHistoryView(roomId: roomId, provider: di.resolve(EstimateUseCaseProvider.self))
+        case .comparisonHistory:
+            ComparisonHistoryView(provider: di.resolve(ComparisonUseCaseProvider.self))
         case .comparisonSelect:
             ComparisonSelectView(provider: di.resolve(ComparisonUseCaseProvider.self))
         case .comparisonResult(let moveInRoomId, let moveOutRoomId):
