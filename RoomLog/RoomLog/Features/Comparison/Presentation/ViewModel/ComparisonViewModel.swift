@@ -41,9 +41,12 @@ final class ComparisonViewModel {
     }
 
     func fetchRooms(houseId: Int) async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             rooms = try await provider.makeGetComparisonRoomsUseCase().execute(houseId: houseId)
         } catch {
+            rooms = []
             errorMessage = error.localizedDescription
         }
     }
