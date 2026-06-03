@@ -50,7 +50,7 @@ private extension DefectDetailView {
                let url = URL(string: urlString) {
                 LazyImage(url: url) { state in
                     if let image = state.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        image.resizable().aspectRatio(contentMode: .fit)
                     } else if state.error != nil {
                         imagePlaceholder
                             .overlay {
