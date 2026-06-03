@@ -118,7 +118,7 @@ private extension ComparisonResultView {
 
             HStack(spacing: 0) {
                 SummaryStatView(value: "\(result.defectCount)", label: "하자")
-                SummaryStatView(value: formattedCost(result.totalCost), label: "예상 수리비")
+                SummaryStatView(value: result.totalCost.formattedCost, label: "예상 수리비")
                 SummaryStatView(value: String(format: "%.1fm²", result.totalArea), label: "면적")
             }
 
@@ -131,13 +131,6 @@ private extension ComparisonResultView {
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
     }
 
-    func formattedCost(_ cost: Int) -> String {
-        let manWon = cost / 10000
-        if manWon > 0 { return "\(manWon)만원" }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        return "\(f.string(from: NSNumber(value: cost)) ?? "\(cost)")원"
-    }
 }
 
 // MARK: - Defect List
