@@ -197,7 +197,7 @@ private extension ComparisonResultView {
                 .foregroundStyle(Color.blueGray400)
                 .multilineTextAlignment(.center)
             Button {
-                Task { await viewModel.startAnalysis() }
+                Task { await viewModel.loadOrAnalyze() }
             } label: {
                 Text("다시 시도")
                     .font(.semibold, 16)

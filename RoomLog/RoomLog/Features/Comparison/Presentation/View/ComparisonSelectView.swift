@@ -56,6 +56,7 @@ private extension ComparisonSelectView {
                 ForEach(viewModel.houses) { house in
                     Button {
                         viewModel.selectHouse(house)
+                        step = .moveIn
                     } label: {
                         Text(house.name)
                             .font(.medium, 14)
@@ -144,7 +145,9 @@ private extension ComparisonSelectView {
     @ViewBuilder
     func bottomButton(pathStore: PathStore) -> some View {
         let isEnabled = (step == .moveIn && viewModel.selectedMoveInScan != nil)
-            || (step == .moveOut && viewModel.selectedMoveOutScan != nil)
+            || (step == .moveOut
+                && viewModel.selectedMoveInScan != nil
+                && viewModel.selectedMoveOutScan != nil)
 
         BottomCTAButton {
             if step == .moveIn {

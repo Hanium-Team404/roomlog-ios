@@ -73,11 +73,16 @@ final class ComparisonResultViewModel {
                     await resumePolling(analysisId: savedId)
                     return
                 }
-            } catch let error as RepositoryError where !error.isRetryable {
-                phase = .failed(error.userMessage)
-                return
+            } catch let error as RepositoryError {
+                if error.serverErrorCode == .analysisNotFound {
+                    clearAnalysisId()
+                } else {
+                    phase = .failed(error.userMessage)
+                    return
+                }
             } catch {
-                clearAnalysisId()
+                phase = .failed(error.localizedDescription)
+                return
             }
         }
 
