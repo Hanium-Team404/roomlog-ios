@@ -9,10 +9,12 @@ import Foundation
 
 @Observable
 final class ComparisonViewModel {
-    private(set) var scans: [ComparisonScan] = []
+    private(set) var houses: [House] = []
+    private(set) var rooms: [ComparisonScan] = []
     private(set) var isLoading = false
     var errorMessage: String?
 
+    var selectedHouse: House?
     var selectedMoveInScan: ComparisonScan?
     var selectedMoveOutScan: ComparisonScan?
 
@@ -22,22 +24,34 @@ final class ComparisonViewModel {
         self.provider = provider
     }
 
-    func fetchScans() async {
+    func fetchHouses() async {
         isLoading = true
-        errorMessage = nil
         defer { isLoading = false }
         do {
-            scans = try await provider.makeGetComparisonScansUseCase().execute()
+            houses = try await provider.makeGetComparisonHousesUseCase().execute()
+            if selectedHouse == nil {
+                selectedHouse = houses.first
+            }
+            if let houseId = selectedHouse?.id {
+                await fetchRooms(houseId: houseId)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    var moveInScans: [ComparisonScan] {
-        scans.filter { $0.scanType == .moveIn }
+    func fetchRooms(houseId: Int) async {
+        do {
+            rooms = try await provider.makeGetComparisonRoomsUseCase().execute(houseId: houseId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
-    var moveOutScans: [ComparisonScan] {
-        scans.filter { $0.scanType == .moveOut }
+    func selectHouse(_ house: House) {
+        selectedHouse = house
+        selectedMoveInScan = nil
+        selectedMoveOutScan = nil
+        Task { await fetchRooms(houseId: house.id) }
     }
 }

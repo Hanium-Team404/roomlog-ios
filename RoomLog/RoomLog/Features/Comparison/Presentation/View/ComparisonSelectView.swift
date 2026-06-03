@@ -10,7 +10,11 @@ import SwiftUI
 struct ComparisonSelectView: View {
     @Environment(\.di) var di
     @State private var viewModel: ComparisonViewModel
-    @State private var scanType: ScanType = .moveIn
+    @State private var step: SelectionStep = .moveIn
+
+    enum SelectionStep {
+        case moveIn, moveOut
+    }
 
     init(provider: ComparisonUseCaseProvider) {
         self._viewModel = .init(
@@ -21,6 +25,11 @@ struct ComparisonSelectView: View {
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
         VStack(spacing: 0) {
+            // 집 선택
+            if !viewModel.houses.isEmpty {
+                houseSelector
+            }
+
             stepIndicator
                 .padding(.vertical, 16)
 
@@ -33,7 +42,35 @@ struct ComparisonSelectView: View {
         .navigationTitle("비교할 방 선택")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.fetchScans()
+            await viewModel.fetchHouses()
+        }
+    }
+}
+
+// MARK: - House Selector
+
+private extension ComparisonSelectView {
+    var houseSelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.houses) { house in
+                    Button {
+                        viewModel.selectHouse(house)
+                    } label: {
+                        Text(house.name)
+                            .font(.medium, 14)
+                            .foregroundStyle(viewModel.selectedHouse?.id == house.id ? .white : Color.neutral800)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                viewModel.selectedHouse?.id == house.id ? Color.mutedBlue : Color.blueGray50,
+                                in: Capsule()
+                            )
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
     }
 }
@@ -43,8 +80,8 @@ struct ComparisonSelectView: View {
 private extension ComparisonSelectView {
     var stepIndicator: some View {
         HStack(spacing: 24) {
-            stepLabel(number: 1, title: "입주 방 선택", isActive: scanType == .moveIn)
-            stepLabel(number: 2, title: "퇴거 방 선택", isActive: scanType == .moveOut)
+            stepLabel(number: 1, title: "입주 전 방 선택", isActive: step == .moveIn)
+            stepLabel(number: 2, title: "퇴거 후 방 선택", isActive: step == .moveOut)
         }
     }
 
@@ -65,32 +102,38 @@ private extension ComparisonSelectView {
 // MARK: - Scan List
 
 private extension ComparisonSelectView {
-    var currentScans: [ComparisonScan] {
-        scanType == .moveIn ? viewModel.moveInScans : viewModel.moveOutScans
-    }
-
     var selectedScan: ComparisonScan? {
-        scanType == .moveIn ? viewModel.selectedMoveInScan : viewModel.selectedMoveOutScan
+        step == .moveIn ? viewModel.selectedMoveInScan : viewModel.selectedMoveOutScan
     }
 
     var scanList: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(currentScans) { scan in
-                    ScanSelectionRow(
-                        scan: scan,
-                        isSelected: selectedScan?.id == scan.id
-                    )
-                    .onTapGesture {
-                        if scanType == .moveIn {
-                            viewModel.selectedMoveInScan = scan
-                        } else {
-                            viewModel.selectedMoveOutScan = scan
+            if viewModel.isLoading {
+                ProgressView()
+                    .padding(.top, 40)
+            } else if viewModel.rooms.isEmpty {
+                Text("방이 없습니다")
+                    .font(.medium, 16)
+                    .foregroundStyle(Color.blueGray300)
+                    .padding(.top, 40)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.rooms) { scan in
+                        ScanSelectionRow(
+                            scan: scan,
+                            isSelected: selectedScan?.id == scan.id
+                        )
+                        .onTapGesture {
+                            if step == .moveIn {
+                                viewModel.selectedMoveInScan = scan
+                            } else {
+                                viewModel.selectedMoveOutScan = scan
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
         }
     }
 }
@@ -100,20 +143,24 @@ private extension ComparisonSelectView {
 private extension ComparisonSelectView {
     @ViewBuilder
     func bottomButton(pathStore: PathStore) -> some View {
-        let isEnabled = (scanType == .moveIn && viewModel.selectedMoveInScan != nil)
-            || (scanType == .moveOut && viewModel.selectedMoveOutScan != nil)
+        let isEnabled = (step == .moveIn && viewModel.selectedMoveInScan != nil)
+            || (step == .moveOut && viewModel.selectedMoveOutScan != nil)
 
         BottomCTAButton {
-            if scanType == .moveIn {
-                scanType = .moveOut
+            if step == .moveIn {
+                print("[Comparison] step: moveIn → moveOut, selected: \(viewModel.selectedMoveInScan?.roomName ?? "nil")")
+                step = .moveOut
             } else if let moveIn = viewModel.selectedMoveInScan,
                       let moveOut = viewModel.selectedMoveOutScan {
+                print("[Comparison] 방 비교하기 — moveIn: \(moveIn.id)(\(moveIn.roomName)), moveOut: \(moveOut.id)(\(moveOut.roomName))")
                 pathStore.defectPath.append(
-                    .defect(.comparisonResult(moveInScanId: moveIn.id, moveOutScanId: moveOut.id))
+                    .defect(.comparisonResult(moveInRoomId: moveIn.id, moveOutRoomId: moveOut.id))
                 )
+            } else {
+                print("[Comparison] 방 비교하기 실패 — moveIn: \(viewModel.selectedMoveInScan?.id as Any), moveOut: \(viewModel.selectedMoveOutScan?.id as Any)")
             }
         } label: {
-            Text(scanType == .moveIn ? "다음" : "방 비교하기")
+            Text(step == .moveIn ? "다음" : "방 비교하기")
                 .font(.semibold, 17)
         }
         .opacity(isEnabled ? 1 : 0.5)
@@ -134,15 +181,16 @@ struct ScanSelectionRow: View {
                 Text(scan.roomName)
                     .font(.semibold, 16)
                     .foregroundStyle(Color.neutral800)
-                Text(scan.scanDate.toShortDisplayString())
-                    .font(.medium, 14)
-                    .foregroundStyle(Color.blueGray300)
+                if let date = scan.scanDate {
+                    Text(date.toShortDisplayString())
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.blueGray300)
+                }
             }
             Spacer()
             if isSelected {
-                Image("recommend_check")
-                    .renderingMode(.template)
-                    .frame(width:24, height: 24)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
                     .foregroundStyle(Color.accentColor)
             }
         }
@@ -165,24 +213,16 @@ struct ScanSelectionRow: View {
                     if case .success(let image) = phase {
                         image.resizable().aspectRatio(contentMode: .fill)
                     } else {
-                        placeholder
+                        ImagePlaceholder()
                     }
                 }
             } else {
-                placeholder
+                ImagePlaceholder()
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .frame(maxWidth: 85)
+        .containerRelativeFrame(.horizontal) { width, _ in width * 0.18 }
         .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private var placeholder: some View {
-        Color.blueGray50
-            .overlay {
-                Image(systemName: "house.fill")
-                    .foregroundStyle(Color.blueGray300)
-            }
     }
 }
 

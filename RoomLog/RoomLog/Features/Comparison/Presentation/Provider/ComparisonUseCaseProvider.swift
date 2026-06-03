@@ -8,7 +8,8 @@
 import Foundation
 
 protocol ComparisonUseCaseProvider {
-    func makeGetComparisonScansUseCase() -> GetComparisonScansUseCaseProtocol
+    func makeGetComparisonHousesUseCase() -> GetComparisonHousesUseCaseProtocol
+    func makeGetComparisonRoomsUseCase() -> GetComparisonRoomsUseCaseProtocol
 }
 
 final class ComparisonUseCaseProviderImpl: ComparisonUseCaseProvider {
@@ -18,7 +19,15 @@ final class ComparisonUseCaseProviderImpl: ComparisonUseCaseProvider {
         self.repository = repository
     }
 
-    func makeGetComparisonScansUseCase() -> GetComparisonScansUseCaseProtocol {
-        GetComparisonScansUseCase(repository: repository)
+    init(adapter: MoyaNetworkAdapter) {
+        self.repository = ComparisonRepository(adapter: adapter)
+    }
+
+    func makeGetComparisonHousesUseCase() -> GetComparisonHousesUseCaseProtocol {
+        GetComparisonHousesUseCase(repository: repository)
+    }
+
+    func makeGetComparisonRoomsUseCase() -> GetComparisonRoomsUseCaseProtocol {
+        GetComparisonRoomsUseCase(repository: repository)
     }
 }
