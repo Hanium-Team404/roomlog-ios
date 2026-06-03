@@ -52,4 +52,21 @@ final class MockDefectRepository: DefectRepositoryProtocol {
     func getAnalysisStatus(analysisId: Int) async throws -> String {
         return "COMPLETED"
     }
+
+    func getAnalysisResult(analysisId: Int) async throws -> AnalysisResult {
+        AnalysisResult(
+            analysisId: analysisId,
+            roomId: 1,
+            status: "COMPLETED",
+            defectCount: 2,
+            totalCost: 100000,
+            totalArea: 0.5,
+            defects: [
+                DefectReportDetail(id: 1, imageURL: nil, type: .crack, severity: .high, description: "벽면 균열", repairCost: 60000, defectArea: 0.3, location: "거실 벽", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
+                DefectReportDetail(id: 2, imageURL: nil, type: .stain, severity: .medium, description: "천장 얼룩", repairCost: 40000, defectArea: 0.2, location: "천장", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: [])
+            ],
+            plyURL: nil,
+            createdAt: Date()
+        )
+    }
 }

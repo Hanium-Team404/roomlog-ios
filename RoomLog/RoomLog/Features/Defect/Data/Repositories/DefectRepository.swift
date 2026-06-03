@@ -72,4 +72,15 @@ final class DefectRepository: DefectRepositoryProtocol {
         }
         return try apiResponse.unwrap().status
     }
+
+    func getAnalysisResult(analysisId: Int) async throws -> AnalysisResult {
+        let response = try await adapter.request(DefectTarget.getAnalysisResult(analysisId: analysisId))
+        let apiResponse: APIResponse<AnalysisResultResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<AnalysisResultResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().toDomain()
+    }
 }
