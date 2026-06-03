@@ -309,7 +309,7 @@ private struct ShopCard: View {
             if let image = state.image {
                 image
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .aspectRatio(contentMode: .fit)
             } else {
                 Color.blueGray50
                     .overlay(

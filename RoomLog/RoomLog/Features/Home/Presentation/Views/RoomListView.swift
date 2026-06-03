@@ -191,7 +191,7 @@ struct RoomListView: View {
                 if let image = state.image {
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .aspectRatio(contentMode: .fit)
                 } else {
                     thumbnailPlaceholder
                 }

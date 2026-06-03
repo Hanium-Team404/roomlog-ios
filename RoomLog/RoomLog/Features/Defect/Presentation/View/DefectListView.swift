@@ -80,7 +80,7 @@ private struct DefectListRow: View {
             if let urlString = item.thumbnailURL, let url = URL(string: urlString) {
                 LazyImage(url: url) { state in
                     if let image = state.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        image.resizable().aspectRatio(contentMode: .fit)
                     } else {
                         placeholder
                     }

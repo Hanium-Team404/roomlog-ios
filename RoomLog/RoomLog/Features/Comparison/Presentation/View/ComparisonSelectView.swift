@@ -215,7 +215,7 @@ struct ScanSelectionRow: View {
             if let urlString = scan.thumbnailURL, let url = URL(string: urlString) {
                 LazyImage(url: url) { state in
                     if let image = state.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        image.resizable().aspectRatio(contentMode: .fit)
                     } else {
                         ImagePlaceholder()
                     }
