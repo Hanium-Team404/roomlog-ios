@@ -8,91 +8,234 @@
 import SwiftUI
 
 struct ComparisonResultView: View {
-    let moveInScanId: Int
-    let moveOutScanId: Int
+    @Environment(\.di) var di
+    @State private var viewModel: ComparisonResultViewModel
+
+    init(moveInRoomId: Int, moveOutRoomId: Int, provider: DefectUseCaseProvider) {
+        self._viewModel = .init(
+            wrappedValue: ComparisonResultViewModel(
+                moveInRoomId: moveInRoomId,
+                moveOutRoomId: moveOutRoomId,
+                provider: provider
+            )
+        )
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                imagePlaceholder
-                differenceSection
+        Group {
+            switch viewModel.phase {
+            case .loading:
+                ProgressView()
+            case .polling:
+                pollingContent
+            case .completed:
+                if let result = viewModel.result {
+                    completedContent(result: result)
+                }
+            case .failed(let message):
+                errorView(message: message)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
         }
         .navigationTitle("비교 결과")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.loadOrAnalyze()
+        }
     }
 }
 
-// MARK: - Image Placeholder
+// MARK: - Polling Content
 
 private extension ComparisonResultView {
-    var imagePlaceholder: some View {
-        ZStack {
-            Color.blueGray50
-                .overlay {
-                    VStack(spacing: 8) {
-                        Image(systemName: "cube.transparent")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color.blueGray300)
-                        Text("3D 모델 영역")
-                            .font(.medium, 14)
-                            .foregroundStyle(Color.blueGray300)
-                    }
-                }
+    var pollingContent: some View {
+        AnalysisLoadingView(message: "AI가 입주 전/후를 비교하고 있습니다...") {
+            plySection(defects: [])
+        }
+    }
+}
 
-            GeometryReader { geo in
-                ForEach(PreviewSampleData.defects.prefix(3), id: \.id) { defect in
-                    if let x = defect.x, let y = defect.y {
-                        VStack(spacing: 2) {
-                            Text(defect.type.displayName)
-                                .font(.semibold, 12)
-                            Text(String(format: "%.2f m²", defect.defectArea))
-                                .font(.medium, 11)
-                        }
-                        .foregroundStyle(Color.neutral800)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 8))
-                        .position(
-                            x: CGFloat(x) * geo.size.width,
-                            y: CGFloat(y) * geo.size.height
-                        )
-                    }
-                }
+// MARK: - Completed Content
+
+private extension ComparisonResultView {
+    func completedContent(result: AnalysisResult) -> some View {
+        let pathStore = di.resolve(PathStore.self)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                plySection(defects: result.defects)
+                summarySection(result: result)
+                defectListSection(result: result, pathStore: pathStore)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+        .safeAreaInset(edge: .bottom) {
+            BottomCTAButton {
+                pathStore.defectPath.append(.defect(.repairHistory(roomId: result.roomId)))
+            } label: {
+                Text("수리 내역 보기")
+                    .font(.semibold, 17)
             }
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(16 / 10, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
-// MARK: - Difference Section
+// MARK: - 3D PLY Viewer
 
 private extension ComparisonResultView {
-    var differenceSection: some View {
+    func plySection(defects: [DefectReportDetail]) -> some View {
+        Group {
+            if let localURL = viewModel.plyLocalURL {
+                PLYSceneView(fileURL: localURL, defects: defects)
+            } else if viewModel.result?.plyURL != nil {
+                ProgressView("3D 모델 로딩 중...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ImagePlaceholder(iconFont: .largeTitle)
+            }
+        }
+        .aspectRatio(3/4, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .task {
+            await viewModel.downloadPLYIfNeeded()
+        }
+    }
+}
+
+// MARK: - Summary
+
+private extension ComparisonResultView {
+    func summarySection(result: AnalysisResult) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("내 RoomLog 정보")
+                .font(.semibold, 13)
+                .foregroundStyle(Color.blueGray500)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 20))
+
+            Spacer().frame(height: 16)
+
+            HStack(spacing: 0) {
+                SummaryStatView(value: "\(result.defectCount)", label: "하자")
+                SummaryStatView(value: formattedCost(result.totalCost), label: "예상 수리비")
+                SummaryStatView(value: String(format: "%.1fm²", result.totalArea), label: "면적")
+            }
+
+            Spacer().frame(height: 16)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .frame(maxWidth: .infinity)
+        .background(.white, in: RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
+    }
+
+    func formattedCost(_ cost: Int) -> String {
+        let manWon = cost / 10000
+        if manWon > 0 { return "\(manWon)만원" }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        return "\(f.string(from: NSNumber(value: cost)) ?? "\(cost)")원"
+    }
+}
+
+// MARK: - Defect List
+
+private extension ComparisonResultView {
+    func defectListSection(result: AnalysisResult, pathStore: PathStore) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text("주요 차이점")
+            HStack {
+                Text("감지된 하자")
                     .font(.semibold, 20)
                     .foregroundStyle(Color.neutral800)
-                Text("\(PreviewSampleData.defects.count)")
-                    .font(.semibold, 20)
-                    .foregroundStyle(Color.accentColor)
+                Spacer()
+                Button {
+                    pathStore.defectPath.append(.defect(.defectAllList(
+                        roomId: result.roomId,
+                        roomName: "",
+                        defects: result.defects
+                    )))
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("전체보기")
+                            .font(.semibold, 14)
+                        Image(systemName: "chevron.right")
+                            .font(.semibold, 11)
+                    }
+                    .foregroundStyle(Color.mutedBlue)
+                }
             }
 
-            ForEach(PreviewSampleData.defects, id: \.id) { defect in
+            ForEach(result.defects, id: \.id) { defect in
                 DefectReportRow(defect: defect)
+                    .onTapGesture {
+                        pathStore.defectPath.append(.defect(.defectListDetail(
+                            defect: defect,
+                            roomId: result.roomId,
+                            roomImageURL: result.plyURL
+                        )))
+                    }
             }
         }
+    }
+}
+
+// MARK: - Error View
+
+private extension ComparisonResultView {
+    func errorView(message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.blueGray300)
+            Text("비교 분석에 실패했습니다")
+                .font(.semibold, 18)
+                .foregroundStyle(Color.neutral800)
+            Text(message)
+                .font(.medium, 14)
+                .foregroundStyle(Color.blueGray400)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await viewModel.startAnalysis() }
+            } label: {
+                Text("다시 시도")
+                    .font(.semibold, 16)
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Summary Stat 
+
+private struct SummaryStatView: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text(value)
+                .font(.semibold, 24)
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.medium, 16)
+                .foregroundStyle(Color.dustyBlue)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
 #Preview {
+    let di = DIContainer.configured()
     NavigationStack {
-        ComparisonResultView(moveInScanId: 1, moveOutScanId: 4)
+        ComparisonResultView(
+            moveInRoomId: 1,
+            moveOutRoomId: 2,
+            provider: di.resolve(DefectUseCaseProvider.self)
+        )
     }
+    .environment(\.di, di)
 }
