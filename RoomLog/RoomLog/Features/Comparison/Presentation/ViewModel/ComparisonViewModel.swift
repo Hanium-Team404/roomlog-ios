@@ -19,6 +19,7 @@ final class ComparisonViewModel {
     var selectedMoveOutScan: ComparisonScan?
 
     private let provider: ComparisonUseCaseProvider
+    private var fetchRoomsTask: Task<Void, Never>?
 
     init(provider: ComparisonUseCaseProvider) {
         self.provider = provider
@@ -44,8 +45,11 @@ final class ComparisonViewModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            rooms = try await provider.makeGetComparisonRoomsUseCase().execute(houseId: houseId)
+            let result = try await provider.makeGetComparisonRoomsUseCase().execute(houseId: houseId)
+            guard selectedHouse?.id == houseId else { return }
+            rooms = result
         } catch {
+            guard selectedHouse?.id == houseId else { return }
             rooms = []
             errorMessage = error.localizedDescription
         }
@@ -55,6 +59,7 @@ final class ComparisonViewModel {
         selectedHouse = house
         selectedMoveInScan = nil
         selectedMoveOutScan = nil
-        Task { await fetchRooms(houseId: house.id) }
+        fetchRoomsTask?.cancel()
+        fetchRoomsTask = Task { await fetchRooms(houseId: house.id) }
     }
 }
