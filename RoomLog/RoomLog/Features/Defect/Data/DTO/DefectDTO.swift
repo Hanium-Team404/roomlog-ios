@@ -27,14 +27,14 @@ struct DefectRoomSummaryDTO: Codable {
 struct DefectReportResponseDTO: Codable {
     let name: String
     let defects: [DefectDetailDTO]
-    let fileUrl: String?
+    let fileURL: String?
     let moveInDate: String?
     let moveOutDate: String?
     let defectCount: Int
 
     enum CodingKeys: String, CodingKey {
         case name, defects
-        case fileUrl = "ply_url"
+        case fileURL = "ply_url"
         case moveInDate = "move_in_date"
         case moveOutDate = "move_out_date"
         case defectCount = "defect_count"
@@ -45,14 +45,14 @@ struct DefectReportResponseDTO: Codable {
             id: roomId,
             title: name,
             date: moveInDate.flatMap { Date.fromServerDate($0) } ?? Date(),
-            thumbnailURL: fileUrl
+            thumbnailURL: fileURL
         )
         let details = defects.map { $0.toDomain() }
         let totalCost = details.reduce(0) { $0 + $1.repairCost }
         let totalArea = details.reduce(0.0) { $0 + $1.defectArea }
         return DefectReport(
             room: roomData,
-            imageURL: fileUrl,
+            imageURL: fileURL,
             defectCount: defectCount,
             minRepairCost: totalCost,
             repairArea: Float(totalArea),
@@ -96,7 +96,7 @@ struct DefectDetailDTO: Codable {
     let defectId: Int
     let analysisId: Int
     let estimatedCost: Int
-    let imageUrl: String?
+    let imageURL: String?
     let region3d: [Region3dDTO]?
 
     enum CodingKeys: String, CodingKey {
@@ -104,7 +104,7 @@ struct DefectDetailDTO: Codable {
         case defectId = "defect_id"
         case analysisId = "analysis_id"
         case estimatedCost = "estimated_cost"
-        case imageUrl = "image_url"
+        case imageURL = "image_url"
         case region3d = "region_3d"
     }
 
@@ -113,7 +113,7 @@ struct DefectDetailDTO: Codable {
         let points = region3d?.map { DefectPoint3D(x: $0.x, y: $0.y, z: $0.z) } ?? []
         return DefectReportDetail(
             id: defectId,
-            imageURL: imageUrl,
+            imageURL: imageURL,
             type: DefectType(rawString: type),
             severity: Severity(rawString: severity),
             description: description,
@@ -134,4 +134,50 @@ struct Region3dDTO: Codable {
     let x: Float
     let y: Float
     let z: Float
+}
+
+// MARK: - Analysis Result DTO
+
+struct AnalysisResultResponseDTO: Codable {
+    let status: String
+    let summary: AnalysisSummaryDTO
+    let defects: [DefectDetailDTO]
+    let analysisId: Int
+    let roomId: Int
+    let plyURL: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status, summary, defects
+        case analysisId = "analysis_id"
+        case roomId = "room_id"
+        case plyURL = "ply_url"
+        case createdAt = "created_at"
+    }
+
+    func toDomain() -> AnalysisResult {
+        let domainDefects = defects.map { $0.toDomain() }
+        let totalArea = domainDefects.reduce(0) { $0 + Float($1.defectArea) }
+        return AnalysisResult(
+            analysisId: analysisId,
+            roomId: roomId,
+            status: status,
+            defectCount: summary.defectCount,
+            totalCost: summary.totalCost,
+            totalArea: totalArea,
+            defects: domainDefects,
+            plyURL: plyURL,
+            createdAt: createdAt.flatMap { Date.fromServerDateTime($0) }
+        )
+    }
+}
+
+struct AnalysisSummaryDTO: Codable {
+    let defectCount: Int
+    let totalCost: Int
+
+    enum CodingKeys: String, CodingKey {
+        case defectCount = "defect_count"
+        case totalCost = "total_cost"
+    }
 }

@@ -61,12 +61,15 @@ final class DefectViewModel {
                 phase = .completed
                 return
             }
-        } catch let error as RepositoryError where !error.isRetryable {
-            // 디코딩 에러 등 재시도 불가 → 실패
-            phase = .failed(error.userMessage)
-            return
+        } catch let error as RepositoryError {
+            if !error.isRetryable {
+                phase = .failed(error.userMessage)
+                return
+            }
+            // 서버 에러 → 분석 필요할 수 있으므로 계속 진행
         } catch {
-            // 서버 에러(404 포함) → 분석 필요할 수 있으므로 계속 진행
+            phase = .failed(error.localizedDescription)
+            return
         }
 
         // 2. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
@@ -84,12 +87,16 @@ final class DefectViewModel {
                     await resumePolling(analysisId: savedId)
                     return
                 }
-            } catch let error as RepositoryError where !error.isRetryable {
-                phase = .failed(error.userMessage)
-                return
+            } catch let error as RepositoryError {
+                if error.serverErrorCode == .analysisNotFound {
+                    Self.clearAnalysisId(for: roomId)
+                } else {
+                    phase = .failed(error.userMessage)
+                    return
+                }
             } catch {
-                // 서버 에러 → 저장값 무효로 판단, 새 분석 허용
-                Self.clearAnalysisId(for: roomId)
+                phase = .failed(error.localizedDescription)
+                return
             }
         }
 

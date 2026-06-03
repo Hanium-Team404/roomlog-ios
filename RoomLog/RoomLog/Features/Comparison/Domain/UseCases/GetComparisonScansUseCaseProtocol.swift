@@ -7,6 +7,10 @@
 
 import Foundation
 
-protocol GetComparisonScansUseCaseProtocol {
-    func execute() async throws -> [ComparisonScan]
+protocol GetComparisonHousesUseCaseProtocol {
+    func execute() async throws -> [House]
+}
+
+protocol GetComparisonRoomsUseCaseProtocol {
+    func execute(houseId: Int) async throws -> [ComparisonScan]
 }

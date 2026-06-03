@@ -8,6 +8,8 @@
 import Foundation
 
 protocol ComparisonRepositoryProtocol {
-    /// 방 스캔 목록 조회
-    func getScans() async throws -> [ComparisonScan]
+    /// 집 목록 조회
+    func getHouses() async throws -> [House]
+    /// 집의 방 목록 조회
+    func getRooms(houseId: Int) async throws -> [ComparisonScan]
 }

@@ -8,14 +8,18 @@
 import Foundation
 
 final class MockComparisonRepository: ComparisonRepositoryProtocol {
-    func getScans() async throws -> [ComparisonScan] {
+    func getHouses() async throws -> [House] {
         [
-            ComparisonScan(id: 1, roomName: "망고의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 90), thumbnailURL: nil, scanType: .moveIn),
-            ComparisonScan(id: 2, roomName: "민교의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 60), thumbnailURL: nil, scanType: .moveIn),
-            ComparisonScan(id: 3, roomName: "밍교의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 45), thumbnailURL: nil, scanType: .moveIn),
-            ComparisonScan(id: 4, roomName: "망고의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 3), thumbnailURL: nil, scanType: .moveOut),
-            ComparisonScan(id: 5, roomName: "민교의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 1), thumbnailURL: nil, scanType: .moveOut),
-            ComparisonScan(id: 6, roomName: "밍교의 방", scanDate: Date(timeIntervalSinceNow: -86400 * 7), thumbnailURL: nil, scanType: .moveOut),
+            House(houseId: 1, name: "망고의 집", address: "서울시 중구"),
+            House(houseId: 2, name: "민교의 집", address: "서울시 강남구")
+        ]
+    }
+
+    func getRooms(houseId: Int) async throws -> [ComparisonScan] {
+        [
+            ComparisonScan(id: 1, roomName: "거실", scanDate: Date(timeIntervalSinceNow: -86400 * 90), thumbnailURL: nil),
+            ComparisonScan(id: 2, roomName: "안방", scanDate: Date(timeIntervalSinceNow: -86400 * 60), thumbnailURL: nil),
+            ComparisonScan(id: 3, roomName: "주방", scanDate: Date(timeIntervalSinceNow: -86400 * 45), thumbnailURL: nil)
         ]
     }
 }

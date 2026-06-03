@@ -21,4 +21,7 @@ protocol DefectRepositoryProtocol {
 
     /// 분석 상태 조회
     func getAnalysisStatus(analysisId: Int) async throws -> String
+
+    /// 분석 결과 조회
+    func getAnalysisResult(analysisId: Int) async throws -> AnalysisResult
 }
