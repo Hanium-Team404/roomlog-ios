@@ -28,6 +28,12 @@ struct ComparisonHistoryView: View {
                 Spacer()
                 ProgressView()
                 Spacer()
+            } else if let errorMessage = viewModel.errorMessage {
+                Spacer()
+                Text(errorMessage)
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.blueGray500)
+                Spacer()
             } else if viewModel.histories.isEmpty {
                 Spacer()
                 emptyView

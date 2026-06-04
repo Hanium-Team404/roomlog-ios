@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 @Observable
 final class ComparisonHistoryViewModel {
     private(set) var houses: [House] = []
@@ -26,7 +27,10 @@ final class ComparisonHistoryViewModel {
         defer { isLoading = false }
         do {
             houses = try await provider.makeGetComparisonHousesUseCase().execute()
-            if selectedHouse == nil {
+            if let selected = selectedHouse,
+               houses.contains(where: { $0.id == selected.id }) {
+                selectedHouse = selected
+            } else {
                 selectedHouse = houses.first
             }
             loadMockHistories()
