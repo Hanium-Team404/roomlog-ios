@@ -381,6 +381,7 @@ private struct ShopMapCard: View {
     let di = DIContainer.configured()
     let mockDefect = DefectReportDetail(
         id: 1,
+        analysisID: 1,
         imageURL: nil,
         type: .scratch,
         severity: .medium,

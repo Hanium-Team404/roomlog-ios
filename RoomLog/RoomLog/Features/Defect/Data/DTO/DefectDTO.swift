@@ -113,6 +113,7 @@ struct DefectDetailDTO: Codable {
         let points = region3d?.map { DefectPoint3D(x: $0.x, y: $0.y, z: $0.z) } ?? []
         return DefectReportDetail(
             id: defectId,
+            analysisID: analysisId,
             imageURL: imageURL,
             type: DefectType(rawString: type),
             severity: Severity(rawString: severity),

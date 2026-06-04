@@ -8,6 +8,7 @@ import Foundation
 
 struct DefectReportDetail: Hashable {
     let id: Int
+    let analysisID: Int
     let imageURL: String?
     let type: DefectType
     let severity: Severity

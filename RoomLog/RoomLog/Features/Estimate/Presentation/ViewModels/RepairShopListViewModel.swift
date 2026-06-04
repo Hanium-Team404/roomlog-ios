@@ -17,7 +17,6 @@ final class RepairShopListViewModel {
     private(set) var shops: [RepairShop] = []
     private(set) var isLoading = false
     private(set) var isSubmitting = false
-    private(set) var analysisId: Int?
     var selectedShop: RepairShop?
     var viewMode: ViewMode = .list
     var errorMessage: String?
@@ -66,8 +65,7 @@ final class RepairShopListViewModel {
         do {
             let result = try await provider.makeGetRepairShopsByRoomUseCase().execute(roomId: roomId)
             shops = result.shops
-            analysisId = result.analysisId
-            print("[Estimate] fetchShops OK — count=\(result.shops.count), analysisId=\(String(describing: result.analysisId))")
+            print("[Estimate] fetchShops OK — count=\(result.shops.count)")
         } catch {
             errorMessage = error.localizedDescription
             print("[Estimate] fetchShops FAIL — \(error)")
@@ -80,17 +78,14 @@ final class RepairShopListViewModel {
 
     func requestInquiry() async {
         guard let shop = selectedShop else { return }
-        guard let analysisId else {
-            errorMessage = "분석 정보가 없어 문의 미리보기를 생성할 수 없습니다."
-            return
-        }
+        let analysisID = defect.analysisID
         isLoadingPreview = true
         defer { isLoadingPreview = false }
         do {
             let message = "\(messageTitle)\n\n\(messageBody)"
             let result = try await provider.makePreviewEstimateUseCase().execute(
                 message: message,
-                analysisId: analysisId,
+                analysisId: analysisID,
                 providerExternalId: shop.externalId
             )
             preview = result
@@ -109,7 +104,7 @@ final class RepairShopListViewModel {
             try await provider.makeCreateEstimateUseCase().execute(
                 message: composedMessage,
                 roomId: roomId,
-                analysisId: analysisId,
+                analysisId: defect.analysisID,
                 defectIds: [defect.id],
                 provider: shop
             )
