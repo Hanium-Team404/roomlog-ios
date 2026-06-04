@@ -10,6 +10,7 @@ import Foundation
 protocol ComparisonUseCaseProvider {
     func makeGetComparisonHousesUseCase() -> GetComparisonHousesUseCaseProtocol
     func makeGetComparisonRoomsUseCase() -> GetComparisonRoomsUseCaseProtocol
+    func makeGetComparisonHistoriesUseCase() -> GetComparisonHistoriesUseCaseProtocol
 }
 
 final class ComparisonUseCaseProviderImpl: ComparisonUseCaseProvider {
@@ -29,5 +30,9 @@ final class ComparisonUseCaseProviderImpl: ComparisonUseCaseProvider {
 
     func makeGetComparisonRoomsUseCase() -> GetComparisonRoomsUseCaseProtocol {
         GetComparisonRoomsUseCase(repository: repository)
+    }
+
+    func makeGetComparisonHistoriesUseCase() -> GetComparisonHistoriesUseCaseProtocol {
+        GetComparisonHistoriesUseCase(repository: repository)
     }
 }

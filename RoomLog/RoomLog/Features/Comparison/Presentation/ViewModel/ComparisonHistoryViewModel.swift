@@ -33,7 +33,9 @@ final class ComparisonHistoryViewModel {
             } else {
                 selectedHouse = houses.first
             }
-            loadMockHistories()
+            if let houseId = selectedHouse?.id {
+                await fetchHistories(houseId: houseId)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -41,37 +43,15 @@ final class ComparisonHistoryViewModel {
 
     func selectHouse(_ house: House) {
         selectedHouse = house
-        loadMockHistories()
+        Task { await fetchHistories(houseId: house.id) }
     }
 
-    // TODO: 서버 API 연동 시 교체
-    private func loadMockHistories() {
-        guard let house = selectedHouse else {
+    private func fetchHistories(houseId: Int) async {
+        do {
+            histories = try await provider.makeGetComparisonHistoriesUseCase().execute(houseId: houseId)
+        } catch {
             histories = []
-            return
+            errorMessage = error.localizedDescription
         }
-        // Mock 데이터 — 추후 GET /analyses?houseId= 로 교체
-        histories = [
-            ComparisonHistory(
-                id: 101,
-                moveInRoomName: "거실",
-                moveOutRoomName: "거실",
-                defectCount: 3,
-                totalCost: 150000,
-                createdAt: Date(timeIntervalSinceNow: -86400 * 2),
-                moveInRoomId: 1,
-                moveOutRoomId: 4
-            ),
-            ComparisonHistory(
-                id: 102,
-                moveInRoomName: "안방",
-                moveOutRoomName: "안방",
-                defectCount: 1,
-                totalCost: 50000,
-                createdAt: Date(timeIntervalSinceNow: -86400 * 7),
-                moveInRoomId: 2,
-                moveOutRoomId: 5
-            )
-        ]
     }
 }
