@@ -17,6 +17,7 @@ final class ComparisonHistoryViewModel {
     var selectedHouse: House?
 
     private let provider: ComparisonUseCaseProvider
+    private var fetchHistoriesTask: Task<Void, Never>?
 
     init(provider: ComparisonUseCaseProvider) {
         self.provider = provider
@@ -43,13 +44,17 @@ final class ComparisonHistoryViewModel {
 
     func selectHouse(_ house: House) {
         selectedHouse = house
-        Task { await fetchHistories(houseId: house.id) }
+        fetchHistoriesTask?.cancel()
+        fetchHistoriesTask = Task { await fetchHistories(houseId: house.id) }
     }
 
     private func fetchHistories(houseId: Int) async {
         do {
-            histories = try await provider.makeGetComparisonHistoriesUseCase().execute(houseId: houseId)
+            let fetched = try await provider.makeGetComparisonHistoriesUseCase().execute(houseId: houseId)
+            guard !Task.isCancelled, selectedHouse?.id == houseId else { return }
+            histories = fetched
         } catch {
+            guard !Task.isCancelled else { return }
             histories = []
             errorMessage = error.localizedDescription
         }
