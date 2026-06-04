@@ -85,11 +85,11 @@ enum PreviewSampleData {
     ]
 
     static let defects: [DefectReportDetail] = [
-        DefectReportDetail(id: 1, imageURL: nil, type: .scratch, severity: .high, description: "벽지가 심하게 찢어져 있음", repairCost: 15000, defectArea: 0.24, location: "거실 벽면 북서부", discoveredDate: nil, memo: nil, x: 0.3, y: 0.4, z: nil, region3d: []),
-        DefectReportDetail(id: 2, imageURL: nil, type: .crack, severity: .medium, description: "바닥에 찍힌 자국", repairCost: 15000, defectArea: 0.24, location: "거실 중앙부", discoveredDate: nil, memo: nil, x: 0.5, y: 0.6, z: nil, region3d: []),
-        DefectReportDetail(id: 3, imageURL: nil, type: .peeling, severity: .low, description: "경미한 벽지 손상", repairCost: 15000, defectArea: 0.24, location: "거실 벽면 북서부", discoveredDate: nil, memo: nil, x: 0.7, y: 0.2, z: nil, region3d: []),
-        DefectReportDetail(id: 4, imageURL: nil, type: .stain, severity: .high, description: "큰 면적 벽지 손상", repairCost: 25000, defectArea: 0.35, location: "안방 벽면", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
-        DefectReportDetail(id: 5, imageURL: nil, type: .breakage, severity: .medium, description: "바닥 손상", repairCost: 10000, defectArea: 0.12, location: "주방 바닥", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
+        DefectReportDetail(id: 1, analysisID: 1, imageURL: nil, type: .scratch, severity: .high, description: "벽지가 심하게 찢어져 있음", repairCost: 15000, defectArea: 0.24, location: "거실 벽면 북서부", discoveredDate: nil, memo: nil, x: 0.3, y: 0.4, z: nil, region3d: []),
+        DefectReportDetail(id: 2, analysisID: 1, imageURL: nil, type: .crack, severity: .medium, description: "바닥에 찍힌 자국", repairCost: 15000, defectArea: 0.24, location: "거실 중앙부", discoveredDate: nil, memo: nil, x: 0.5, y: 0.6, z: nil, region3d: []),
+        DefectReportDetail(id: 3, analysisID: 1, imageURL: nil, type: .peeling, severity: .low, description: "경미한 벽지 손상", repairCost: 15000, defectArea: 0.24, location: "거실 벽면 북서부", discoveredDate: nil, memo: nil, x: 0.7, y: 0.2, z: nil, region3d: []),
+        DefectReportDetail(id: 4, analysisID: 1, imageURL: nil, type: .stain, severity: .high, description: "큰 면적 벽지 손상", repairCost: 25000, defectArea: 0.35, location: "안방 벽면", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
+        DefectReportDetail(id: 5, analysisID: 1, imageURL: nil, type: .breakage, severity: .medium, description: "바닥 손상", repairCost: 10000, defectArea: 0.12, location: "주방 바닥", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
     ]
 
     static var defectReport: DefectReport {

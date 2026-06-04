@@ -244,7 +244,7 @@ private struct RepairHistoryCard: View {
                 dateAndShopInfo
             }
             Spacer()
-            statusBadge
+            StatusBadge(estimateStatus: estimate.displayStatus)
         }
         .padding(16)
         .background(.white, in: RoundedRectangle(cornerRadius: 12))
@@ -300,31 +300,6 @@ private struct RepairHistoryCard: View {
                     .foregroundStyle(Color.neutral700)
                     .lineLimit(1)
             }
-        }
-    }
-
-    // MARK: - 상태 뱃지
-
-    private var statusBadge: some View {
-        Text(estimate.displayStatus.label)
-            .font(.system(size: 16, weight: .medium))
-            .foregroundStyle(statusForeground)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(statusBackground, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var statusForeground: Color {
-        switch estimate.displayStatus {
-        case .inProgress: .white
-        case .completed: Color.mutedBlue
-        }
-    }
-
-    private var statusBackground: Color {
-        switch estimate.displayStatus {
-        case .inProgress: Color.mutedBlue
-        case .completed: Color.blueGray50
         }
     }
 

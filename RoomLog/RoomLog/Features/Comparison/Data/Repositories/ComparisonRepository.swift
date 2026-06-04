@@ -45,4 +45,15 @@ final class ComparisonRepository: ComparisonRepositoryProtocol {
             )
         }
     }
+
+    func getComparisonHistories(houseId: Int) async throws -> [ComparisonHistory] {
+        let response = try await adapter.request(ComparisonTarget.getComparisonHistories(houseId: houseId))
+        let apiResponse: APIResponse<[ComparisonHistoryDTO]>
+        do {
+            apiResponse = try decoder.decode(APIResponse<[ComparisonHistoryDTO]>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().map { $0.toDomain() }
+    }
 }

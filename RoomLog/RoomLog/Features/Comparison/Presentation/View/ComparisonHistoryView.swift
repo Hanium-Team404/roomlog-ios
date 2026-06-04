@@ -87,7 +87,9 @@ private extension ComparisonHistoryView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.histories) { history in
                     ComparisonHistoryCard(history: history)
+                        .opacity(history.isCompleted ? 1 : 0.7)
                         .onTapGesture {
+                            guard history.isCompleted else { return }
                             pathStore.defectPath.append(
                                 .defect(.comparisonResult(
                                     moveInRoomId: history.moveInRoomId,
@@ -138,7 +140,7 @@ private struct ComparisonHistoryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 상단: 방 이름 비교
+            // 상단: 방 이름 + 상태 뱃지
             HStack(spacing: 10) {
                 roomLabel(history.moveInRoomName, subtitle: "입주 전")
                 Image(systemName: "arrow.right")
@@ -146,6 +148,7 @@ private struct ComparisonHistoryCard: View {
                     .foregroundStyle(Color.blueGray300)
                 roomLabel(history.moveOutRoomName, subtitle: "퇴거 후")
                 Spacer()
+                StatusBadge(analysisStatus: history.status)
             }
 
             Divider()
@@ -153,10 +156,12 @@ private struct ComparisonHistoryCard: View {
             // 하단: 요약 정보
             HStack(spacing: 16) {
                 if let date = history.createdAt {
-                    infoChip(icon: "calendar", text: date.toShortDisplayString())
+                    InfoChip(icon: "calendar", text: date.toShortDisplayString())
                 }
-                infoChip(icon: "exclamationmark.triangle", text: "하자 \(history.defectCount)건")
-                infoChip(icon: "wonsign.circle", text: history.totalCost.formattedCost)
+                if history.isCompleted {
+                    InfoChip(icon: "exclamationmark.triangle", text: "하자 \(history.defectCount)건")
+                    InfoChip(icon: "wonsign.circle", text: history.totalCost.formattedCost)
+                }
             }
         }
         .padding(16)
@@ -174,17 +179,6 @@ private struct ComparisonHistoryCard: View {
                 .foregroundStyle(Color.neutral800)
         }
         .padding(.horizontal, 5)
-    }
-
-    private func infoChip(icon: String, text: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.blueGray400)
-            Text(text)
-                .font(.medium, 13)
-                .foregroundStyle(Color.blueGray600)
-        }
     }
 }
 
