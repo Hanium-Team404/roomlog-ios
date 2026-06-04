@@ -141,7 +141,7 @@ private extension ViewerView {
                         .foregroundStyle(Color.dustyBlue)
                         .lineSpacing(6)
                     Button {
-                        pathStore.defectPath.append(.defect(.comparisonSelect))
+                        pathStore.defectPath.append(.defect(.comparisonHistory))
                     } label: {
                         Circle()
                             .fill(Color(red: 0.79, green: 0.87, blue: 0.92))

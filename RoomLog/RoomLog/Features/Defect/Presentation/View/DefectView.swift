@@ -179,7 +179,7 @@ private extension DefectView {
 
             HStack(spacing: 0) {
                 SummaryStatView(value: "\(report.defectCount)", label: "하자")
-                SummaryStatView(value: formattedCost(report.minRepairCost), label: "예상 수리비")
+                SummaryStatView(value: report.minRepairCost.formattedCost, label: "예상 수리비")
                 SummaryStatView(value: String(format: "%.1fm²", report.repairArea), label: "면적")
             }
 
@@ -192,13 +192,6 @@ private extension DefectView {
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
     }
 
-    func formattedCost(_ cost: Int) -> String {
-        let manWon = cost / 10000
-        if manWon > 0 { return "\(manWon)만원" }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        return "\(f.string(from: NSNumber(value: cost)) ?? "\(cost)")원"
-    }
 }
 
 // MARK: - Section 3: 하자 리스트
