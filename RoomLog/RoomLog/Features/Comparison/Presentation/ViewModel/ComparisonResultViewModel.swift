@@ -57,6 +57,11 @@ final class ComparisonResultViewModel {
     // MARK: - Main Flow
 
     func loadOrAnalyze() async {
+        // 0. PLY 캐시 먼저 확인
+        if let cached = await PLYFileCache.shared.cachedFileURL(for: moveOutRoomId) {
+            plyLocalURL = cached
+        }
+
         // 1. 저장된 analysisId가 있으면 상태 확인
         if let savedId = savedAnalysisId() {
             do {
