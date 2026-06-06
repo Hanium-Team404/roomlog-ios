@@ -50,16 +50,25 @@ final class DefectViewModel {
 
     // MARK: - Function
 
-    /// 1. PLY 캐시 확인
+    /// 0. PLY 캐시 확인
+    /// 1. 기존 하자 결과 조회 → defects 있으면 바로 표시
     /// 2. savedAnalysisId 있으면 상태 확인 → polling 재개 or 결과 표시
-    /// 3. 없으면 POST /analyses → 서버가 COMPLETED면 결과 조회, PENDING이면 ply 먼저 받아서 표시 + polling
+    /// 3. 없으면 POST /analyses → 분석 시작
     func loadOrAnalyze() async {
         // 0. PLY 캐시 먼저 확인 (불필요한 다운로드 방지)
         if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
             plyLocalURL = cached
         }
 
-        // 1. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
+        // 1. 기존 하자 결과 조회 → defects가 있으면 바로 표시
+        if let existingReport = try? await provider.makeGetDefectReportUseCase().execute(roomId: roomId),
+           !existingReport.defects.isEmpty {
+            report = existingReport
+            phase = .completed
+            return
+        }
+
+        // 2. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
         if let savedId = Self.savedAnalysisId(for: roomId) {
             do {
                 let status = try await provider.makeGetAnalysisStatusUseCase().execute(analysisId: savedId).uppercased()
