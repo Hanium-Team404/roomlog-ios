@@ -65,7 +65,7 @@ final class DefectViewModel {
                 let status = try await provider.makeGetAnalysisStatusUseCase().execute(analysisId: savedId).uppercased()
                 switch status {
                 case "COMPLETED":
-                    Self.clearAnalysisId(for: roomId)
+                    // analysisId 유지 — 재진입 시 다시 결과 조회 가능
                     await fetchReport()
                     return
                 case "FAILED":
@@ -123,7 +123,6 @@ final class DefectViewModel {
 
             let status = result.status.uppercased()
             if status == "COMPLETED" {
-                Self.clearAnalysisId(for: roomId)
                 await fetchReport()
                 return
             }
@@ -187,7 +186,6 @@ final class DefectViewModel {
                 consecutiveErrors = 0
 
                 if status == "COMPLETED" {
-                    Self.clearAnalysisId(for: roomId)
                     break
                 } else if status == "FAILED" {
                     Self.clearAnalysisId(for: roomId)
