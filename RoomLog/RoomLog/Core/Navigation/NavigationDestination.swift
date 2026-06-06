@@ -34,7 +34,7 @@ enum NavigationDestination: Hashable {
         /// 내방비교 case
         case comparisonHistory
         case comparisonSelect
-        case comparisonResult(moveInRoomId: Int, moveOutRoomId: Int)
+        case comparisonResult(moveInRoomId: Int, moveOutRoomId: Int, analysisID: Int? = nil)
     }
     
     enum MyPage: Hashable {

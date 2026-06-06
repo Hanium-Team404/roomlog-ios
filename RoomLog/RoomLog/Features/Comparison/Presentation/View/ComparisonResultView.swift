@@ -11,11 +11,12 @@ struct ComparisonResultView: View {
     @Environment(\.di) var di
     @State private var viewModel: ComparisonResultViewModel
 
-    init(moveInRoomId: Int, moveOutRoomId: Int, provider: DefectUseCaseProvider) {
+    init(moveInRoomId: Int, moveOutRoomId: Int, analysisID: Int? = nil, provider: DefectUseCaseProvider) {
         self._viewModel = .init(
             wrappedValue: ComparisonResultViewModel(
                 moveInRoomId: moveInRoomId,
                 moveOutRoomId: moveOutRoomId,
+                analysisID: analysisID,
                 provider: provider
             )
         )
@@ -49,6 +50,7 @@ struct ComparisonResultView: View {
 private extension ComparisonResultView {
     var pollingContent: some View {
         AnalysisLoadingView(message: "AI가 입주 전/후를 비교하고 있습니다...") {
+            plyToggle
             plySection(defects: [])
         }
     }
@@ -61,7 +63,8 @@ private extension ComparisonResultView {
         let pathStore = di.resolve(PathStore.self)
         return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                plySection(defects: result.defects)
+                plyToggle
+                plySection(defects: viewModel.currentDefects)
                 summarySection(result: result)
                 defectListSection(result: result, pathStore: pathStore)
             }
@@ -83,15 +86,36 @@ private extension ComparisonResultView {
 // MARK: - 3D PLY Viewer
 
 private extension ComparisonResultView {
+    var plyToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(ComparisonResultViewModel.PLYMode.allCases, id: \.self) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.plyMode = mode
+                    }
+                } label: {
+                    Text(mode.rawValue)
+                        .font(.medium, 14)
+                        .foregroundStyle(viewModel.plyMode == mode ? .white : Color.neutral800)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            viewModel.plyMode == mode ? Color.mutedBlue : Color.clear,
+                            in: Capsule()
+                        )
+                }
+            }
+        }
+        .background(Color.blueGray50, in: Capsule())
+    }
+
     func plySection(defects: [DefectReportDetail]) -> some View {
         Group {
-            if let localURL = viewModel.plyLocalURL {
+            if let localURL = viewModel.currentPLYURL {
                 PLYSceneView(fileURL: localURL, defects: defects)
-            } else if viewModel.result?.plyURL != nil {
+            } else {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ImagePlaceholder(iconFont: .largeTitle)
             }
         }
         .aspectRatio(3/4, contentMode: .fit)

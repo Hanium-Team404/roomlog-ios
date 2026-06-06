@@ -17,21 +17,43 @@ final class ComparisonResultViewModel {
         case failed(String)
     }
 
+    // MARK: - PLY Toggle
+    enum PLYMode: String, CaseIterable {
+        case moveIn = "입주 전"
+        case moveOut = "퇴거 후"
+    }
+
     // MARK: - State
     private(set) var phase: Phase = .loading
     private(set) var result: AnalysisResult?
-    private(set) var plyLocalURL: URL?
+    private(set) var moveInPLYURL: URL?
+    private(set) var moveOutPLYURL: URL?
+    var plyMode: PLYMode = .moveOut
     var errorMessage: String?
+
+    /// 현재 선택된 모드의 PLY URL
+    var currentPLYURL: URL? {
+        plyMode == .moveIn ? moveInPLYURL : moveOutPLYURL
+    }
+
+    /// 현재 모드에서 표시할 하자 오버레이 (입주 전이면 없음)
+    var currentDefects: [DefectReportDetail] {
+        plyMode == .moveIn ? [] : (result?.defects ?? [])
+    }
 
     // MARK: - Context
     let moveInRoomId: Int
     let moveOutRoomId: Int
     private let provider: DefectUseCaseProvider
 
-    init(moveInRoomId: Int, moveOutRoomId: Int, provider: DefectUseCaseProvider) {
+    init(moveInRoomId: Int, moveOutRoomId: Int, analysisID: Int? = nil, provider: DefectUseCaseProvider) {
         self.moveInRoomId = moveInRoomId
         self.moveOutRoomId = moveOutRoomId
         self.provider = provider
+        // 내역에서 진입 시 analysisId를 바로 저장
+        if let analysisID {
+            saveAnalysisId(analysisID)
+        }
     }
 
     // MARK: - Analysis ID Tracking
@@ -57,9 +79,12 @@ final class ComparisonResultViewModel {
     // MARK: - Main Flow
 
     func loadOrAnalyze() async {
-        // 0. PLY 캐시 먼저 확인
+        // 0. PLY 캐시 먼저 확인 (입주 전 / 퇴거 후 각각)
+        if let cached = await PLYFileCache.shared.cachedFileURL(for: moveInRoomId) {
+            moveInPLYURL = cached
+        }
         if let cached = await PLYFileCache.shared.cachedFileURL(for: moveOutRoomId) {
-            plyLocalURL = cached
+            moveOutPLYURL = cached
         }
 
         // 1. 저장된 analysisId가 있으면 상태 확인
@@ -193,21 +218,31 @@ final class ComparisonResultViewModel {
     // MARK: - PLY Download
 
     func downloadPLYIfNeeded() async {
-        guard plyLocalURL == nil,
-              let urlString = result?.plyURL,
-              let remoteURL = URL(string: urlString) else { return }
+        // 입주 전 PLY
+        if moveInPLYURL == nil {
+            await downloadPLY(for: moveInRoomId, assign: \.moveInPLYURL)
+        }
+        // 퇴거 후 PLY
+        if moveOutPLYURL == nil {
+            await downloadPLY(for: moveOutRoomId, assign: \.moveOutPLYURL)
+        }
+    }
 
-        let cacheRoomId = moveOutRoomId
-
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: cacheRoomId) {
-            plyLocalURL = cached
+    private func downloadPLY(for roomId: Int, assign keyPath: ReferenceWritableKeyPath<ComparisonResultViewModel, URL?>) async {
+        if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
+            self[keyPath: keyPath] = cached
             return
         }
 
+        // 해당 방의 ply_url을 defects API에서 가져오기
+        guard let report = try? await provider.makeGetDefectReportUseCase().execute(roomId: roomId),
+              let urlString = report.imageURL,
+              let remoteURL = URL(string: urlString) else { return }
+
         do {
-            plyLocalURL = try await PLYFileCache.shared.download(from: remoteURL, roomId: cacheRoomId)
+            self[keyPath: keyPath] = try await PLYFileCache.shared.download(from: remoteURL, roomId: roomId)
         } catch {
-            print("[Comparison] PLY download failed: \(error)")
+            print("[Comparison] PLY download failed for room \(roomId): \(error)")
         }
     }
 }

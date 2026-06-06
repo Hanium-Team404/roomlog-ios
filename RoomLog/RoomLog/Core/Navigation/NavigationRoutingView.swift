@@ -86,10 +86,11 @@ private extension NavigationRoutingView {
             ComparisonHistoryView(provider: di.resolve(ComparisonUseCaseProvider.self))
         case .comparisonSelect:
             ComparisonSelectView(provider: di.resolve(ComparisonUseCaseProvider.self))
-        case .comparisonResult(let moveInRoomId, let moveOutRoomId):
+        case .comparisonResult(let moveInRoomId, let moveOutRoomId, let analysisID):
             ComparisonResultView(
                 moveInRoomId: moveInRoomId,
                 moveOutRoomId: moveOutRoomId,
+                analysisID: analysisID,
                 provider: di.resolve(DefectUseCaseProvider.self)
             )
         }

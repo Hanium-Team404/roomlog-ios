@@ -93,7 +93,8 @@ private extension ComparisonHistoryView {
                             pathStore.defectPath.append(
                                 .defect(.comparisonResult(
                                     moveInRoomId: history.moveInRoomId,
-                                    moveOutRoomId: history.moveOutRoomId
+                                    moveOutRoomId: history.moveOutRoomId,
+                                    analysisID: history.id
                                 ))
                             )
                         }
