@@ -50,29 +50,16 @@ final class DefectViewModel {
 
     // MARK: - Function
 
-    /// 먼저 하자 조회 시도 → 데이터 있으면 바로 표시
-    /// 저장된 analysisId가 있으면 상태 확인 → PENDING이면 polling 재개
-    /// 없으면 새 분석 요청
+    /// 1. PLY 캐시 확인
+    /// 2. savedAnalysisId 있으면 상태 확인 → polling 재개 or 결과 표시
+    /// 3. 없으면 POST /analyses → 서버가 COMPLETED면 결과 조회, PENDING이면 ply 먼저 받아서 표시 + polling
     func loadOrAnalyze() async {
-        // 1. 기존 하자 데이터 조회
-        do {
-            report = try await provider.makeGetDefectReportUseCase().execute(roomId: roomId)
-            if Self.savedAnalysisId(for: roomId) == nil {
-                phase = .completed
-                return
-            }
-        } catch let error as RepositoryError {
-            if !error.isRetryable {
-                phase = .failed(error.userMessage)
-                return
-            }
-            // 서버 에러 → 분석 필요할 수 있으므로 계속 진행
-        } catch {
-            phase = .failed(error.localizedDescription)
-            return
+        // 0. PLY 캐시 먼저 확인 (불필요한 다운로드 방지)
+        if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
+            plyLocalURL = cached
         }
 
-        // 2. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
+        // 1. 저장된 analysisId가 있으면 상태 확인 (중복 분석 방지)
         if let savedId = Self.savedAnalysisId(for: roomId) {
             do {
                 let status = try await provider.makeGetAnalysisStatusUseCase().execute(analysisId: savedId).uppercased()
@@ -83,7 +70,9 @@ final class DefectViewModel {
                     return
                 case "FAILED":
                     Self.clearAnalysisId(for: roomId)
+                    // FAILED → 새 분석 시작
                 default:
+                    // PENDING → polling 재개
                     await resumePolling(analysisId: savedId)
                     return
                 }
@@ -100,7 +89,7 @@ final class DefectViewModel {
             }
         }
 
-        // 3. 새 분석 요청
+        // 2. 새 분석 요청 (or 서버가 기존 완료 분석 반환)
         await startAnalysis()
     }
 
