@@ -10,6 +10,8 @@ import SwiftUI
 struct DefectView: View {
     @Environment(\.di) var di
     @State private var viewModel: DefectViewModel
+    @State private var cameraDirection: CameraDirection?
+    @State private var resetCamera = false
     private let skipAutoLoad: Bool
 
     init(roomId: Int, provider: DefectUseCaseProvider) {
@@ -142,7 +144,19 @@ private extension DefectView {
     func imageSection(report: DefectReport) -> some View {
         Group {
             if let localURL = viewModel.plyLocalURL {
-                PLYSceneView(fileURL: localURL, defects: report.defects)
+                ZStack(alignment: .bottom) {
+                    PLYSceneView(
+                        fileURL: localURL,
+                        defects: report.defects,
+                        cameraDirection: $cameraDirection,
+                        resetCamera: $resetCamera
+                    )
+                    PLYCameraDirectionBar(
+                        direction: $cameraDirection,
+                        resetCamera: $resetCamera
+                    )
+                        .padding(.bottom, 10)
+                }
             } else if report.imageURL != nil {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
