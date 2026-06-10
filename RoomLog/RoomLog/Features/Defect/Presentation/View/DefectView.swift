@@ -140,6 +140,15 @@ struct DefectView: View {
 // MARK: - Section 1: 3D PLY 뷰어 + 마커
 
 private extension DefectView {
+    /// Renders the image / 3D model area for a defect report, showing a 3D scene, loading indicator, or placeholder as appropriate.
+    /// 
+    /// The view shows, in order of preference:
+    /// - a local PLY 3D scene with an overlaid camera-direction bar when a local PLY URL is available,
+    /// - a full-size loading indicator when an image URL exists but the PLY is not yet available,
+    /// - a placeholder otherwise.
+    /// It also initiates a background check/download of the PLY asset when the view appears.
+    /// - Parameter report: The defect report whose image/defect data drive the displayed content.
+    /// - Returns: A view containing the image or 3D scene area, clipped to a rounded rectangle and constrained to a 3:4 aspect ratio.
     @ViewBuilder
     func imageSection(report: DefectReport) -> some View {
         Group {

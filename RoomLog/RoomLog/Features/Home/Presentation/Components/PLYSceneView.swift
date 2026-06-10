@@ -53,6 +53,9 @@ struct PLYSceneView: UIViewRepresentable {
         weak var scnView: SCNView?
         var lastAppliedDirection: CameraDirection?
 
+        /// Handles a tap on the SceneKit view and, if a defect overlay was tapped, animates the camera to that defect's center.
+        /// - Parameters:
+        ///   - gesture: The tap gesture recognizer whose touch location is hit-tested against the SCNView to locate defect nodes.
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let scnView = gesture.view as? SCNView else { return }
             let location = gesture.location(in: scnView)
@@ -70,6 +73,9 @@ struct PLYSceneView: UIViewRepresentable {
             }
         }
 
+        /// Finds a defect identifier encoded in a node's name or any of its ancestor nodes.
+        /// - Parameter node: The starting `SCNNode` to inspect; the search moves upward through `parent` links.
+        /// - Returns: The integer parsed from a name matching the pattern `"defect_<id>"`, or `nil` if no matching node is found.
         private func findDefectID(from node: SCNNode) -> Int? {
             var current: SCNNode? = node
             while let n = current {
@@ -82,7 +88,12 @@ struct PLYSceneView: UIViewRepresentable {
             return nil
         }
 
-        // MARK: 하자 마커 탭 → 카메라 이동
+        /// Animates the scene camera to frame and look at the specified defect region.
+        /// 
+        /// If `defect.region3d` is empty or `scnView.pointOfView` is missing, the function returns without changes.
+        /// - Parameters:
+        ///   - defect: The defect whose 3D region will be used to compute the camera target.
+        ///   - scnView: The SceneKit view containing the camera to animate.
 
         func animateCameraToDefect(_ defect: DefectReportDetail, in scnView: SCNView) {
             let points = defect.region3d
@@ -105,6 +116,12 @@ struct PLYSceneView: UIViewRepresentable {
             SCNTransaction.commit()
         }
 
+        /// Computes a camera offset vector positioned at a fixed distance from the defect region center, oriented along the region's estimated face normal when available or toward the current camera otherwise.
+        /// - Parameters:
+        ///   - points: 3D points defining the defect region; the first three points are used to estimate a face normal.
+        ///   - center: Centroid of the defect region.
+        ///   - cameraNode: Current camera node used to choose the normal direction or as fallback orientation.
+        /// - Returns: An `SCNVector3` whose length is approximately 3.0, pointing from the region center toward the camera-facing side (or directly toward the camera if a reliable normal cannot be computed).
         private func defectCameraOffset(
             for points: [DefectPoint3D],
             center: SCNVector3,
@@ -144,7 +161,11 @@ struct PLYSceneView: UIViewRepresentable {
             return SCNVector3(dx * scale, dy * scale, dz * scale)
         }
 
-        // MARK: 방향 버튼 → 카메라 이동
+        /// Moves the scene's camera to a preset viewpoint for the specified direction, animating the transition.
+        /// - Parameters:
+        ///   - direction: The target `CameraDirection` (front/back/left/right/top/bottom) to move the camera toward.
+        ///   - scnView: The `SCNView` whose scene and `pointOfView` camera will be repositioned. If the scene or camera is missing, the function has no effect.
+        /// - Note: The camera is positioned relative to the scene's root-node bounding box center and the transition is animated (0.6s, ease in/out).
 
         func moveCamera(direction: CameraDirection, in scnView: SCNView) {
             guard let scene = scnView.scene,
@@ -180,7 +201,10 @@ struct PLYSceneView: UIViewRepresentable {
             SCNTransaction.commit()
         }
 
-        // MARK: 초기화 → SceneKit 기본 시점 복원
+        /// Reset the scene camera to a default viewpoint that frames the scene's root node.
+        /// 
+        /// The camera is moved to a position directly above the scene center at a distance equal to 1.5 × the scene's maximum axis size, the camera's orientation is reset (zeroed Euler angles), and the change is animated with a 0.6s ease-in-out transition. If the view has no scene or pointOfView, the call does nothing.
+        /// - Parameter scnView: The `SCNView` whose pointOfView (camera) will be reset.
 
         func resetToDefaultCamera(in scnView: SCNView) {
             guard let scene = scnView.scene,
@@ -209,10 +233,14 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
+    /// Creates a new coordinator to manage SceneKit interactions and runtime state.
+    /// - Returns: A `Coordinator` instance responsible for gesture handling, defect interaction, and camera control.
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
+    /// Creates and configures an `SCNView` for SwiftUI integration, attaches a tap gesture that forwards taps to the coordinator, loads the scene from `fileURL` and applies defect overlays, and wires the coordinator's runtime state.
+    /// - Returns: A configured `SCNView` ready for display and interaction.
     func makeUIView(context: Context) -> SCNView {
         let scnView = SCNView()
         scnView.backgroundColor = .systemBackground
@@ -236,6 +264,11 @@ struct PLYSceneView: UIViewRepresentable {
         return scnView
     }
 
+    /// Updates the provided `SCNView` with the loaded scene and defect overlays, and responds to camera control bindings (move direction or reset).
+    /// - Parameters:
+    ///   - uiView: The `SCNView` to update; the function will load a scene if needed and refresh defect overlay nodes.
+    ///   - context: The SwiftUI `Context` containing the coordinator used to perform camera animations and maintain coordinator state.
+    /// - Note: This method may trigger camera animations via the coordinator and will clear `resetCamera` / `cameraDirection` bindings after applying their effects.
     func updateUIView(_ uiView: SCNView, context: Context) {
         context.coordinator.defects = defects
 
@@ -266,6 +299,10 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
+    /// Create an `SCNScene` from a Model I/O asset at the specified file URL.
+    /// - Parameters:
+    ///   - url: File URL of the 3D model to load.
+    /// - Returns: An `SCNScene` constructed from the model asset, or `nil` if the scene could not be created.
     private func loadScene(from url: URL) -> SCNScene? {
         let asset = MDLAsset(url: url)
         asset.loadTextures()
@@ -280,6 +317,16 @@ struct PLYSceneView: UIViewRepresentable {
         addDefectOverlays(to: scene, defects: defects)
     }
 
+    /// Adds visual overlays for each defect to the given scene.
+    /// 
+    /// Creates a top-level container node named "defectOverlay" and, for every defect that has a non-empty `region3d`,
+    /// adds a child group node named "defect_<id>" containing:
+    /// - a filled polygon region node representing the defect area, and
+    /// - a marker node positioned at the region centroid showing the defect type and area.
+    /// Defects with empty `region3d` are skipped.
+    — Parameters:
+    ///   - scene: The SceneKit scene to which defect overlay nodes will be added.
+    ///   - defects: An array of defect details; each defect's `region3d` provides the polygon vertices and is used to build the overlay.
     private func addDefectOverlays(to scene: SCNScene, defects: [DefectReportDetail]) {
         let container = SCNNode()
         container.name = "defectOverlay"
@@ -317,7 +364,10 @@ struct PLYSceneView: UIViewRepresentable {
         scene.rootNode.addChildNode(container)
     }
 
-    // MARK: - Polygon
+    /// Creates an SCNNode representing a filled polygon defined by the given 3D points, rendered with a translucent blue material.
+    /// - Parameters:
+    ///   - points: Ordered vertices of the polygon in 3D space; must contain at least three points to form a polygon.
+    /// - Returns: An `SCNNode` whose geometry is the filled polygon with a semi-transparent blue material.
 
     private func createPolygonNode(points: [DefectPoint3D]) -> SCNNode {
         let vertices = points.map { SCNVector3($0.x, $0.y, $0.z) }
@@ -354,7 +404,12 @@ struct PLYSceneView: UIViewRepresentable {
         return SCNNode(geometry: geometry)
     }
 
-    // MARK: - Marker
+    /// Creates a marker node with a billboarded image label showing the given title and formatted area at the specified 3D position.
+    /// - Parameters:
+    ///   - position: World-space position where the marker will be placed.
+    ///   - title: Title text displayed on the label.
+    ///   - area: Area in square meters; rendered as a string formatted to two decimal places (e.g. "12.34 m²").
+    /// - Returns: An `SCNNode` positioned at `position` containing a textured plane that faces the camera and displays the title and area.
 
     private func createMarkerNode(at position: SCNVector3, title: String, area: Double) -> SCNNode {
         let node = SCNNode()
@@ -386,7 +441,11 @@ struct PLYSceneView: UIViewRepresentable {
         return node
     }
 
-    // MARK: - Helpers
+    /// Renders a rounded label image combining a title and subtitle for use as a 3D marker texture.
+    /// - Parameters:
+    ///   - title: The primary text displayed prominently at the top of the label.
+    ///   - subtitle: The secondary text displayed below the title with reduced emphasis.
+    /// - Returns: A `UIImage` sized to fit the text that contains a semi-transparent black rounded background with the title (bold, white) and subtitle (semibold, white at reduced alpha) drawn centered vertically with padding.
 
     private func renderLabel(title: String, subtitle: String) -> UIImage {
         let titleFont = UIFont.systemFont(ofSize: 36, weight: .bold)
@@ -425,6 +484,9 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
+    /// Computes the centroid (arithmetic mean) of the given 3D defect points.
+    /// - Parameter points: Array of `DefectPoint3D` whose coordinates will be averaged; must contain at least one element.
+    /// - Returns: An `SCNVector3` representing the average x, y and z coordinates of the input points.
     private func centroid(of points: [DefectPoint3D]) -> SCNVector3 {
         let n = Float(points.count)
         let x = points.reduce(0 as Float) { $0 + $1.x } / n
