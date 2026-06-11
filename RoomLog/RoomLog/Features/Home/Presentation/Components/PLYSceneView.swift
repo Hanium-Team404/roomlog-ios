@@ -324,7 +324,7 @@ struct PLYSceneView: UIViewRepresentable {
     /// - a filled polygon region node representing the defect area, and
     /// - a marker node positioned at the region centroid showing the defect type and area.
     /// Defects with empty `region3d` are skipped.
-    — Parameters:
+    /// - Parameters:
     ///   - scene: The SceneKit scene to which defect overlay nodes will be added.
     ///   - defects: An array of defect details; each defect's `region3d` provides the polygon vertices and is used to build the overlay.
     private func addDefectOverlays(to scene: SCNScene, defects: [DefectReportDetail]) {
