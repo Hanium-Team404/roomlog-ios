@@ -40,7 +40,7 @@ struct DefectListView: View {
                 .listStyle(.plain)
             }
         }
-        .navigationTitle("하자 점검")
+        .navigationTitle(viewModel.houseName.map { "\($0)의 하자 점검" } ?? "하자 점검")
         .navigationBarTitleDisplayMode(.large)
         .task {
             await viewModel.fetchItems()
@@ -58,9 +58,12 @@ private struct DefectListRow: View {
         HStack(spacing: 12) {
             thumbnailView
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.name)
-                    .font(.semibold, 16)
-                    .foregroundStyle(Color.neutral800)
+                HStack(spacing: 8) {
+                    Text(item.name)
+                        .font(.semibold, 16)
+                        .foregroundStyle(Color.neutral800)
+                    statusBadge
+                }
                 Text(item.recentScanDate?.toShortDisplayString() ?? "-")
                     .font(.medium, 14)
                     .foregroundStyle(Color.blueGray300)
@@ -91,6 +94,15 @@ private struct DefectListRow: View {
         }
         .frame(width: 60, height: 60)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        if let status = item.latestScanStatus {
+            StatusBadge(analysisStatus: AnalysisStatus(rawString: status))
+        } else {
+            StatusBadge(label: "진행 전", foreground: Color.blueGray300, background: Color.blueGray50)
+        }
     }
 
     private var placeholder: some View {

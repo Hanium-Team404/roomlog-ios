@@ -12,6 +12,7 @@ final class DefectListViewModel {
     // MARK: - State
     private(set) var items: [RoomSummary] = []
     private(set) var isLoading = false
+    private(set) var houseName: String?
     var errorMessage: String?
 
     // MARK: - Dependency
@@ -30,6 +31,7 @@ final class DefectListViewModel {
         do {
             let houseRooms = try await homeProvider.makeGetHouseRoomsUseCase().execute(houseId: houseId)
             items = houseRooms.rooms
+            houseName = houseRooms.houseName
         } catch {
             errorMessage = error.localizedDescription
         }

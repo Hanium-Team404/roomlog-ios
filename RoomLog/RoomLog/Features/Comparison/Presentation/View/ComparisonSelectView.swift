@@ -12,6 +12,7 @@ struct ComparisonSelectView: View {
     @Environment(\.di) var di
     @State private var viewModel: ComparisonViewModel
     @State private var step: SelectionStep = .moveIn
+    @State private var showToast = false
 
     enum SelectionStep {
         case moveIn, moveOut
@@ -34,12 +35,40 @@ struct ComparisonSelectView: View {
             stepIndicator
                 .padding(.vertical, 16)
 
-            scanList
+            TabView(selection: $step) {
+                scanList.tag(SelectionStep.moveIn)
+                scanList.tag(SelectionStep.moveOut)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.25), value: step)
+            .onChange(of: step) { _, newValue in
+                if newValue == .moveOut && viewModel.selectedMoveInScan == nil {
+                    step = .moveIn
+                    showToast = true
+                }
+            }
 
             Spacer()
 
             bottomButton(pathStore: pathStore)
         }
+        .overlay(alignment: .top) {
+            if showToast {
+                SystemToastView(systemImage: "exclamationmark.circle") {
+                    Text("입주 전 방을 먼저 선택해주세요")
+                        .font(.medium, 14)
+                        .foregroundStyle(Color.neutral800)
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, 60)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { showToast = false }
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showToast)
         .navigationTitle("비교할 방 선택")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -83,6 +112,10 @@ private extension ComparisonSelectView {
     var stepIndicator: some View {
         HStack(spacing: 24) {
             stepLabel(number: 1, title: "입주 전 방 선택", isActive: step == .moveIn)
+                .onTapGesture {
+                    guard step == .moveOut else { return }
+                    step = .moveIn
+                }
             stepLabel(number: 2, title: "퇴거 후 방 선택", isActive: step == .moveOut)
         }
     }
@@ -135,6 +168,7 @@ private extension ComparisonSelectView {
                     }
                 }
                 .padding(.horizontal, 16)
+                .padding(.top, 4)
             }
         }
     }
@@ -208,6 +242,7 @@ struct ScanSelectionRow: View {
                 .stroke(isSelected ? Color.mutedBlue.opacity(0.8) : Color.blueGray200, lineWidth: isSelected ? 1.2 : 1)
         )
         .shadow(color: isSelected ? .black.opacity(0.1) : .clear, radius: 8, x: 0, y: 2)
+        .contentShape(Rectangle())
     }
 
     private var thumbnailView: some View {
