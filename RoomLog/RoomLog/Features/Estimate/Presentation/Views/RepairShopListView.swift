@@ -325,7 +325,7 @@ private struct ShopCard: View {
     }
 
     private var localFallbackImage: some View {
-        let index = (abs(shop.id.hashValue) % 3) + 1
+        let index = (abs(shop.id.hashValue) % 7) + 1
         return Image("recommend_image\(index)")
             .resizable()
             .aspectRatio(contentMode: .fill)
