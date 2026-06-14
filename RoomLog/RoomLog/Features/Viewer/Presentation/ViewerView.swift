@@ -105,24 +105,24 @@ private extension ViewerView {
                         .font(.medium, 16)
                         .foregroundStyle(Color.cloudDancer)
                         .lineSpacing(6)
-                    Button {
-                        if let houseId = viewModel?.selectedHouse?.id {
-                            pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 49, height: 49)
+                        .overlay {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.545, green: 0.451, blue: 0.408))
                         }
-                    } label: {
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 49, height: 49)
-                            .overlay {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(Color(red: 0.545, green: 0.451, blue: 0.408))
-                            }
-                    }
-                    .padding(.top, 8)
+                        .padding(.top, 8)
                 }
                 .padding(.leading, 29)
                 .padding(.top, 32)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if let houseId = viewModel?.selectedHouse?.id {
+                    pathStore.defectPath.append(.defect(.defectList(houseId: houseId)))
+                }
             }
             .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
     }
@@ -140,22 +140,22 @@ private extension ViewerView {
                         .font(.medium, 16)
                         .foregroundStyle(Color.dustyBlue)
                         .lineSpacing(6)
-                    Button {
-                        pathStore.defectPath.append(.defect(.comparisonHistory))
-                    } label: {
-                        Circle()
-                            .fill(Color(red: 0.79, green: 0.87, blue: 0.92))
-                            .frame(width: 49, height: 49)
-                            .overlay {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(Color.deepNavy)
-                            }
-                    }
-                    .padding(.top, 8)
+                    Circle()
+                        .fill(Color(red: 0.79, green: 0.87, blue: 0.92))
+                        .frame(width: 49, height: 49)
+                        .overlay {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Color.deepNavy)
+                        }
+                        .padding(.top, 8)
                 }
                 .padding(.leading, 29)
                 .padding(.top, 32)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                pathStore.defectPath.append(.defect(.comparisonHistory))
             }
             .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
     }

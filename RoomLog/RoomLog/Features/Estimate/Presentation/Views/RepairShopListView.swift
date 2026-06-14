@@ -305,21 +305,30 @@ private struct ShopCard: View {
     }
 
     private var shopImage: some View {
-        LazyImage(url: URL(string: shop.imageURL ?? "")) { state in
-            if let image = state.image {
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+        Group {
+            if let urlString = shop.imageURL, let url = URL(string: urlString) {
+                LazyImage(url: url) { state in
+                    if let image = state.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        localFallbackImage
+                    }
+                }
             } else {
-                Color.blueGray50
-                    .overlay(
-                        Image(systemName: "photo")
-                            .foregroundStyle(Color.blueGray300)
-                    )
+                localFallbackImage
             }
         }
         .frame(width: 106, height: 113)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var localFallbackImage: some View {
+        let index = (abs(shop.id.hashValue) % 3) + 1
+        return Image("recommend_image\(index)")
+            .resizable()
+            .aspectRatio(contentMode: .fill)
     }
 
     private var shopInfo: some View {
