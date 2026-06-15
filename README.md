@@ -10,6 +10,7 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 |:---:|:---:|
 | **김도연** | **송민교** |
 | iOS | iOS |
+| Auth · Home · Scan · MyPage<br/>Core (NetworkClient · TokenStore · DIContainer · CI) | Viewer · Defect · Comparison · Estimate |
 | [@ddodle](https://github.com/ddodle) | [@wk1717](https://github.com/wk1717) |
 
 ## ✨ 주요 기능
