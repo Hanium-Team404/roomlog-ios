@@ -34,11 +34,11 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
     <td align="center"><b>3D 스캔 (LiDAR)</b></td>
   </tr>
   <tr>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 18 28" src="https://github.com/user-attachments/assets/63158777-ee27-4322-8820-40c1d029fecc" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 31 48" src="https://github.com/user-attachments/assets/69c27545-90bb-4c4b-ba9b-562bfefced70" />
 </td>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 18 58" src="https://github.com/user-attachments/assets/844a79b1-3e7f-4967-b45f-a0a1988ec3a5" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 32 00" src="https://github.com/user-attachments/assets/b9bb06cf-d0ac-4851-a180-a825199da931" />
 </td>
-    <td><img width="240" height="512" alt="IMG_0540" src="https://github.com/user-attachments/assets/914d2cf7-fa06-4521-9918-1f2246b63297" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 32 11" src="https://github.com/user-attachments/assets/e0230548-253f-422e-955c-9d2c7b61b5a3" />
 </td>
   </tr>
   <tr>
@@ -47,10 +47,13 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
     <td align="center"><b>하자 상세</b></td>
   </tr>
   <tr>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 21 15" src="https://github.com/user-attachments/assets/ab96b785-dc1b-4523-bf5b-7001688482ce" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 32 25" src="https://github.com/user-attachments/assets/92141419-c81b-4b1c-a88d-071dd88acd5e" />
+
 </td>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 21 48" src="https://github.com/user-attachments/assets/3b0305d4-2086-430f-90a3-482a7788723c" /></td>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 22 05" src="https://github.com/user-attachments/assets/0e73fc01-bf72-4972-a757-f5a2905f1072" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 32 38" src="https://github.com/user-attachments/assets/0968232b-69a0-4c6e-bd61-c0869fd773e9" />
+</td>
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 32 46" src="https://github.com/user-attachments/assets/23075a73-6987-4c3b-ba2b-aefd2755498e" />
+
 </td>
   </tr>
   <tr>
@@ -59,10 +62,13 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
     <td align="center"><b>수리업체 (KakaoMap)</b></td>
   </tr>
   <tr>
-    <td><img width="240" height="512" alt="Simulator Screenshot - iPhone 17 Pro - 2026-06-14 at 20 22 54" src="https://github.com/user-attachments/assets/96a0fdbd-034d-4b2d-bf9e-c3d7e281596a" />
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 33 08" src="https://github.com/user-attachments/assets/ec78e27b-ecd5-4385-a2d4-3785155937cb" />
+
 </td>
-    <td><img src="docs/screenshots/08_comparison_history.png" width="240" /></td>
-    <td><img src="docs/screenshots/09_repair_shops.png" width="240" /></td>
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 33 23" src="https://github.com/user-attachments/assets/6c80cacc-5952-476e-ad67-4f01f15ea2f8" />
+</td>
+    <td><img width="240" height="512" alt="스크린샷 2026-06-18 17 33 38" src="https://github.com/user-attachments/assets/d14099e8-ad0e-49fc-b688-6343f53da2b8" />
+</td>
   </tr>
 </table>
 
