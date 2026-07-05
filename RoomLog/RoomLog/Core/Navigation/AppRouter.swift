@@ -45,8 +45,6 @@ final class AppRouter {
 
     private func transition(to newState: AppState) {
         guard newState != state else { return }
-        withAnimation {
-            state = newState
-        }
+        state = newState
     }
 }
