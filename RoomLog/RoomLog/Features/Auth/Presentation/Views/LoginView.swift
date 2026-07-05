@@ -10,7 +10,7 @@ import SwiftUI
 struct LoginView: View {
 
     @State private var viewModel: LoginViewModel
-    @Environment(\.appFlow) private var appFlow
+    @Environment(AppRouter.self) private var router
 
     init(
         loginUseCase: LoginUseCaseProtocol
@@ -35,9 +35,9 @@ struct LoginView: View {
         .onChange(of: viewModel.loginState) { _, newValue in
             switch newValue {
             case true:
-                appFlow.showMain()
+                router.showMain()
             case false:
-                appFlow.showLogin()
+                router.showLogin()
             }
         }
         .ignoresSafeArea()

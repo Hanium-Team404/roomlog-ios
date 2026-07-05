@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MyPageView: View {
 
-    @Environment(\.appFlow) private var appFlow
+    @Environment(AppRouter.self) private var router
     @State private var viewModel: MyPageViewModel
 
     init(provider: MyPageUseCaseProvider) {
@@ -53,7 +53,7 @@ struct MyPageView: View {
         .alert("로그아웃", isPresented: $viewModel.showLogoutConfirm) {
             Button("취소", role: .cancel) {}
             Button("로그아웃", role: .destructive) {
-                appFlow.logout()
+                router.logout()
             }
         } message: {
             Text("정말 로그아웃 하시겠습니까?")
@@ -63,7 +63,7 @@ struct MyPageView: View {
             Button("탈퇴", role: .destructive) {
                 Task {
                     if await viewModel.deleteAccount() {
-                        appFlow.logout()
+                        router.logout()
                     }
                 }
             }

@@ -10,7 +10,7 @@ import SwiftUI
 struct SplashView: View {
 
     @State private var viewModel: SplashViewModel
-    @Environment(\.appFlow) private var appFlow
+    @Environment(AppRouter.self) private var router
 
     init(
         networkClient: NetworkClient,
@@ -34,9 +34,9 @@ struct SplashView: View {
             .onChange(of: viewModel.isChecked) { _, newValue in
                 guard newValue else { return }
                 if viewModel.isLoggedin {
-                    appFlow.showMain()
+                    router.showMain()
                 } else {
-                    appFlow.showLogin()
+                    router.showLogin()
                 }
             }
     }
