@@ -1,7 +1,7 @@
 # RoomLog
 
 > 자취/원룸 거주자를 위한 **3D 방 기록 & 하자 관리 iOS 앱**
-> 2026 동국대학교 정보통신공학과 졸업프로젝트 (DGU-ICE Capstone Design, Team 404)
+> 2026 한이음 드림업 프로젝트 (Team 404)
 
 LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 동일 공간을 다시 스캔해 변경된 영역과 하자를 자동으로 비교·관리하는 iOS 앱입니다.
 ## 👥 Team
@@ -163,4 +163,4 @@ RoomLog/RoomLog/
 
 ## 📄 License
 
-[MIT License](LICENSE) © 2026 DGU Team404
+[MIT License](LICENSE) © 2026 Team404
