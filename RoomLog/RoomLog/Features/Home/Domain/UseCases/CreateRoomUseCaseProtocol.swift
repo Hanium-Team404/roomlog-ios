@@ -8,5 +8,6 @@
 import Foundation
 
 protocol CreateRoomUseCaseProtocol {
-    func execute(houseId: Int, name: String, scanId: Int) async throws
+    /// 생성된 방의 roomId 반환.
+    func execute(houseId: Int, name: String, scanId: Int) async throws -> Int
 }

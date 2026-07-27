@@ -14,7 +14,7 @@ final class CreateRoomUseCase: CreateRoomUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(houseId: Int, name: String, scanId: Int) async throws {
+    func execute(houseId: Int, name: String, scanId: Int) async throws -> Int {
         try await repository.createRoom(houseId: houseId, name: name, scanId: scanId)
     }
 }

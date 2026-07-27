@@ -26,7 +26,7 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
     var getHouseRoomsResult: Result<HouseRooms, Error> = .success(
         HouseRooms(rooms: [], houseId: 1, houseName: "테스트 집", totalCount: 0)
     )
-    var createRoomResult: Result<Void, Error> = .success(())
+    var createRoomResult: Result<Int, Error> = .success(1)
     var getRoomDetailResult: Result<RoomDetail, Error> = .success(
         RoomDetail(id: 1, name: "테스트 방", moveInDate: nil, moveOutDate: nil,
                    thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil)
@@ -101,8 +101,8 @@ private struct StubGetHouseRoomsUseCase: GetHouseRoomsUseCaseProtocol {
 }
 
 private struct StubCreateRoomUseCase: CreateRoomUseCaseProtocol {
-    let result: Result<Void, Error>
-    func execute(houseId: Int, name: String, scanId: Int) async throws { try result.get() }
+    let result: Result<Int, Error>
+    func execute(houseId: Int, name: String, scanId: Int) async throws -> Int { try result.get() }
 }
 
 private struct StubGetRoomDetailUseCase: GetRoomDetailUseCaseProtocol {

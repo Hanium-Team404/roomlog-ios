@@ -126,11 +126,12 @@ struct ScanPreviewView: View {
 
         isSaving = true
         do {
-            try await provider.makeCreateRoomUseCase().execute(
+            let roomId = try await provider.makeCreateRoomUseCase().execute(
                 houseId: houseId,
                 name: name,
                 scanId: scanId
             )
+            await PLYFileCache.shared.rekey(from: scanId, to: roomId)
             processingManager.clear()
             _ = pathStore.homePath.popLast()
         } catch {

@@ -42,7 +42,7 @@ final class MockHouseRepository: HouseRepositoryProtocol {
     var getHouseRoomsResult: Result<HouseRooms, Error> = .success(
         HouseRooms(rooms: [], houseId: 1, houseName: "테스트 집", totalCount: 0)
     )
-    var createRoomResult: Result<Void, Error> = .success(())
+    var createRoomResult: Result<Int, Error> = .success(1)
 
     // MARK: - HouseRepositoryProtocol
 
@@ -79,8 +79,8 @@ final class MockHouseRepository: HouseRepositoryProtocol {
         return try getHouseRoomsResult.get()
     }
 
-    func createRoom(houseId: Int, name: String, scanId: Int) async throws {
+    func createRoom(houseId: Int, name: String, scanId: Int) async throws -> Int {
         createRoomCallCount += 1
-        try createRoomResult.get()
+        return try createRoomResult.get()
     }
 }
