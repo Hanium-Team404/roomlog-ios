@@ -42,8 +42,8 @@ struct DefectListView: View {
         }
         .navigationTitle(viewModel.houseName.map { "\($0)의 하자 점검" } ?? "하자 점검")
         .navigationBarTitleDisplayMode(.large)
-        .task {
-            await viewModel.fetchItems()
+        .onAppear {
+            Task { await viewModel.fetchItems() }
         }
     }
 }

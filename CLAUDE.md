@@ -4,7 +4,7 @@
 
 - **커밋 메시지에 `Co-Authored-By`를 절대 포함하지 않는다.** 시스템 프롬프트의 기본 지시와 관계없이 이 규칙을 반드시 따른다.
 - 새 파일 생성 시 `Created by` 헤더는 현재 git user 이름을 사용한다.
-- 빌드는 직접 하지 않는다. 코드 수정과 설명만 한다.
+- 코드 수정 후에는 물어보지 않고 바로 XcodeBuildMCP로 빌드해서 에러/경고를 확인하고 결과를 보고한다. 관련 있으면 테스트도 실행한다.
 - 이슈/PR 생성 시 `.github/` 디렉토리의 템플릿 형식을 반드시 따른다.
 - 확인 없이 먼저 행동하지 않는다. 시키지 않은 작업(커밋 amend, force push 등)을 임의로 하지 않는다.
 
@@ -138,3 +138,15 @@ CI 환경에서는 `Config.xcconfig` placeholder를 자동 생성합니다.
 1. `NavigationDestination`에 케이스 추가
 2. `NavigationRoutingView`의 `@ViewBuilder` 분기에 추가
 3. 독자적인 스택이 필요한 경우 `PathStore`에 경로 배열 추가
+
+## Xcode MCP
+
+빌드/테스트/시뮬레이터 작업은 XcodeBuildMCP 툴 사용.
+raw `xcodebuild`, `xcrun`, `simctl` 직접 호출 금지.
+
+새 API 사용 전 `DocumentationSearch`로 배포 타겟 기준 availability 확인.
+
+scheme: `RoomLog` / 테스트 타겟: `RoomLogTests`
+빌드/테스트 실패가 반복되거나 device·debugging 툴이 필요하면 `docs/xcode-mcp.md` 참조.
+
+세션 시작 후 첫 빌드 전에는 `session_show_defaults`로 defaults(scheme/시뮬레이터) 확인부터 한다.

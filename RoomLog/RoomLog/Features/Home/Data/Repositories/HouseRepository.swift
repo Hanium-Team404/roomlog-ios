@@ -71,10 +71,10 @@ final class HouseRepository: HouseRepositoryProtocol {
         )
     }
 
-    func createRoom(houseId: Int, name: String, scanId: Int) async throws {
+    func createRoom(houseId: Int, name: String, scanId: Int) async throws -> Int {
         let body = CreateRoomRequestDTO(name: name, scanId: scanId)
         let response = try await adapter.request(HouseTarget.createRoom(houseId: houseId, request: body))
         let dto = try decoder.decode(APIResponse<CreateRoomResponseDTO>.self, from: response.data)
-        _ = try dto.unwrap()
+        return try dto.unwrap().roomId
     }
 }

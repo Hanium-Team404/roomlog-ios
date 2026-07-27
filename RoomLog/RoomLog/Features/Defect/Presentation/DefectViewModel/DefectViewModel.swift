@@ -202,7 +202,10 @@ final class DefectViewModel {
                     return
                 }
             } catch {
-                if Task.isCancelled { return }
+                if Task.isCancelled {
+                    phase = .loading
+                    return
+                }
                 consecutiveErrors += 1
                 if consecutiveErrors >= PollConfig.maxConsecutiveErrors {
                     phase = .failed("상태 조회 실패: \(error.localizedDescription)")
@@ -213,7 +216,11 @@ final class DefectViewModel {
             try? await Task.sleep(for: .seconds(PollConfig.intervalSeconds))
         }
 
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            // 뷰가 사라져 취소된 경우 재진입 시 polling을 재개할 수 있도록 되돌림 (analysisId는 유지)
+            phase = .loading
+            return
+        }
 
         // 완료 → 하자 데이터 로드
         await fetchReport()
