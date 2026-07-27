@@ -47,7 +47,13 @@ actor PLYFileCache {
             try fileManager.removeItem(at: destination)
         }
         try fileManager.moveItem(at: tempURL, to: destination)
-        try? remoteURL.absoluteString.write(to: sourceURLFile(for: roomId), atomically: true, encoding: .utf8)
+        do {
+            try remoteURL.absoluteString.write(to: sourceURLFile(for: roomId), atomically: true, encoding: .utf8)
+        } catch {
+            try? fileManager.removeItem(at: destination)
+            try? fileManager.removeItem(at: sourceURLFile(for: roomId))
+            throw error
+        }
 
         return destination
     }
@@ -59,21 +65,26 @@ actor PLYFileCache {
     }
 
     /// 임시 키(oldRoomId, 예: scanId)로 캐시된 파일을 새 roomId로 이전. 재다운로드 없이 그대로 재사용하기 위함.
+    /// .ply/.source 쌍이 온전할 때만 이전하며, 한쪽이라도 실패하면 대상 쌍을 제거해 다음 호출이 재다운로드하도록 한다.
     func rekey(from oldRoomId: Int, to newRoomId: Int) {
         guard oldRoomId != newRoomId else { return }
 
         let oldFile = fileURL(for: oldRoomId)
-        let newFile = fileURL(for: newRoomId)
-        if fileManager.fileExists(atPath: oldFile.path) {
-            try? fileManager.removeItem(at: newFile)
-            try? fileManager.moveItem(at: oldFile, to: newFile)
-        }
-
         let oldSource = sourceURLFile(for: oldRoomId)
+        guard fileManager.fileExists(atPath: oldFile.path),
+              fileManager.fileExists(atPath: oldSource.path) else { return }
+
+        let newFile = fileURL(for: newRoomId)
         let newSource = sourceURLFile(for: newRoomId)
-        if fileManager.fileExists(atPath: oldSource.path) {
+        try? fileManager.removeItem(at: newFile)
+        try? fileManager.removeItem(at: newSource)
+
+        do {
+            try fileManager.moveItem(at: oldFile, to: newFile)
+            try fileManager.moveItem(at: oldSource, to: newSource)
+        } catch {
+            try? fileManager.removeItem(at: newFile)
             try? fileManager.removeItem(at: newSource)
-            try? fileManager.moveItem(at: oldSource, to: newSource)
         }
     }
 

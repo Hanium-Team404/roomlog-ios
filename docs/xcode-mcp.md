@@ -26,7 +26,7 @@ workflow 단위로 묶어 제공하며, 빌드 / 테스트 / 시뮬레이터 / �
 커버한다.
 
 ```bash
-claude mcp add XcodeBuildMCP npx xcodebuildmcp@latest
+claude mcp add XcodeBuildMCP -- npx -y xcodebuildmcp@latest mcp
 ```
 
 요구사항: macOS 14.5+, Xcode 16.x+, Node 18+
@@ -61,7 +61,7 @@ enabledWorkflows:
   - project-discovery
 
 sessionDefaults:
-  projectPath: "./RoomLog.xcodeproj"
+  projectPath: "./RoomLog/RoomLog.xcodeproj"
   scheme: "RoomLog"
   simulatorName: "iPhone 17 Pro"
 ```
