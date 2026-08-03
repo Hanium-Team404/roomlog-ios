@@ -65,3 +65,6 @@ fastlane/test_output
 .claude/commands/
 /.xcodebuildmcp/*
 !/.xcodebuildmcp/config.yaml
+
+# CI에서 xcodebuild -clonedSourcePackagesDirPath로 쓰는 SPM 체크아웃 경로
+.spm-cache/
