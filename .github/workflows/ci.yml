@@ -26,10 +26,13 @@ jobs:
       - name: Clean SPM cache
         run: rm -rf ~/Library/Caches/org.swift.swiftpm/repositories
 
+      # 캐시 경로는 아래 -clonedSourcePackagesDirPath와 반드시 같아야 한다.
+      # 기본값(DerivedData/RoomLog-<해시>/SourcePackages)은 프로젝트별 해시가 붙어
+      # 워크플로에서 경로를 지목할 수 없다 — 그래서 저장·복원·빌드가 볼 위치를 고정한다.
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:
-          path: ~/Library/Developer/Xcode/DerivedData/SourcePackages
+          path: .spm-cache
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: ${{ runner.os }}-spm-
 
@@ -40,4 +43,5 @@ jobs:
             -scheme RoomLog \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -configuration Debug \
+            -clonedSourcePackagesDirPath .spm-cache \
             CODE_SIGNING_ALLOWED=NO
