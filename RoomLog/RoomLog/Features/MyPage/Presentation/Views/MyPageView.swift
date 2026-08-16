@@ -129,6 +129,12 @@ private extension MyPageView {
                 menuRow(icon: "camera", title: "카메라 권한 설정") {
                     openAppSettings()
                 }
+
+                Divider().padding(.horizontal, 16)
+
+                menuRow(icon: "location", title: "위치 권한 설정") {
+                    openAppSettings()
+                }
             }
             .background(.white, in: RoundedRectangle(cornerRadius: 20))
             .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
