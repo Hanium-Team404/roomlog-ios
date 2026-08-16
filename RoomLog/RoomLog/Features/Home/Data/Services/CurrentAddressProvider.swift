@@ -9,8 +9,8 @@ import CoreLocation
 import MapKit
 
 /// 현재 위치를 도로명 수준의 주소 문자열로 변환하는 헬퍼.
-/// 권한 거부·위치 획득 실패·역지오코딩 실패 시 아무것도 방출하지 않는다 (조용히 스킵).
-struct CurrentAddressProvider {
+/// 권한 거부·대략적 위치·위치 획득 실패·역지오코딩 실패 시 아무것도 방출하지 않는다 (조용히 스킵).
+struct CurrentAddressProvider: CurrentAddressProviderProtocol {
 
     /// 위치 정확도가 개선될 때마다 주소를 방출하는 스트림.
     /// 첫 픽스(Wi-Fi/셀 추정, 수백 m 오차)로 즉시 한 번 방출해 빠르게 채우고,
@@ -30,7 +30,13 @@ struct CurrentAddressProvider {
                 var fixCount = 0
                 do {
                     for try await update in CLLocationUpdate.liveUpdates() {
-                        if update.authorizationDenied || update.authorizationDeniedGlobally || update.authorizationRestricted {
+                        // 권한 거부·대략적 위치(정확한 위치 OFF)·위치 확인 불가 상태에서는
+                        // 수 km 튄 좌표로 잘못된 주소를 채울 수 있으므로 프리필을 포기한다
+                        if update.authorizationDenied ||
+                            update.authorizationDeniedGlobally ||
+                            update.authorizationRestricted ||
+                            update.accuracyLimited ||
+                            update.locationUnavailable {
                             return
                         }
                         guard let location = update.location, location.horizontalAccuracy >= 0 else { continue }

@@ -16,6 +16,7 @@ protocol HomeUseCaseProvider {
     func makeSetMainHouseUseCase() -> SetMainHouseUseCaseProtocol
     func makeGetHouseRoomsUseCase() -> GetHouseRoomsUseCaseProtocol
     func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol
+    func makeGetCurrentAddressUseCase() -> GetCurrentAddressUseCaseProtocol
 
     // MARK: - Room
     func makeGetRoomDetailUseCase() -> GetRoomDetailUseCaseProtocol
@@ -27,11 +28,13 @@ final class HomeUseCaseProviderImpl: HomeUseCaseProvider {
     // MARK: - Repository
     private let houseRepository: HouseRepositoryProtocol
     private let roomRepository: RoomRepositoryProtocol
+    private let currentAddressProvider: CurrentAddressProviderProtocol
 
     // MARK: - Init
     init(adapter: MoyaNetworkAdapter) {
         self.houseRepository = HouseRepository(adapter: adapter)
         self.roomRepository = RoomRepository(adapter: adapter)
+        self.currentAddressProvider = CurrentAddressProvider()
     }
 
     // MARK: - House UseCases
@@ -61,6 +64,10 @@ final class HomeUseCaseProviderImpl: HomeUseCaseProvider {
 
     func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol {
         CreateRoomUseCase(repository: houseRepository)
+    }
+
+    func makeGetCurrentAddressUseCase() -> GetCurrentAddressUseCaseProtocol {
+        GetCurrentAddressUseCase(provider: currentAddressProvider)
     }
 
     // MARK: - Room UseCases

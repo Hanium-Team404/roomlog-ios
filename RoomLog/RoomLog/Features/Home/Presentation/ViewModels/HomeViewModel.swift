@@ -49,4 +49,9 @@ final class HomeViewModel {
         let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: address)
         houses.append(house)
     }
+
+    /// 집 생성 시트의 주소 프리필용 현재 위치 주소 스트림
+    func currentAddressUpdates() -> AsyncStream<String> {
+        provider.makeGetCurrentAddressUseCase().execute()
+    }
 }

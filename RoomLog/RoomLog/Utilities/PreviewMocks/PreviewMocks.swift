@@ -44,6 +44,9 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
         MockGetHouseRoomsUseCase(rooms: rooms)
     }
     func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol { fatalError() }
+    func makeGetCurrentAddressUseCase() -> GetCurrentAddressUseCaseProtocol {
+        MockGetCurrentAddressUseCase()
+    }
     func makeGetRoomDetailUseCase() -> GetRoomDetailUseCaseProtocol { fatalError() }
     func makeUpdateRoomUseCase() -> UpdateRoomUseCaseProtocol { fatalError() }
     func makeDeleteRoomUseCase() -> DeleteRoomUseCaseProtocol {
@@ -62,6 +65,12 @@ private struct MockGetHouseRoomsUseCase: GetHouseRoomsUseCaseProtocol {
 
 private struct MockDeleteRoomUseCase: DeleteRoomUseCaseProtocol {
     func execute(roomId: Int) async throws {}
+}
+
+private struct MockGetCurrentAddressUseCase: GetCurrentAddressUseCaseProtocol {
+    func execute() -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
 }
 
 // MARK: - Preview DIContainer

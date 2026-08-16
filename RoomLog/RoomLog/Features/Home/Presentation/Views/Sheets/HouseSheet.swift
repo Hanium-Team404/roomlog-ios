@@ -10,6 +10,7 @@ import SwiftUI
 struct HouseSheet: View {
 
     let house: House?
+    let addressUpdates: (() -> AsyncStream<String>)?
     let onSave: (String, String?) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -20,8 +21,13 @@ struct HouseSheet: View {
 
     private var isEditing: Bool { house != nil }
 
-    init(house: House? = nil, onSave: @escaping (String, String?) async throws -> Void) {
+    init(
+        house: House? = nil,
+        addressUpdates: (() -> AsyncStream<String>)? = nil,
+        onSave: @escaping (String, String?) async throws -> Void
+    ) {
         self.house = house
+        self.addressUpdates = addressUpdates
         self.onSave = onSave
         self._name = State(initialValue: house?.name ?? "")
         self._address = State(initialValue: house?.address ?? "")
@@ -76,9 +82,9 @@ struct HouseSheet: View {
     /// 첫 픽스로 즉시 채우고 더 정확한 주소가 오면 갱신하되, 사용자가 직접 입력을 시작하면 멈춘다.
     /// 권한 거부·위치 실패 시 조용히 빈 칸을 유지한다.
     private func prefillAddressIfNeeded() async {
-        guard !isEditing, address.isEmpty else { return }
+        guard !isEditing, address.isEmpty, let addressUpdates else { return }
         var lastPrefilled = ""
-        for await currentAddress in CurrentAddressProvider().addressUpdates() {
+        for await currentAddress in addressUpdates() {
             // 필드가 마지막 프리필 값 그대로일 때만 갱신 — 사용자가 수정(삭제 포함)했으면 멈춘다
             guard address == lastPrefilled else { return }
             address = currentAddress
