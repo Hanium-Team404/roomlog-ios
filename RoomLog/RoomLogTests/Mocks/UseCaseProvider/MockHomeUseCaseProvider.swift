@@ -33,6 +33,7 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
     )
     var updateRoomResult: Result<Void, Error> = .success(())
     var deleteRoomResult: Result<Void, Error> = .success(())
+    var currentAddresses: [String] = []
 
     // MARK: - HomeUseCaseProvider
 
@@ -56,6 +57,9 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
     }
     func makeCreateRoomUseCase() -> CreateRoomUseCaseProtocol {
         StubCreateRoomUseCase(result: createRoomResult)
+    }
+    func makeGetCurrentAddressUseCase() -> GetCurrentAddressUseCaseProtocol {
+        StubGetCurrentAddressUseCase(addresses: currentAddresses)
     }
     func makeGetRoomDetailUseCase() -> GetRoomDetailUseCaseProtocol {
         StubGetRoomDetailUseCase(result: getRoomDetailResult)
@@ -118,4 +122,14 @@ private struct StubUpdateRoomUseCase: UpdateRoomUseCaseProtocol {
 private struct StubDeleteRoomUseCase: DeleteRoomUseCaseProtocol {
     let result: Result<Void, Error>
     func execute(roomId: Int) async throws { try result.get() }
+}
+
+private struct StubGetCurrentAddressUseCase: GetCurrentAddressUseCaseProtocol {
+    let addresses: [String]
+    func execute() -> AsyncStream<String> {
+        AsyncStream { continuation in
+            addresses.forEach { continuation.yield($0) }
+            continuation.finish()
+        }
+    }
 }

@@ -74,7 +74,7 @@ struct HomeView: View {
         }
         .tint(.accent)
         .sheet(isPresented: $viewModel.showCreateSheet) {
-            HouseSheet { name, address in
+            HouseSheet(addressUpdates: viewModel.currentAddressUpdates) { name, address in
                 try await viewModel.createHouse(name: name, address: address)
                 homeState.hasHouses = !viewModel.houses.isEmpty
             }
