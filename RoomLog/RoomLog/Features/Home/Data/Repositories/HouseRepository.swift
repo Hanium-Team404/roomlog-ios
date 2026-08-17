@@ -31,20 +31,42 @@ final class HouseRepository: HouseRepositoryProtocol {
         )
     }
 
-    func createHouse(name: String, address: String?) async throws -> House {
-        let body = CreateHouseRequestDTO(name: name, address: address)
+    func createHouse(name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
+        let body = CreateHouseRequestDTO(
+            name: name,
+            address: address,
+            houseColor: houseColor.rawValue,
+            floorColor: floorColor.rawValue
+        )
         let response = try await adapter.request(HouseTarget.createHouse(request: body))
         let dto = try decoder.decode(APIResponse<CreateHouseResponseDTO>.self, from: response.data)
         let result = try dto.unwrap()
-        return House(houseId: result.houseId, name: result.name, address: result.address)
+        return House(
+            houseId: result.houseId,
+            name: result.name,
+            address: result.address,
+            houseColor: result.houseColor.flatMap(HouseColor.init(rawValue:)),
+            floorColor: result.floorColor.flatMap(FloorColor.init(rawValue:))
+        )
     }
 
-    func updateHouse(houseId: Int, name: String, address: String?) async throws -> House {
-        let body = UpdateHouseRequestDTO(name: name, address: address)
+    func updateHouse(houseId: Int, name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
+        let body = UpdateHouseRequestDTO(
+            name: name,
+            address: address,
+            houseColor: houseColor.rawValue,
+            floorColor: floorColor.rawValue
+        )
         let response = try await adapter.request(HouseTarget.updateHouse(houseId: houseId, request: body))
         let dto = try decoder.decode(APIResponse<UpdateHouseResponseDTO>.self, from: response.data)
         let result = try dto.unwrap()
-        return House(houseId: result.houseId, name: result.name, address: result.address)
+        return House(
+            houseId: result.houseId,
+            name: result.name,
+            address: result.address,
+            houseColor: result.houseColor.flatMap(HouseColor.init(rawValue:)),
+            floorColor: result.floorColor.flatMap(FloorColor.init(rawValue:))
+        )
     }
 
     func deleteHouse(houseId: Int) async throws {

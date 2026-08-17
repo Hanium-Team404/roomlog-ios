@@ -1,12 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "home1.pdf",
+      "filename" : "house_body_beige.pdf",
       "idiom" : "universal"
     }
   ],
   "info" : {
     "author" : "xcode",
     "version" : 1
+  },
+  "properties" : {
+    "preserves-vector-representation" : true
   }
 }

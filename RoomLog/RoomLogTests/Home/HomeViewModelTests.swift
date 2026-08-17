@@ -78,10 +78,10 @@ struct HomeViewModelTests {
     // MARK: - createHouse
 
     @Test func createHouse_성공시_houses에_추가된다() async throws {
-        let newHouse = House(houseId: 3, name: "새 집", address: nil)
+        let newHouse = House(houseId: 3, name: "새 집", address: "서울")
         provider.createHouseResult = .success(newHouse)
 
-        try await sut.createHouse(name: "새 집", address: nil)
+        try await sut.createHouse(name: "새 집", address: "서울")
 
         #expect(sut.houses.count == 1)
         #expect(sut.houses.first?.name == "새 집")
@@ -91,7 +91,7 @@ struct HomeViewModelTests {
         provider.createHouseResult = .failure(NSError(domain: "test", code: -1))
 
         await #expect(throws: (any Error).self) {
-            try await sut.createHouse(name: "실패", address: nil)
+            try await sut.createHouse(name: "실패", address: "서울")
         }
         #expect(sut.houses.isEmpty)
     }
@@ -102,11 +102,43 @@ struct HomeViewModelTests {
         )
         await sut.fetchHouses()
 
-        provider.createHouseResult = .success(House(houseId: 2, name: "자취방", address: nil))
-        try await sut.createHouse(name: "자취방", address: nil)
+        provider.createHouseResult = .success(House(houseId: 2, name: "자취방", address: "부산"))
+        try await sut.createHouse(name: "자취방", address: "부산")
 
         #expect(sut.houses.count == 2)
         #expect(sut.houses.last?.houseId == 2)
         #expect(sut.houses.first?.houseId == 1)
+    }
+
+    @Test func createHouse_이름_주소_색상이_그대로_유즈케이스로_전달된다() async throws {
+        provider.createHouseResult = .success(
+            House(houseId: 3, name: "새 집", address: "서울", houseColor: .navy, floorColor: .pink)
+        )
+
+        try await sut.createHouse(name: "새 집", address: "서울", houseColor: .navy, floorColor: .pink)
+
+        #expect(
+            provider.lastCreateHouseArguments == MockHomeUseCaseProvider.CreateHouseArguments(
+                name: "새 집", address: "서울", houseColor: .navy, floorColor: .pink
+            )
+        )
+    }
+
+    @Test func createHouse_색상을_생략하면_기본_색상이_전달된다() async throws {
+        try await sut.createHouse(name: "새 집", address: "서울")
+
+        #expect(provider.lastCreateHouseArguments?.houseColor == .fallback)
+        #expect(provider.lastCreateHouseArguments?.floorColor == .fallback)
+    }
+
+    @Test func createHouse_성공시_서버가_준_색상이_houses에_반영된다() async throws {
+        provider.createHouseResult = .success(
+            House(houseId: 3, name: "새 집", address: "서울", houseColor: .olive, floorColor: .gray)
+        )
+
+        try await sut.createHouse(name: "새 집", address: "서울", houseColor: .olive, floorColor: .gray)
+
+        #expect(sut.houses.first?.houseColor == .olive)
+        #expect(sut.houses.first?.floorColor == .gray)
     }
 }

@@ -78,7 +78,8 @@ struct HouseMapView: View {
                     ForEach(Array(houses.enumerated()), id: \.element.houseId) { index, house in
                         let pos = viewModel.positionFor(house: house, index: index)
                         HouseImageView(
-                            houseId: house.houseId,
+                            houseColor: house.houseColor,
+                            floorColor: house.floorColor,
                             name: house.name,
                             spacing: Layout.houseSpacing,
                             nameFontSize: Layout.houseNameFontSize

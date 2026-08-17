@@ -11,12 +11,30 @@ import Foundation
 
 struct CreateHouseRequestDTO: Encodable {
     let name: String
-    let address: String?
+    let address: String
+    let houseColor: String
+    let floorColor: String
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case address
+        case houseColor = "house_color"
+        case floorColor = "floor_color"
+    }
 }
 
 struct UpdateHouseRequestDTO: Encodable {
     let name: String
-    let address: String?
+    let address: String
+    let houseColor: String
+    let floorColor: String
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case address
+        case houseColor = "house_color"
+        case floorColor = "floor_color"
+    }
 }
 
 // MARK: - Response DTO
@@ -25,12 +43,16 @@ struct CreateHouseResponseDTO: Codable {
     let houseId: Int
     let name: String
     let address: String?
+    let houseColor: String?
+    let floorColor: String?
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
         case address
+        case houseColor = "house_color"
+        case floorColor = "floor_color"
         case createdAt = "created_at"
     }
 }
@@ -51,15 +73,25 @@ struct HouseSummaryDTO: Codable {
     let houseId: Int
     let name: String
     let address: String?
+    let houseColor: String?
+    let floorColor: String?
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
         case address
+        case houseColor = "house_color"
+        case floorColor = "floor_color"
     }
 
     func toDomain() -> House {
-        House(houseId: houseId, name: name, address: address)
+        House(
+            houseId: houseId,
+            name: name,
+            address: address,
+            houseColor: houseColor.flatMap(HouseColor.init(rawValue:)),
+            floorColor: floorColor.flatMap(FloorColor.init(rawValue:))
+        )
     }
 }
 
@@ -67,11 +99,15 @@ struct UpdateHouseResponseDTO: Codable {
     let houseId: Int
     let name: String
     let address: String?
+    let houseColor: String?
+    let floorColor: String?
 
     enum CodingKeys: String, CodingKey {
         case houseId = "house_id"
         case name
         case address
+        case houseColor = "house_color"
+        case floorColor = "floor_color"
     }
 }
 

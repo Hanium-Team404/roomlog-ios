@@ -36,7 +36,6 @@ struct RoomEditSheet: View {
     var body: some View {
         EditSheetContainer(
             title: "방 정보 수정",
-            detent: .medium,
             isSaving: isSaving,
             isValid: isValid,
             onSave: { save() }

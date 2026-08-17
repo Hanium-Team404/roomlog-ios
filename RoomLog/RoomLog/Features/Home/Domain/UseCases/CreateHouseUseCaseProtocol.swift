@@ -8,5 +8,5 @@
 import Foundation
 
 protocol CreateHouseUseCaseProtocol {
-    func execute(name: String, address: String?) async throws -> House
+    func execute(name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House
 }

@@ -11,11 +11,13 @@ struct HouseSheet: View {
 
     let house: House?
     let addressUpdates: (() -> AsyncStream<String>)?
-    let onSave: (String, String?) async throws -> Void
+    let onSave: (String, String, HouseColor, FloorColor) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var address: String
+    @State private var houseColor: HouseColor
+    @State private var floorColor: FloorColor
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -24,55 +26,49 @@ struct HouseSheet: View {
     init(
         house: House? = nil,
         addressUpdates: (() -> AsyncStream<String>)? = nil,
-        onSave: @escaping (String, String?) async throws -> Void
+        onSave: @escaping (String, String, HouseColor, FloorColor) async throws -> Void
     ) {
         self.house = house
         self.addressUpdates = addressUpdates
         self.onSave = onSave
         self._name = State(initialValue: house?.name ?? "")
         self._address = State(initialValue: house?.address ?? "")
+        self._houseColor = State(initialValue: house?.houseColor ?? .fallback)
+        self._floorColor = State(initialValue: house?.floorColor ?? .fallback)
     }
 
+    /// 이름과 주소는 모두 필수 입력이다.
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
+            && !address.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
         EditSheetContainer(
             title: isEditing ? "집 정보 수정" : "새 집 추가",
-            detent: .height(280),
+            saveButtonTitle: isEditing ? "저장" : "추가",
             isSaving: isSaving,
             isValid: isValid,
             onSave: { save() }
         ) {
-            HStack {
-                Text("집 이름")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                TextField("예: 망고의 집", text: $name)
-                    .font(.medium, 16)
-                    .multilineTextAlignment(.trailing)
-            }
-            .padding()
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 16) {
+                HouseIconView(houseColor: houseColor, floorColor: floorColor)
+                    .frame(height: 170)
+                    .frame(maxWidth: .infinity)
 
-            HStack {
-                Text("주소")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                TextField("예: 서울시 강남구 테헤란로 123", text: $address)
-                    .font(.medium, 16)
-                    .multilineTextAlignment(.trailing)
-            }
-            .padding()
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+                colorPickerRow(title: "지붕 색상", items: HouseColor.allCases, displayColor: \.displayColor, selection: $houseColor)
 
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.regular, 13)
-                    .foregroundStyle(.red)
+                colorPickerRow(title: "바닥 색상", items: FloorColor.allCases, displayColor: \.displayColor, selection: $floorColor)
+
+                capsuleField(title: "집 이름", placeholder: "예: 망고의 집", text: $name)
+
+                capsuleField(title: "주소", placeholder: "예: 서울시 강남구 테헤란로 123", text: $address)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.regular, 13)
+                        .foregroundStyle(.red)
+                }
             }
         }
         .task { await prefillAddressIfNeeded() }
@@ -92,14 +88,65 @@ struct HouseSheet: View {
         }
     }
 
+    private func colorPickerRow<Item: Hashable>(
+        title: String,
+        items: [Item],
+        displayColor: @escaping (Item) -> Color,
+        selection: Binding<Item>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.medium, 14)
+                .foregroundStyle(.neutral800)
+            HStack(spacing: 0) {
+                ForEach(items, id: \.self) { item in
+                    let isSelected = selection.wrappedValue == item
+                    Button {
+                        selection.wrappedValue = item
+                    } label: {
+                        Circle()
+                            .fill(displayColor(item))
+                            .frame(width: 34, height: 34)
+                            .overlay {
+                                // 선택된 색상은 자기 색으로 바깥 링 표시
+                                Circle()
+                                    .stroke(displayColor(item), lineWidth: 2.5)
+                                    .padding(-5)
+                                    .opacity(isSelected ? 1 : 0)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func capsuleField(title: String, placeholder: String, text: Binding<String>) -> some View {
+        HStack {
+            Text(title)
+                .font(.medium, 14)
+                .foregroundStyle(.secondary)
+            Spacer()
+            TextField(placeholder, text: text)
+                .font(.medium, 16)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 15)
+        .background(Capsule().fill(Color(.systemGray6)))
+    }
+
     private func save() {
         isSaving = true
         Task {
             do {
-                let trimmedAddress = address.trimmingCharacters(in: .whitespaces)
                 try await onSave(
                     name.trimmingCharacters(in: .whitespaces),
-                    trimmedAddress.isEmpty ? nil : trimmedAddress
+                    address.trimmingCharacters(in: .whitespaces),
+                    houseColor,
+                    floorColor
                 )
                 dismiss()
             } catch {

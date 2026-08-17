@@ -117,8 +117,11 @@ struct HouseListView: View {
             Text(Strings.deleteMessage)
         }
         .sheet(item: $viewModel.houseToEdit) { house in
-            HouseSheet(house: house) { name, address in
-                try await viewModel.updateHouse(houseId: house.houseId, name: name, address: address)
+            HouseSheet(house: house) { name, address, houseColor, floorColor in
+                try await viewModel.updateHouse(
+                    houseId: house.houseId, name: name, address: address,
+                    houseColor: houseColor, floorColor: floorColor
+                )
             }
         }
         .overlay(alignment: .top) {
@@ -179,9 +182,7 @@ struct HouseListView: View {
     @ViewBuilder
     private func mainHouseCard(house: House) -> some View {
         HStack(spacing: 16) {
-            Image(HouseImageView.imageResource(for: house.houseId))
-                .resizable()
-                .scaledToFit()
+            HouseIconView(houseColor: house.houseColor, floorColor: house.floorColor)
                 .frame(height: Layout.mainThumbnailHeight)
 
             VStack(alignment: .leading, spacing: 16) {
@@ -209,9 +210,7 @@ struct HouseListView: View {
     ) -> some View {
         let isCurrent = isEditing && isSelected
         VStack(spacing: Layout.cardGap) {
-            Image(HouseImageView.imageResource(for: house.houseId))
-                .resizable()
-                .scaledToFit()
+            HouseIconView(houseColor: house.houseColor, floorColor: house.floorColor)
                 .frame(height: Layout.gridThumbnailHeight)
 
             VStack(alignment: .leading, spacing: 8) {

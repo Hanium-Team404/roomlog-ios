@@ -23,8 +23,25 @@ final class MockHouseRepository: HouseRepositoryProtocol {
     // MARK: - Captured Arguments
 
     var lastCreatedHouseName: String?
+    var lastCreateArguments: CreateHouseArguments?
+    var lastUpdateArguments: UpdateHouseArguments?
     var lastDeletedHouseId: Int?
     var lastMainHouseId: Int?
+
+    struct CreateHouseArguments: Equatable {
+        let name: String
+        let address: String
+        let houseColor: HouseColor
+        let floorColor: FloorColor
+    }
+
+    struct UpdateHouseArguments: Equatable {
+        let houseId: Int
+        let name: String
+        let address: String
+        let houseColor: HouseColor
+        let floorColor: FloorColor
+    }
 
     // MARK: - Stub Results
 
@@ -51,14 +68,20 @@ final class MockHouseRepository: HouseRepositoryProtocol {
         return try getHousesResult.get()
     }
 
-    func createHouse(name: String, address: String?) async throws -> House {
+    func createHouse(name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
         createHouseCallCount += 1
         lastCreatedHouseName = name
+        lastCreateArguments = CreateHouseArguments(
+            name: name, address: address, houseColor: houseColor, floorColor: floorColor
+        )
         return try createHouseResult.get()
     }
 
-    func updateHouse(houseId: Int, name: String, address: String?) async throws -> House {
+    func updateHouse(houseId: Int, name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
         updateHouseCallCount += 1
+        lastUpdateArguments = UpdateHouseArguments(
+            houseId: houseId, name: name, address: address, houseColor: houseColor, floorColor: floorColor
+        )
         return try updateHouseResult.get()
     }
 

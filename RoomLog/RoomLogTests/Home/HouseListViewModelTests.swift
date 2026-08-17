@@ -104,6 +104,40 @@ final class HouseListViewModelTests: XCTestCase {
         XCTAssertEqual(sut.mainHouse?.name, "새 이름")
     }
 
+    func test_updateHouse_선택한_색상이_그대로_유즈케이스로_전달된다() async throws {
+        let house = House(houseId: 1, name: "원래 이름", address: "서울", houseColor: .blue, floorColor: .beige)
+        provider.getHousesResult = .success(
+            HouseList(houses: [house], mainHouse: house, totalCount: 1)
+        )
+        await sut.fetchHouses()
+
+        provider.updateHouseResult = .success(
+            House(houseId: 1, name: "새 이름", address: "부산", houseColor: .olive, floorColor: .gray)
+        )
+
+        try await sut.updateHouse(
+            houseId: 1, name: "새 이름", address: "부산",
+            houseColor: .olive, floorColor: .gray
+        )
+
+        XCTAssertEqual(
+            provider.lastUpdateHouseArguments,
+            MockHomeUseCaseProvider.UpdateHouseArguments(
+                houseId: 1, name: "새 이름", address: "부산",
+                houseColor: .olive, floorColor: .gray
+            )
+        )
+        XCTAssertEqual(sut.houses.first?.houseColor, .olive)
+        XCTAssertEqual(sut.mainHouse?.floorColor, .gray)
+    }
+
+    func test_updateHouse_색상을_생략하면_기본_색상이_전달된다() async throws {
+        try await sut.updateHouse(houseId: 1, name: "새 이름", address: "부산")
+
+        XCTAssertEqual(provider.lastUpdateHouseArguments?.houseColor, .fallback)
+        XCTAssertEqual(provider.lastUpdateHouseArguments?.floorColor, .fallback)
+    }
+
     // MARK: - deleteSelectedHouse
 
     func test_deleteSelectedHouse_성공시_목록에서_제거된다() async {

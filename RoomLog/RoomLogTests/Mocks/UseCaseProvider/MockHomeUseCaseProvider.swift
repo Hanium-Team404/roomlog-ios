@@ -35,16 +35,40 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
     var deleteRoomResult: Result<Void, Error> = .success(())
     var currentAddresses: [String] = []
 
+    // MARK: - Captured Arguments
+
+    var lastCreateHouseArguments: CreateHouseArguments?
+    var lastUpdateHouseArguments: UpdateHouseArguments?
+
+    struct CreateHouseArguments: Equatable {
+        let name: String
+        let address: String
+        let houseColor: HouseColor
+        let floorColor: FloorColor
+    }
+
+    struct UpdateHouseArguments: Equatable {
+        let houseId: Int
+        let name: String
+        let address: String
+        let houseColor: HouseColor
+        let floorColor: FloorColor
+    }
+
     // MARK: - HomeUseCaseProvider
 
     func makeGetHousesUseCase() -> GetHousesUseCaseProtocol {
         StubGetHousesUseCase(result: getHousesResult)
     }
     func makeCreateHouseUseCase() -> CreateHouseUseCaseProtocol {
-        StubCreateHouseUseCase(result: createHouseResult)
+        StubCreateHouseUseCase(result: createHouseResult) { [weak self] arguments in
+            self?.lastCreateHouseArguments = arguments
+        }
     }
     func makeUpdateHouseUseCase() -> UpdateHouseUseCaseProtocol {
-        StubUpdateHouseUseCase(result: updateHouseResult)
+        StubUpdateHouseUseCase(result: updateHouseResult) { [weak self] arguments in
+            self?.lastUpdateHouseArguments = arguments
+        }
     }
     func makeDeleteHouseUseCase() -> DeleteHouseUseCaseProtocol {
         StubDeleteHouseUseCase(result: deleteHouseResult)
@@ -81,12 +105,22 @@ private struct StubGetHousesUseCase: GetHousesUseCaseProtocol {
 
 private struct StubCreateHouseUseCase: CreateHouseUseCaseProtocol {
     let result: Result<House, Error>
-    func execute(name: String, address: String?) async throws -> House { try result.get() }
+    let record: (MockHomeUseCaseProvider.CreateHouseArguments) -> Void
+
+    func execute(name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
+        record(.init(name: name, address: address, houseColor: houseColor, floorColor: floorColor))
+        return try result.get()
+    }
 }
 
 private struct StubUpdateHouseUseCase: UpdateHouseUseCaseProtocol {
     let result: Result<House, Error>
-    func execute(houseId: Int, name: String, address: String?) async throws -> House { try result.get() }
+    let record: (MockHomeUseCaseProvider.UpdateHouseArguments) -> Void
+
+    func execute(houseId: Int, name: String, address: String, houseColor: HouseColor, floorColor: FloorColor) async throws -> House {
+        record(.init(houseId: houseId, name: name, address: address, houseColor: houseColor, floorColor: floorColor))
+        return try result.get()
+    }
 }
 
 private struct StubDeleteHouseUseCase: DeleteHouseUseCaseProtocol {
