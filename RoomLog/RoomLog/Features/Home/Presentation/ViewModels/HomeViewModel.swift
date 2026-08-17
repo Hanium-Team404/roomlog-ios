@@ -45,8 +45,15 @@ final class HomeViewModel {
     }
 
     @MainActor
-    func createHouse(name: String, address: String?) async throws {
-        let house = try await provider.makeCreateHouseUseCase().execute(name: name, address: address)
+    func createHouse(
+        name: String,
+        address: String,
+        houseColor: HouseColor = .fallback,
+        floorColor: FloorColor = .fallback
+    ) async throws {
+        let house = try await provider.makeCreateHouseUseCase().execute(
+            name: name, address: address, houseColor: houseColor, floorColor: floorColor
+        )
         houses.append(house)
     }
 

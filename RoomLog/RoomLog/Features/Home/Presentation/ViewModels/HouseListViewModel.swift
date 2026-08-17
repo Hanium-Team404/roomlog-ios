@@ -64,9 +64,16 @@ final class HouseListViewModel {
     }
 
     @MainActor
-    func updateHouse(houseId: Int, name: String, address: String?) async throws {
+    func updateHouse(
+        houseId: Int,
+        name: String,
+        address: String,
+        houseColor: HouseColor = .fallback,
+        floorColor: FloorColor = .fallback
+    ) async throws {
         let updated = try await provider.makeUpdateHouseUseCase().execute(
-            houseId: houseId, name: name, address: address
+            houseId: houseId, name: name, address: address,
+            houseColor: houseColor, floorColor: floorColor
         )
         if let index = houses.firstIndex(where: { $0.houseId == houseId }) {
             houses[index] = updated
