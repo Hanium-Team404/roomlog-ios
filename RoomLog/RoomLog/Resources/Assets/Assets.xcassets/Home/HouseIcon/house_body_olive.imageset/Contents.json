@@ -1,0 +1,15 @@
+{
+  "images" : [
+    {
+      "filename" : "house_body_olive.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
+  "properties" : {
+    "preserves-vector-representation" : true
+  }
+}
