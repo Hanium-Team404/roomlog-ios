@@ -33,7 +33,10 @@ struct DefectListView: View {
             } else {
                 let pathStore = di.resolve(PathStore.self)
                 List(viewModel.items, id: \.id) { item in
-                    DefectListRow(item: item) {
+                    DefectListRow(
+                        item: item,
+                        isAnalysisCompleted: viewModel.completedRoomIds.contains(item.id)
+                    ) {
                         pathStore.defectPath.append(.defect(.defectListMain(roomId: item.id)))
                     }
                 }
@@ -52,6 +55,7 @@ struct DefectListView: View {
 
 private struct DefectListRow: View {
     let item: RoomSummary
+    let isAnalysisCompleted: Bool
     let onTap: () -> Void
 
     var body: some View {
@@ -98,8 +102,8 @@ private struct DefectListRow: View {
 
     @ViewBuilder
     private var statusBadge: some View {
-        if let status = item.latestScanStatus {
-            StatusBadge(analysisStatus: AnalysisStatus(rawString: status))
+        if isAnalysisCompleted {
+            StatusBadge(analysisStatus: .completed)
         } else {
             StatusBadge(label: "진행 전", foreground: Color.blueGray300, background: Color.blueGray50)
         }

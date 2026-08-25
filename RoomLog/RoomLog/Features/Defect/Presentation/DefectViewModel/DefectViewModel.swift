@@ -43,6 +43,17 @@ final class DefectViewModel {
         UserDefaults.standard.removeObject(forKey: "\(analysisIdPrefix)\(roomId)")
     }
 
+    private static let analysisCompletedPrefix = "analysisCompleted_room_"
+
+    /// 방 목록 배지 표시용 — 분석이 완료된 적 있는 방인지
+    static func isAnalysisCompleted(for roomId: Int) -> Bool {
+        UserDefaults.standard.bool(forKey: "\(analysisCompletedPrefix)\(roomId)")
+    }
+
+    private static func markAnalysisCompleted(for roomId: Int) {
+        UserDefaults.standard.set(true, forKey: "\(analysisCompletedPrefix)\(roomId)")
+    }
+
     init(roomId: Int, provider: DefectUseCaseProvider) {
         self.roomId = roomId
         self.provider = provider
@@ -65,6 +76,7 @@ final class DefectViewModel {
            !existingReport.defects.isEmpty {
             report = existingReport
             phase = .completed
+            Self.markAnalysisCompleted(for: roomId)
             return
         }
 
@@ -106,6 +118,7 @@ final class DefectViewModel {
         do {
             report = try await provider.makeGetDefectReportUseCase().execute(roomId: roomId)
             phase = .completed
+            Self.markAnalysisCompleted(for: roomId)
         } catch {
             errorMessage = error.localizedDescription
             phase = .failed(error.localizedDescription)

@@ -11,6 +11,7 @@ import Foundation
 final class DefectListViewModel {
     // MARK: - State
     private(set) var items: [RoomSummary] = []
+    private(set) var completedRoomIds: Set<Int> = []
     private(set) var isLoading = false
     private(set) var houseName: String?
     var errorMessage: String?
@@ -32,6 +33,9 @@ final class DefectListViewModel {
             let houseRooms = try await homeProvider.makeGetHouseRoomsUseCase().execute(houseId: houseId)
             items = houseRooms.rooms
             houseName = houseRooms.houseName
+            completedRoomIds = Set(
+                houseRooms.rooms.map(\.id).filter { DefectViewModel.isAnalysisCompleted(for: $0) }
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
