@@ -38,6 +38,34 @@ enum CameraDirection: CaseIterable {
     }
 }
 
+// MARK: - Scene Memory Cache
+
+/// 파싱된 SCNScene을 메모리에 캐시해 재진입 시 PLY 재파싱을 피한다.
+/// 파일이 교체되면 수정 시각이 바뀌어 키가 달라지므로 자동으로 새로 파싱된다.
+final class PLYSceneCache {
+    static let shared = PLYSceneCache()
+
+    private let cache = NSCache<NSString, SCNScene>()
+
+    private init() {
+        // 방 스캔 씬은 개당 수십 MB라 최근 것만 유지 (비교 화면이 동시에 2개 사용)
+        cache.countLimit = 3
+    }
+
+    private func key(for url: URL) -> NSString {
+        let modified = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        return "\(url.path)#\(modified?.timeIntervalSince1970 ?? 0)" as NSString
+    }
+
+    func scene(for url: URL) -> SCNScene? {
+        cache.object(forKey: key(for: url))
+    }
+
+    func store(_ scene: SCNScene, for url: URL) {
+        cache.setObject(scene, forKey: key(for: url))
+    }
+}
+
 // MARK: - PLYSceneView
 
 struct PLYSceneView: UIViewRepresentable {
@@ -52,6 +80,10 @@ struct PLYSceneView: UIViewRepresentable {
         var defects: [DefectReportDetail] = []
         weak var scnView: SCNView?
         var lastAppliedDirection: CameraDirection?
+        /// 현재 화면에 적용된 씬의 원본 파일 URL — fileURL이 바뀌면 씬을 다시 로드하기 위한 기준
+        var loadedFileURL: URL?
+        var loadingFileURL: URL?
+        var loadTask: Task<Void, Never>?
 
         /// Handles a tap on the SceneKit view and, if a defect overlay was tapped, animates the camera to that defect's center.
         /// - Parameters:
@@ -214,7 +246,6 @@ struct PLYSceneView: UIViewRepresentable {
             let centerX = (minBound.x + maxBound.x) / 2
             let centerY = (minBound.y + maxBound.y) / 2
             let centerZ = (minBound.z + maxBound.z) / 2
-            let center = SCNVector3(centerX, centerY, centerZ)
 
             let sizeX = maxBound.x - minBound.x
             let sizeY = maxBound.y - minBound.y
@@ -253,13 +284,9 @@ struct PLYSceneView: UIViewRepresentable {
         )
         scnView.addGestureRecognizer(tap)
 
-        if let scene = loadScene(from: fileURL) {
-            updateDefectOverlays(in: scene, defects: defects)
-            scnView.scene = scene
-
-        }
         context.coordinator.defects = defects
         context.coordinator.scnView = scnView
+        applySceneIfNeeded(to: scnView, coordinator: context.coordinator)
 
         return scnView
     }
@@ -272,11 +299,11 @@ struct PLYSceneView: UIViewRepresentable {
     func updateUIView(_ uiView: SCNView, context: Context) {
         context.coordinator.defects = defects
 
-        if uiView.scene == nil, let scene = loadScene(from: fileURL) {
+        // fileURL이 바뀌었으면(예: 비교 화면 이전/이후 토글) 씬을 새로 로드해야 한다
+        if let scene = uiView.scene, context.coordinator.loadedFileURL == fileURL {
             updateDefectOverlays(in: scene, defects: defects)
-            uiView.scene = scene
-        } else if let scene = uiView.scene {
-            updateDefectOverlays(in: scene, defects: defects)
+        } else {
+            applySceneIfNeeded(to: uiView, coordinator: context.coordinator)
         }
 
         // 카메라 초기화 처리
@@ -299,22 +326,77 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
-    /// Create an `SCNScene` from a Model I/O asset at the specified file URL.
-    /// - Parameters:
-    ///   - url: File URL of the 3D model to load.
-    /// - Returns: An `SCNScene` constructed from the model asset, or `nil` if the scene could not be created.
-    private func loadScene(from url: URL) -> SCNScene? {
-        let asset = MDLAsset(url: url)
-        asset.loadTextures()
-        return SCNScene(mdlAsset: asset)
+    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 PLY를 파싱한 뒤 적용한다.
+    /// PLY 파싱(MDLAsset → SCNScene)은 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
+    private func applySceneIfNeeded(to scnView: SCNView, coordinator: Coordinator) {
+        if let master = PLYSceneCache.shared.scene(for: fileURL) {
+            coordinator.loadTask?.cancel()
+            coordinator.loadingFileURL = nil
+            apply(master: master, for: fileURL, to: scnView, coordinator: coordinator)
+            return
+        }
+
+        // 같은 URL을 이미 파싱 중이면 완료를 기다리고, 다른 URL이면 기존 작업을 취소하고 새로 시작
+        guard coordinator.loadingFileURL != fileURL else { return }
+        coordinator.loadTask?.cancel()
+        coordinator.loadingFileURL = fileURL
+
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.startAnimating()
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        scnView.addSubview(spinner)
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: scnView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: scnView.centerYAnchor)
+        ])
+
+        let url = fileURL
+        coordinator.loadTask = Task.detached(priority: .userInitiated) {
+            guard !Task.isCancelled else { return }
+            let asset = MDLAsset(url: url)
+            asset.loadTextures()
+            let master = SCNScene(mdlAsset: asset)
+            await MainActor.run {
+                PLYSceneCache.shared.store(master, for: url)
+                spinner.removeFromSuperview()
+                // 파싱 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (캐시에는 남는다)
+                guard coordinator.loadingFileURL == url, let liveView = coordinator.scnView else { return }
+                coordinator.loadingFileURL = nil
+                apply(master: master, for: url, to: liveView, coordinator: coordinator)
+            }
+        }
+    }
+
+    /// 캐시된 마스터 씬을 직접 표시하지 않고 노드 트리를 복제해 뷰별 씬을 만든다.
+    /// 지오메트리는 공유되어 복제 비용이 적고, 오버레이·카메라 조작이 같은 파일을 쓰는 다른 뷰와 섞이지 않는다.
+    private func apply(master: SCNScene, for url: URL, to scnView: SCNView, coordinator: Coordinator) {
+        let scene = SCNScene()
+        for child in master.rootNode.childNodes {
+            scene.rootNode.addChildNode(child.clone())
+        }
+        updateDefectOverlays(in: scene, defects: coordinator.defects)
+        scnView.scene = scene
+        coordinator.loadedFileURL = url
+    }
+
+    static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        coordinator.loadTask?.cancel()
     }
 
     // MARK: - Defect Overlays
 
     private func updateDefectOverlays(in scene: SCNScene, defects: [DefectReportDetail]) {
-        scene.rootNode.childNode(withName: "defectOverlay", recursively: false)?.removeFromParentNode()
-        guard defects.contains(where: { !$0.region3d.isEmpty }) else { return }
-        addDefectOverlays(to: scene, defects: defects)
+        // 컨테이너 이름에 하자 id 구성을 인코딩해두고, 같은 구성이면 재생성을 생략한다
+        // (오버레이 생성은 하자마다 지오메트리 + 라벨 텍스처 래스터라이즈를 수반하는 비싼 작업)
+        let ids = defects.filter { !$0.region3d.isEmpty }.map(\.id).sorted()
+        let signature = "defectOverlay|\(ids.map(String.init).joined(separator: ","))"
+
+        if let existing = scene.rootNode.childNodes.first(where: { $0.name?.hasPrefix("defectOverlay") == true }) {
+            if existing.name == signature { return }
+            existing.removeFromParentNode()
+        }
+        guard !ids.isEmpty else { return }
+        addDefectOverlays(to: scene, defects: defects, containerName: signature)
     }
 
     /// Adds visual overlays for each defect to the given scene.
@@ -327,20 +409,13 @@ struct PLYSceneView: UIViewRepresentable {
     /// - Parameters:
     ///   - scene: The SceneKit scene to which defect overlay nodes will be added.
     ///   - defects: An array of defect details; each defect's `region3d` provides the polygon vertices and is used to build the overlay.
-    private func addDefectOverlays(to scene: SCNScene, defects: [DefectReportDetail]) {
+    private func addDefectOverlays(to scene: SCNScene, defects: [DefectReportDetail], containerName: String) {
         let container = SCNNode()
-        container.name = "defectOverlay"
+        container.name = containerName
 
         for defect in defects {
             guard !defect.region3d.isEmpty else { continue }
             let points = defect.region3d
-
-            #if DEBUG
-            print("[PLY] defect \(defect.id): \(points.count) points")
-            for (i, p) in points.enumerated() {
-                print("  [\(i)] x=\(p.x) y=\(p.y) z=\(p.z)")
-            }
-            #endif
 
             let group = SCNNode()
             group.name = "defect_\(defect.id)"
@@ -517,7 +592,7 @@ struct PLYCameraDirectionBar: View {
                             .font(.system(size: 10, weight: .medium))
                     }
                     .foregroundStyle(selected == dir ? .black : .white)
-                    .frame(width: 44, height: 44)
+                    .frame(maxWidth: 44, minHeight: 44)
                     .background(
                         selected == dir
                             ? AnyShapeStyle(Color.white)
@@ -538,7 +613,7 @@ struct PLYCameraDirectionBar: View {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
+                    .frame(maxWidth: 44, minHeight: 44)
             }
         }
         .padding(.horizontal, 12)

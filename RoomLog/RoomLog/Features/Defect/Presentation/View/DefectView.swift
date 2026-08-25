@@ -153,18 +153,18 @@ private extension DefectView {
     func imageSection(report: DefectReport) -> some View {
         Group {
             if let localURL = viewModel.plyLocalURL {
-                ZStack(alignment: .bottom) {
-                    PLYSceneView(
-                        fileURL: localURL,
-                        defects: report.defects,
-                        cameraDirection: $cameraDirection,
-                        resetCamera: $resetCamera
-                    )
+                PLYSceneView(
+                    fileURL: localURL,
+                    defects: report.defects,
+                    cameraDirection: $cameraDirection,
+                    resetCamera: $resetCamera
+                )
+                .overlay(alignment: .bottom) {
                     PLYCameraDirectionBar(
                         direction: $cameraDirection,
                         resetCamera: $resetCamera
                     )
-                        .padding(.bottom, 10)
+                    .padding(.bottom, 10)
                 }
             } else if report.imageURL != nil {
                 ProgressView("3D 모델 로딩 중...")
@@ -175,7 +175,7 @@ private extension DefectView {
         }
         .aspectRatio(3/4, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .task {
+        .task(id: report.imageURL) {
             await viewModel.downloadPLYIfNeeded()
         }
     }

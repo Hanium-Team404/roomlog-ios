@@ -239,21 +239,19 @@ final class DefectViewModel {
         await fetchReport()
     }
 
-    /// file_url이 있으면 PLY 파일 다운로드 → plyLocalURL에 저장
+    /// file_url이 있으면 PLY 파일 다운로드 → plyLocalURL에 저장.
+    /// PLYFileCache.download가 원격 URL이 이전과 같으면 캐시를 재사용하고, 바뀌었으면 다시 받으므로
+    /// 재분석으로 imageURL이 갱신된 경우에도 오래된 파일을 계속 쓰지 않는다.
     func downloadPLYIfNeeded() async {
-        guard plyLocalURL == nil,
-              let urlString = report?.imageURL,
+        guard let urlString = report?.imageURL,
               let remoteURL = URL(string: urlString) else { return }
-
-        // 캐시 확인
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
-            plyLocalURL = cached
-            return
-        }
 
         do {
             plyLocalURL = try await PLYFileCache.shared.download(from: remoteURL, roomId: roomId)
         } catch {
+            if plyLocalURL == nil {
+                plyLocalURL = await PLYFileCache.shared.cachedFileURL(for: roomId)
+            }
             print("[Defect] PLY download failed: \(error)")
         }
     }
