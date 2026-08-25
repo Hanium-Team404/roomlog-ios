@@ -11,7 +11,7 @@ struct HouseSheet: View {
 
     let house: House?
     let addressUpdates: (() -> AsyncStream<String>)?
-    let onSave: (String, String, HouseColor, FloorColor) async throws -> Void
+    let onSave: @MainActor (String, String, HouseColor, FloorColor) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
@@ -26,7 +26,7 @@ struct HouseSheet: View {
     init(
         house: House? = nil,
         addressUpdates: (() -> AsyncStream<String>)? = nil,
-        onSave: @escaping (String, String, HouseColor, FloorColor) async throws -> Void
+        onSave: @escaping @MainActor (String, String, HouseColor, FloorColor) async throws -> Void
     ) {
         self.house = house
         self.addressUpdates = addressUpdates

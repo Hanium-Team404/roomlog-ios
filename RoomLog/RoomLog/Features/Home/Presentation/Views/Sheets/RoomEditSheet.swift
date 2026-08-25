@@ -10,7 +10,7 @@ import SwiftUI
 struct RoomEditSheet: View {
 
     let roomDetail: RoomDetail
-    let onSave: (String, Date, Date?) async throws -> Void
+    let onSave: @MainActor (String, Date, Date?) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
@@ -20,7 +20,7 @@ struct RoomEditSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
-    init(roomDetail: RoomDetail, onSave: @escaping (String, Date, Date?) async throws -> Void) {
+    init(roomDetail: RoomDetail, onSave: @escaping @MainActor (String, Date, Date?) async throws -> Void) {
         self.roomDetail = roomDetail
         self.onSave = onSave
         self._name = State(initialValue: roomDetail.name)
