@@ -19,8 +19,8 @@ final class ComparisonResultViewModel {
 
     // MARK: - PLY Toggle
     enum PLYMode: String, CaseIterable {
-        case moveIn = "입주 전"
-        case moveOut = "퇴거 후"
+        case moveIn = "이전"
+        case moveOut = "이후"
     }
 
     // MARK: - State

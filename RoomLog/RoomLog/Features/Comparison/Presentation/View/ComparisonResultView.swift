@@ -49,7 +49,7 @@ struct ComparisonResultView: View {
 
 private extension ComparisonResultView {
     var pollingContent: some View {
-        AnalysisLoadingView(message: "AI가 입주 전/후를 비교하고 있습니다...") {
+        AnalysisLoadingView(message: "AI가 이전/이후 방을 비교하고 있습니다...") {
             plyToggle
             plySection(defects: [])
         }
