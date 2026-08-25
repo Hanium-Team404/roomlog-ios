@@ -143,11 +143,11 @@ private struct ComparisonHistoryCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // 상단: 방 이름 + 상태 뱃지
             HStack(spacing: 10) {
-                roomLabel(history.moveInRoomName, subtitle: "입주 전")
+                roomLabel(history.moveInRoomName, subtitle: "이전")
                 Image(systemName: "arrow.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.blueGray300)
-                roomLabel(history.moveOutRoomName, subtitle: "퇴거 후")
+                roomLabel(history.moveOutRoomName, subtitle: "이후")
                 Spacer()
                 StatusBadge(analysisStatus: history.status)
             }

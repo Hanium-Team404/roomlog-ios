@@ -36,8 +36,8 @@ struct ComparisonSelectView: View {
                 .padding(.vertical, 16)
 
             TabView(selection: $step) {
-                scanList.tag(SelectionStep.moveIn)
-                scanList.tag(SelectionStep.moveOut)
+                scanList(for: .moveIn).tag(SelectionStep.moveIn)
+                scanList(for: .moveOut).tag(SelectionStep.moveOut)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.25), value: step)
@@ -55,7 +55,7 @@ struct ComparisonSelectView: View {
         .overlay(alignment: .top) {
             if showToast {
                 SystemToastView(systemImage: "exclamationmark.circle") {
-                    Text("입주 전 방을 먼저 선택해주세요")
+                    Text("이전 방을 먼저 선택해주세요")
                         .font(.medium, 14)
                         .foregroundStyle(Color.neutral800)
                 }
@@ -111,12 +111,12 @@ private extension ComparisonSelectView {
 private extension ComparisonSelectView {
     var stepIndicator: some View {
         HStack(spacing: 24) {
-            stepLabel(number: 1, title: "입주 전 방 선택", isActive: step == .moveIn)
+            stepLabel(number: 1, title: "이전 방 선택", isActive: step == .moveIn)
                 .onTapGesture {
                     guard step == .moveOut else { return }
                     step = .moveIn
                 }
-            stepLabel(number: 2, title: "퇴거 후 방 선택", isActive: step == .moveOut)
+            stepLabel(number: 2, title: "이후 방 선택", isActive: step == .moveOut)
         }
     }
 
@@ -137,26 +137,27 @@ private extension ComparisonSelectView {
 // MARK: - Scan List
 
 private extension ComparisonSelectView {
-    var selectedScan: ComparisonScan? {
+    func selectedScan(for step: SelectionStep) -> ComparisonScan? {
         step == .moveIn ? viewModel.selectedMoveInScan : viewModel.selectedMoveOutScan
     }
 
-    var scanList: some View {
-        ScrollView {
+    func scanList(for step: SelectionStep) -> some View {
+        let scans = step == .moveIn ? viewModel.rooms : viewModel.moveOutCandidates
+        return ScrollView {
             if viewModel.isLoading {
                 ProgressView()
                     .padding(.top, 40)
-            } else if viewModel.rooms.isEmpty {
-                Text("방이 없습니다")
+            } else if scans.isEmpty {
+                Text(step == .moveIn ? "방이 없습니다" : "이전 방보다 나중에 스캔된 방이 없습니다")
                     .font(.medium, 16)
                     .foregroundStyle(Color.blueGray300)
                     .padding(.top, 40)
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(viewModel.rooms) { scan in
+                    ForEach(scans) { scan in
                         ScanSelectionRow(
                             scan: scan,
-                            isSelected: selectedScan?.id == scan.id
+                            isSelected: selectedScan(for: step)?.id == scan.id
                         )
                         .onTapGesture {
                             if step == .moveIn {
