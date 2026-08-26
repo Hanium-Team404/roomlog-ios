@@ -150,3 +150,17 @@ scheme: `RoomLog` / 테스트 타겟: `RoomLogTests`
 빌드/테스트 실패가 반복되거나 device·debugging 툴이 필요하면 `docs/xcode-mcp.md` 참조.
 
 세션 시작 후 첫 빌드 전에는 `session_show_defaults`로 defaults(scheme/시뮬레이터) 확인부터 한다.
+
+## Agent Skills
+
+`.claude/skills/`에 팀 공용 Swift/iOS 스킬이 커밋되어 있다. 저장소를 clone하면 팀원 모두 동일하게 적용된다.
+
+| 스킬 | 용도 |
+|------|------|
+| `swift-concurrency-pro` | actor, async/await, `@MainActor` 등 동시성 코드 작성·리뷰 |
+| `swift-testing-pro` | Swift Testing 작성 및 XCTest → Swift Testing 마이그레이션 |
+| `swiftui-pro` | SwiftUI 최신 API·성능·유지보수성 리뷰 |
+| `ios-accessibility` | VoiceOver, Dynamic Type 등 접근성 구현 |
+
+출처·라이선스·업데이트 방법은 `.claude/skills/README.md` 참조.
+스킬 추가/변경 후에는 Claude Code 세션을 재시작해야 반영된다.
