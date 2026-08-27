@@ -14,6 +14,16 @@ struct DefectDetailView: View {
     let roomImageURL: String?
 
     @Environment(\.di) var di
+    @State private var selfRepairViewModel: SelfRepairViewModel
+
+    init(defect: DefectReportDetail, roomId: Int, roomImageURL: String?, provider: DefectUseCaseProvider) {
+        self.defect = defect
+        self.roomId = roomId
+        self.roomImageURL = roomImageURL
+        self._selfRepairViewModel = .init(
+            wrappedValue: SelfRepairViewModel(defectId: defect.id, provider: provider)
+        )
+    }
 
     private static let displayDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -28,6 +38,7 @@ struct DefectDetailView: View {
                 roomImageView
                 summaryCard
                 detailCard
+                selfRepairCard
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -38,6 +49,7 @@ struct DefectDetailView: View {
         }
         .navigationTitle(defect.type.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .task { await selfRepairViewModel.fetch() }
     }
 }
 
@@ -178,6 +190,20 @@ private extension DefectDetailView {
     }
 }
 
+// MARK: - Self Repair Card
+
+private extension DefectDetailView {
+    var selfRepairCard: some View {
+        SelfRepairCard(
+            guide: selfRepairViewModel.guide,
+            isLoading: selfRepairViewModel.isLoading,
+            loadFailed: selfRepairViewModel.loadFailed
+        ) {
+            Task { await selfRepairViewModel.retry() }
+        }
+    }
+}
+
 // MARK: - Bottom Button
 
 private extension DefectDetailView {
@@ -194,7 +220,12 @@ private extension DefectDetailView {
 
 #Preview {
     NavigationStack {
-        DefectDetailView(defect: PreviewSampleData.defects[0], roomId: 1, roomImageURL: nil)
+        DefectDetailView(
+            defect: PreviewSampleData.defects[0],
+            roomId: 1,
+            roomImageURL: nil,
+            provider: DefectUseCaseProviderImpl(defectRepository: MockDefectRepository())
+        )
     }
     .environment(\.di, DIContainer.configured())
 }

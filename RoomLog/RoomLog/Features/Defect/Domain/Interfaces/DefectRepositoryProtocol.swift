@@ -24,4 +24,7 @@ protocol DefectRepositoryProtocol {
 
     /// 분석 결과 조회
     func getAnalysisResult(analysisId: Int) async throws -> AnalysisResult
+
+    /// 자가 수리 안내 조회
+    func getSelfRepairGuide(defectId: Int) async throws -> SelfRepairGuide
 }

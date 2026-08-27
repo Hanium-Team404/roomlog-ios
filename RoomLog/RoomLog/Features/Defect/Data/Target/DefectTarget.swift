@@ -16,6 +16,7 @@ enum DefectTarget {
     case createAnalysis(inRoomId: Int, outRoomId: Int?)
     case getAnalysisStatus(analysisId: Int)
     case getAnalysisResult(analysisId: Int)
+    case getSelfRepair(defectId: Int)
 }
 
 extension DefectTarget: BaseTargetType {
@@ -31,6 +32,8 @@ extension DefectTarget: BaseTargetType {
             return "/analyses/\(analysisId)/status"
         case .getAnalysisResult(let analysisId):
             return "/analyses/\(analysisId)"
+        case .getSelfRepair(let defectId):
+            return "/defects/\(defectId)/self-repair"
         }
     }
 
