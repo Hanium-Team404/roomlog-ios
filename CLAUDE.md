@@ -147,7 +147,6 @@ raw `xcodebuild`, `xcrun`, `simctl` 직접 호출 금지.
 새 API 사용 전 `DocumentationSearch`로 배포 타겟 기준 availability 확인.
 
 scheme: `RoomLog` / 테스트 타겟: `RoomLogTests`
-빌드/테스트 실패가 반복되거나 device·debugging 툴이 필요하면 `docs/xcode-mcp.md` 참조.
 
 세션 시작 후 첫 빌드 전에는 `session_show_defaults`로 defaults(scheme/시뮬레이터) 확인부터 한다.
 
