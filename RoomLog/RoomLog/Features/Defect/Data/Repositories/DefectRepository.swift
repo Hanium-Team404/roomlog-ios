@@ -83,4 +83,15 @@ final class DefectRepository: DefectRepositoryProtocol {
         }
         return try apiResponse.unwrap().toDomain()
     }
+
+    func getSelfRepairGuide(defectId: Int) async throws -> SelfRepairGuide {
+        let response = try await adapter.request(DefectTarget.getSelfRepair(defectId: defectId))
+        let apiResponse: APIResponse<SelfRepairResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<SelfRepairResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().toDomain()
+    }
 }

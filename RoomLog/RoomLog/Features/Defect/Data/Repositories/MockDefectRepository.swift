@@ -70,4 +70,36 @@ final class MockDefectRepository: DefectRepositoryProtocol {
             createdAt: Date()
         )
     }
+
+    func getSelfRepairGuide(defectId: Int) async throws -> SelfRepairGuide {
+        // 짝수 하자 ID는 자가 수리 가능, 홀수는 불가능으로 가정해 두 케이스를 모두 확인한다.
+        guard defectId % 2 == 0 else {
+            return SelfRepairGuide(
+                defectId: defectId,
+                isPossible: false,
+                description: "해당 하자는 구조체 균열로, 안전상 위험이 있어 스스로 수리 불가",
+                videos: [],
+                items: [],
+                totalCost: 0
+            )
+        }
+        return SelfRepairGuide(
+            defectId: defectId,
+            isPossible: true,
+            description: "해당 하자는 벽지 들뜸으로, 도배 풀과 벽지만 있으면 스스로 수리 가능",
+            videos: [
+                SelfRepairVideo(
+                    title: "욕실 타일 깨짐 보수하는 방법! 이제 셀프로 해결하세요.",
+                    urlString: "https://www.youtube.com/watch?v=L4Ro4hKoAvs",
+                    channel: "이것도 꽉Fix",
+                    thumbnailURLString: "https://i.ytimg.com/vi/L4Ro4hKoAvs/mqdefault.jpg"
+                )
+            ],
+            items: [
+                SelfRepairItem(name: "곰팡이 제거제", price: 8900, urlString: "https://www.coupang.com", imageURLString: nil),
+                SelfRepairItem(name: "욕실용 실리콘", price: 11100, urlString: "https://www.gmarket.co.kr", imageURLString: nil)
+            ],
+            totalCost: 20000
+        )
+    }
 }
