@@ -13,7 +13,7 @@ struct ChatTypingIndicator: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image("Roomi")
+            Image(decorative: "Roomi")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 36)
@@ -34,7 +34,7 @@ struct ChatTypingIndicator: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
+            .background(Color(.systemGray6), in: .rect(cornerRadius: 16))
 
             Spacer(minLength: 48)
         }

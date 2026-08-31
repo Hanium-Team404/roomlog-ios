@@ -17,7 +17,7 @@ struct DefectAttachmentChip: View {
         HStack(spacing: 10) {
             thumbnail
                 .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(.rect(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(defect.type.displayName)
@@ -34,11 +34,16 @@ struct DefectAttachmentChip: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color(.systemGray3))
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
                 }
+                .accessibilityLabel("첨부 제거")
             }
         }
-        .padding(8)
-        .background(Color(.systemGray6).opacity(0.8), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.leading, 8)
+        .padding(.trailing, onRemove == nil ? 8 : 0)
+        .padding(.vertical, onRemove == nil ? 8 : 4)
+        .background(Color(.systemGray6).opacity(0.8), in: .rect(cornerRadius: 14))
     }
 
     private var locationText: String {

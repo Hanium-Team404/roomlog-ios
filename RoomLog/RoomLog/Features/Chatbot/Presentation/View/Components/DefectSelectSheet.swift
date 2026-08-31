@@ -49,10 +49,11 @@ struct DefectSelectSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if viewModel.selectableDefects.isEmpty {
-            Text("등록된 하자가 없어요")
-                .font(.medium, 15)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ContentUnavailableView(
+                "등록된 하자가 없어요",
+                systemImage: "checkmark.seal",
+                description: Text("하자 분석을 완료하면 여기에서 선택할 수 있어요")
+            )
         } else {
             ScrollView {
                 LazyVStack(spacing: 12) {
@@ -81,7 +82,7 @@ private struct ChatDefectRow: View {
         HStack(spacing: 12) {
             thumbnail
                 .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(.rect(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
@@ -100,9 +101,9 @@ private struct ChatDefectRow: View {
             Spacer()
         }
         .padding(12)
-        .background(.white, in: RoundedRectangle(cornerRadius: 12))
+        .background(.white, in: .rect(cornerRadius: 12))
         .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-        .contentShape(Rectangle())
+        .contentShape(.rect)
     }
 
     private var locationText: String {

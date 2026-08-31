@@ -24,15 +24,16 @@ struct ChatbotEntryButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image("Roomi")
+            Image(decorative: "Roomi")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 30)
                 .frame(width: 52, height: 52)
-                .contentShape(Circle())
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: Circle())
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel("챗봇 루미")
     }
 }
 

@@ -27,7 +27,7 @@ struct SuggestedQuestionsPanel: View {
 
     private var expandedPanel: some View {
         VStack(spacing: 0) {
-            ForEach(Array(questions.enumerated()), id: \.element) { index, question in
+            ForEach(questions.enumerated(), id: \.element) { index, question in
                 if index > 0 {
                     Divider()
                         .padding(.horizontal, 20)
@@ -41,12 +41,12 @@ struct SuggestedQuestionsPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 15)
-                        .contentShape(Rectangle())
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
         .gesture(
             DragGesture(minimumDistance: 15)
                 .onEnded { value in
@@ -77,10 +77,10 @@ struct SuggestedQuestionsPanel: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .contentShape(Capsule())
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: Capsule())
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
 

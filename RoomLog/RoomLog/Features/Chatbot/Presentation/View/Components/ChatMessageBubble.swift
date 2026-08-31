@@ -11,11 +11,14 @@ struct ChatMessageBubble: View {
     let message: ChatMessage
 
     var body: some View {
-        switch message.role {
-        case .user:
-            userBubble
-        case .assistant:
-            assistantBubble
+        // 최상위 switch를 단일 루트 컨테이너로 감싸 lazy 컨테이너의 row identity를 상수로 유지한다
+        VStack {
+            switch message.role {
+            case .user:
+                userBubble
+            case .assistant:
+                assistantBubble
+            }
         }
     }
 
@@ -31,7 +34,7 @@ struct ChatMessageBubble: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                    .background(Color.accentColor, in: .rect(cornerRadius: 16))
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -39,7 +42,7 @@ struct ChatMessageBubble: View {
 
     private var assistantBubble: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image("Roomi")
+            Image(decorative: "Roomi")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 36)
@@ -53,7 +56,7 @@ struct ChatMessageBubble: View {
                     .foregroundStyle(Color.neutral800)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
+                    .background(Color(.systemGray6), in: .rect(cornerRadius: 16))
             }
             Spacer(minLength: 48)
         }

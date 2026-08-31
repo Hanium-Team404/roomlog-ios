@@ -35,10 +35,10 @@ struct DefectSelectCard: View {
                     .foregroundStyle(.secondary)
             }
             .padding(16)
-            .contentShape(Rectangle())
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
     }
 }
 
