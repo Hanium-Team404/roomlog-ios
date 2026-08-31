@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B402EB530455C86006D923B /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0B402EB430455C86006D923B /* Moya */; };
 		0BAC0D0E2FCF31680067B330 /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 0BAC0D0D2FCF31680067B330 /* Nuke */; };
 		0BAC0D102FCF31680067B330 /* NukeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0BAC0D0F2FCF31680067B330 /* NukeUI */; };
 		0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */; };
-		0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 0BEFDD962F84FDF900CDE2A6 /* Moya */; };
 		DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */; };
 /* End PBXBuildFile section */
 
@@ -62,9 +62,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				0BAC0D102FCF31680067B330 /* NukeUI in Frameworks */,
-				0BEFDD972F84FDF900CDE2A6 /* Moya in Frameworks */,
 				0BC1FE092F8BCDCF00B9AA18 /* ZIPFoundation in Frameworks */,
 				DBF07F762FB4230E00708069 /* KakaoMapsSDK-SPM in Frameworks */,
+				0B402EB530455C86006D923B /* Moya in Frameworks */,
 				0BAC0D0E2FCF31680067B330 /* Nuke in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -118,11 +118,11 @@
 			);
 			name = RoomLog;
 			packageProductDependencies = (
-				0BEFDD962F84FDF900CDE2A6 /* Moya */,
 				0BC1FE082F8BCDCF00B9AA18 /* ZIPFoundation */,
 				DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */,
 				0BAC0D0D2FCF31680067B330 /* Nuke */,
 				0BAC0D0F2FCF31680067B330 /* NukeUI */,
+				0B402EB430455C86006D923B /* Moya */,
 			);
 			productName = RoomLog;
 			productReference = 0B1EC4402F7BB970001FE02F /* RoomLog.app */;
@@ -180,10 +180,10 @@
 			mainGroup = 0B1EC4372F7BB970001FE02F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */,
 				0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */,
 				0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */,
+				0B402EB330455C86006D923B /* XCRemoteSwiftPackageReference "Moya" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0B1EC4412F7BB970001FE02F /* Products */;
@@ -523,6 +523,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		0B402EB330455C86006D923B /* XCRemoteSwiftPackageReference "Moya" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Moya/Moya";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 15.0.3;
+			};
+		};
 		0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kean/Nuke";
@@ -539,14 +547,6 @@
 				minimumVersion = 0.9.20;
 			};
 		};
-		0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Moya/Moya";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 15.0.3;
-			};
-		};
 		DBF07F742FB4230E00708069 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kakao-mapsSDK/KakaoMapsSDK-SPM";
@@ -558,6 +558,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0B402EB430455C86006D923B /* Moya */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0B402EB330455C86006D923B /* XCRemoteSwiftPackageReference "Moya" */;
+			productName = Moya;
+		};
 		0BAC0D0D2FCF31680067B330 /* Nuke */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0BAC0D0C2FCF31680067B330 /* XCRemoteSwiftPackageReference "Nuke" */;
@@ -572,11 +577,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0BC1FE072F8BCDCF00B9AA18 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
 			productName = ZIPFoundation;
-		};
-		0BEFDD962F84FDF900CDE2A6 /* Moya */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 0BEFDD952F84FDF900CDE2A6 /* XCRemoteSwiftPackageReference "Moya" */;
-			productName = Moya;
 		};
 		DBF07F752FB4230E00708069 /* KakaoMapsSDK-SPM */ = {
 			isa = XCSwiftPackageProductDependency;
