@@ -54,6 +54,11 @@ final class ChatbotViewModel {
         !messages.contains { $0.role == .user }
     }
 
+    /// 세션이 준비된 상태에서만 전송 허용 (세션 없이 전송 시 입력만 유실되는 것 방지)
+    var canSend: Bool {
+        sessionId != nil && !isLoading && !loadFailed
+    }
+
     // MARK: - Session
 
     /// 진입 시 호출. 저장된 세션이 있으면 내역을 복원하고, 없거나 유효하지 않으면 새 세션을 시작한다.
@@ -78,7 +83,13 @@ final class ChatbotViewModel {
                 }
                 return
             } catch {
-                // CHAT_001(없는 대화)/CHAT_002(권한 없음) 등 세션이 유효하지 않으면 버리고 새로 시작
+                // CHAT_001(없는 대화)/CHAT_002(권한 없음)일 때만 세션을 버리고 새로 시작.
+                // 일시적인 네트워크/디코딩 오류로 기존 대화가 유실되지 않도록 그 외에는 재시도 유도.
+                let errorCode = (error as? RepositoryError)?.serverErrorCode
+                guard errorCode == .chatSessionNotFound || errorCode == .chatSessionAccessDenied else {
+                    loadFailed = true
+                    return
+                }
                 clearStoredSession()
             }
         }
@@ -124,7 +135,7 @@ final class ChatbotViewModel {
 
     func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isTyping else { return }
+        guard !trimmed.isEmpty, !isTyping, sessionId != nil else { return }
         let message = String(trimmed.prefix(Self.maxMessageLength))
         let defect = attachedDefect
         attachedDefect = nil
@@ -134,7 +145,7 @@ final class ChatbotViewModel {
     }
 
     func sendSuggested(_ question: ChatSuggestedQuestion) async {
-        guard !isTyping else { return }
+        guard !isTyping, sessionId != nil else { return }
         messages.append(ChatMessage(role: .user, content: question.question))
         isPanelExpanded = false
         await requestAnswer(message: question.question, guide: question.guide, defectId: nil)
