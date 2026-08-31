@@ -72,6 +72,9 @@ struct HomeView: View {
                 }
             }
         }
+        .chatbotEntryButton {
+            pathStore.homePath.append(.chatbot)
+        }
         .tint(.accent)
         .sheet(isPresented: $viewModel.showCreateSheet) {
             HouseSheet(addressUpdates: viewModel.currentAddressUpdates) { name, address, houseColor, floorColor in
