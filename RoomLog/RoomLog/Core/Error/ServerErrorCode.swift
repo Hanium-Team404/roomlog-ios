@@ -37,6 +37,7 @@ enum ServerErrorCode: String, Sendable {
 
     // MARK: - Defect
     case defectNotFound = "DEFECT_001"
+    case defectAccessDenied = "DEFECT_003"
 
     // MARK: - Estimate
     case estimateCreateFailed = "ESTIMATE_001"
@@ -49,6 +50,11 @@ enum ServerErrorCode: String, Sendable {
     // MARK: - RepairShop
     case repairShopNotAvailable = "REPAIRSHOP_001"
     case repairShopNotFound = "REPAIRSHOP_002"
+
+    // MARK: - Chat
+    case chatSessionNotFound = "CHAT_001"
+    case chatSessionAccessDenied = "CHAT_002"
+    case chatAnswerFailed = "CHAT_003"
 
     case unknown
 
@@ -72,12 +78,16 @@ enum ServerErrorCode: String, Sendable {
         case "ANALYSIS_003": self = .analysisInvalidScanPair
         case "ANALYSIS_004": self = .analysisNotCompleted
         case "DEFECT_001": self = .defectNotFound
+        case "DEFECT_003": self = .defectAccessDenied
         case "ESTIMATE_001": self = .estimateCreateFailed
         case "ESTIMATE_002": self = .estimateNotFound
         case "ESTIMATE_003": self = .estimateAccessDenied
         case "REPAIR_001": self = .repairNotFound
         case "REPAIRSHOP_001": self = .repairShopNotAvailable
         case "REPAIRSHOP_002": self = .repairShopNotFound
+        case "CHAT_001": self = .chatSessionNotFound
+        case "CHAT_002": self = .chatSessionAccessDenied
+        case "CHAT_003": self = .chatAnswerFailed
         default: self = .unknown
         }
     }
@@ -102,12 +112,16 @@ enum ServerErrorCode: String, Sendable {
         case .analysisInvalidScanPair: return "선택한 스캔 조합이 올바르지 않거나 비교 가능한 스캔이 부족합니다."
         case .analysisNotCompleted: return "분석이 아직 완료되지 않았습니다."
         case .defectNotFound: return "존재하지 않는 하자 정보입니다."
+        case .defectAccessDenied: return "대표 집에 등록된 하자가 아닙니다."
         case .estimateCreateFailed: return "견적 요청 생성에 실패했습니다."
         case .estimateNotFound: return "존재하지 않는 견적 요청입니다."
         case .estimateAccessDenied: return "해당 견적 요청에 접근 권한이 없습니다."
         case .repairNotFound: return "존재하지 않는 수리 내역입니다."
         case .repairShopNotAvailable: return "추천 가능한 수리 업체가 없습니다."
         case .repairShopNotFound: return "업체 정보를 찾을 수 없습니다."
+        case .chatSessionNotFound: return "존재하지 않는 대화입니다."
+        case .chatSessionAccessDenied: return "해당 대화에 접근 권한이 없습니다."
+        case .chatAnswerFailed: return "답변 생성에 실패했습니다. 다시 시도해 주세요."
         case .unknown: return "알 수 없는 오류가 발생했습니다."
         }
     }

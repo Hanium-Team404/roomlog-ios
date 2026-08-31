@@ -45,4 +45,5 @@ enum NavigationDestination: Hashable {
     case home(Home)
     case defect(Defect)
     case myPage(MyPage)
+    case chatbot
 }

@@ -22,6 +22,9 @@ struct NavigationRoutingView: View {
             defectView(defect)
         case .myPage(let myPage):
             myPageView(myPage)
+        case .chatbot:
+            ChatbotView(provider: di.resolve(ChatbotUseCaseProvider.self))
+                .toolbarVisibility(.hidden, for: .tabBar)
         }
     }
 }

@@ -111,9 +111,17 @@ extension DIContainer {
             ComparisonUseCaseProviderImpl(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
+        container.register(ChatbotUseCaseProvider.self) {
+            ChatbotUseCaseProviderImpl(chatRepository: container.resolve(ChatRepositoryProtocol.self))
+        }
+
         // MARK: - Repository
         container.register(DefectRepositoryProtocol.self) {
             DefectRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
+        }
+
+        container.register(ChatRepositoryProtocol.self) {
+            ChatRepository(adapter: container.resolve(MoyaNetworkAdapter.self))
         }
 
         // MARK: - Scan Processing

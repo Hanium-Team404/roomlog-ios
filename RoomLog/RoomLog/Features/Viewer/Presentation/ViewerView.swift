@@ -36,6 +36,9 @@ struct ViewerView: View {
                 houseDropdown
             }
         }
+        .chatbotEntryButton {
+            pathStore.defectPath.append(.chatbot)
+        }
         .onAppear {
             if viewModel == nil {
                 viewModel = ViewerViewModel(
