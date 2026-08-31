@@ -22,6 +22,7 @@ final class DatasetEncoder {
     private let confidenceEncoder: ConfidenceEncoder
     private let odometryEncoder: OdometryEncoder
     private let imuEncoder: IMUEncoder
+    private let meshEncoder: MeshEncoder
     private let datasetDirectory: URL
     private var lastTask: Task<Void, Never>?
     private var isFinalizing = false
@@ -38,6 +39,7 @@ final class DatasetEncoder {
     let datasetDirectoryURL: URL
     let rgbFilePath: URL
     let depthFilePath: URL
+    let meshFilePath: URL
     let cameraMatrixPath: URL
     let odometryPath: URL
     let imuPath: URL
@@ -78,6 +80,9 @@ final class DatasetEncoder {
 
         self.imuPath = directory.appendingPathComponent("imu.csv")
         self.imuEncoder = try IMUEncoder(url: imuPath)
+
+        self.meshFilePath = directory.appendingPathComponent("mesh.ply")
+        self.meshEncoder = MeshEncoder(outputURL: meshFilePath)
     }
 
     func add(frame: ARFrame) {
@@ -123,6 +128,15 @@ final class DatasetEncoder {
         let rotationRate = simd_double3(data.rotationRate.x, data.rotationRate.y, data.rotationRate.z)
         latestGyroscopeData = (timestamp: data.timestamp, data: rotationRate)
         tryWritingIMUData()
+    }
+
+    /// 녹화 종료 후, wrapUp 전에 mesh anchors를 전달
+    func saveMesh(anchors: [ARMeshAnchor]) {
+        do {
+            try meshEncoder.encode(anchors: anchors)
+        } catch {
+            print("DatasetEncoder: mesh 저장 실패. \(error.localizedDescription)")
+        }
     }
 
     func wrapUp() async {
