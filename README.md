@@ -94,6 +94,7 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 ### 3. ARKit 멀티 채널 스캔 데이터 인코딩
 
 `DatasetEncoder`는 한 번의 녹화 세션에서 5종류의 시계열 데이터를 동기화하여 기록합니다.
+인코더 구현은 [Stray Scanner](https://github.com/strayrobots/scanner)(MIT License)를 기반으로 이식했습니다.
 
 | 채널 | 데이터 | 인코더 |
 |------|--------|--------|
@@ -160,6 +161,10 @@ RoomLog/RoomLog/
 - `develop` 브랜치 push / PR 시 GitHub Actions(`.github/workflows/ci.yml`)가 자동 빌드 검증을 수행합니다.
 - CI 환경에서는 `Config.xcconfig` placeholder를 자동 생성합니다.
 - 실행 환경: `macos-26`, `iPhone 17 Pro` 시뮬레이터
+
+## 🙏 Acknowledgements
+
+- [Stray Scanner](https://github.com/strayrobots/scanner) (© 2021 Stray Robots, MIT License) — 3D 스캔 데이터셋 인코더(`Features/Scan/Data/Encoders/`)의 기반 구현. 원본 고지는 [LICENSE](LICENSE)의 Third-party notices 참고.
 
 ## 📄 License
 
