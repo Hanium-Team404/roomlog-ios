@@ -162,10 +162,6 @@ RoomLog/RoomLog/
 - CI 환경에서는 `Config.xcconfig` placeholder를 자동 생성합니다.
 - 실행 환경: `macos-26`, `iPhone 17 Pro` 시뮬레이터
 
-## 🙏 Acknowledgements
-
-- [Stray Scanner](https://github.com/strayrobots/scanner) (© 2021 Stray Robots, MIT License) — 3D 스캔 데이터셋 인코더(`Features/Scan/Data/Encoders/`)의 기반 구현. 원본 고지는 [LICENSE](LICENSE)의 Third-party notices 참고.
-
 ## 📄 License
 
 [MIT License](LICENSE) © 2026 Team404
