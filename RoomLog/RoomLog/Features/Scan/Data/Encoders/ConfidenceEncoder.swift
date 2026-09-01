@@ -4,6 +4,9 @@
 //
 //  Created by 김도연 on 4/12/26.
 //
+//  Based on Stray Scanner (https://github.com/strayrobots/scanner)
+//  Copyright (c) 2021 Stray Robots — MIT License
+//
 
 import Foundation
 import CoreImage
