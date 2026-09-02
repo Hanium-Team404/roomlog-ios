@@ -85,6 +85,20 @@ struct ScanView: View {
                 .animation(.easeInOut(duration: 0.3), value: viewModel.showDepthWarning)
             }
 
+            if viewModel.showSessionError {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2)
+                    Text("카메라 오류가 발생해 다시 시작하는 중입니다")
+                        .font(.semibold, 15)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .glassEffect(.regular, in: .capsule)
+                .animation(.easeInOut(duration: 0.3), value: viewModel.showSessionError)
+            }
+
             VStack(spacing: 20) {
                 Spacer()
                 statusBadge

@@ -25,6 +25,8 @@ final class ScanViewModel: NSObject {
     private(set) var phase: Phase = .idle
     private(set) var recordingSeconds: Int = 0
     private(set) var showDepthWarning: Bool = false
+    /// AR 세션이 실패해 재시작 중일 때 true. 재시작 후 첫 프레임이 도착하면 해제된다.
+    private(set) var showSessionError: Bool = false
     private var warningFrames: Int = 0
     private var okFrames: Int = 0
     private var totalFrameCount: Int = 0
@@ -165,9 +167,22 @@ final class ScanViewModel: NSObject {
 
 extension ScanViewModel: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        if showSessionError { showSessionError = false }
         updateDepthWarning(frame: frame)
         guard phase == .recording else { return }
         encoder?.add(frame: frame)
+    }
+
+    /// 카메라 등 필수 센서 실패 시 호출된다 (예: 이전 인스턴스가 카메라를 점유 중일 때 Code=102).
+    /// 진행 중이던 녹화는 폐기하고 세션을 재시작해 복구를 시도한다.
+    func session(_ session: ARSession, didFailWithError error: Error) {
+        #if DEBUG
+        print("ScanViewModel: AR 세션 실패, 재시작 시도. \(error.localizedDescription)")
+        #endif
+        showSessionError = true
+        stopIMU()
+        reset()
+        session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
     private func updateDepthWarning(frame: ARFrame) {
