@@ -12,7 +12,9 @@ import Foundation
 import ARKit
 import ImageIO
 
-final class DepthEncoder {
+/// Depth 프레임을 16-bit PNG로 저장하는 인코더.
+/// DatasetEncoder의 직렬 인코딩 체인에서만 접근된다 (@unchecked Sendable 근거는 VideoEncoder 참고).
+nonisolated final class DepthEncoder: @unchecked Sendable {
     enum Status { case allGood, frameEncodingError }
 
     private let baseDirectory: URL

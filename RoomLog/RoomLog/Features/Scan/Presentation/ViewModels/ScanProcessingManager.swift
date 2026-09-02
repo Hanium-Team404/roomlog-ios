@@ -65,7 +65,6 @@ final class ScanProcessingManager {
     // MARK: - Public
 
     /// 촬영 완료 후 호출. wrapUp → 압축 → 업로드 → 폴링 → 다운로드 전체 수행.
-    @MainActor
     func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
         processingTask?.cancel()
         discardPendingRetry()
@@ -76,7 +75,6 @@ final class ScanProcessingManager {
     }
 
     /// 앱 재시작 시 폴링 재개용
-    @MainActor
     func startProcessing(scanId: Int, houseId: Int) {
         savePendingScan(scanId: scanId, houseId: houseId)
         activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
@@ -87,7 +85,6 @@ final class ScanProcessingManager {
     }
 
     /// 진행 중인 스캔 취소
-    @MainActor
     func cancel() {
         let scanId = activeScan?.scanId ?? 0
         processingTask?.cancel()
@@ -103,7 +100,6 @@ final class ScanProcessingManager {
     }
 
     /// 완료된 스캔 소비 (저장 완료 후 호출)
-    @MainActor
     func clear() {
         processingTask?.cancel()
         activeScan = nil
@@ -113,7 +109,6 @@ final class ScanProcessingManager {
 
     /// 업로드 실패 후 사용 가능한 재시도 여부.
     /// `activeScan`이 `.failed` 상태이고 보관된 retry의 houseId가 일치할 때만 true.
-    @MainActor
     var canRetryUpload: Bool {
         guard let pendingRetry, let activeScan else { return false }
         guard case .failed = activeScan.phase else { return false }
@@ -121,7 +116,6 @@ final class ScanProcessingManager {
     }
 
     /// 업로드 실패 후 동일한 zip으로 업로드 재시도
-    @MainActor
     func retryUpload() {
         guard let pendingRetry,
               let scan = activeScan,
@@ -136,7 +130,6 @@ final class ScanProcessingManager {
     }
 
     /// 특정 houseId에 완료된 스캔이 있는지 확인
-    @MainActor
     func completedScan(for houseId: Int) -> ActiveScan? {
         guard let scan = activeScan,
               scan.houseId == houseId,
@@ -147,7 +140,6 @@ final class ScanProcessingManager {
     }
 
     /// 특정 houseId에 진행 중인 스캔이 있는지 확인
-    @MainActor
     func isProcessing(for houseId: Int) -> Bool {
         guard let scan = activeScan, scan.houseId == houseId else { return false }
         switch scan.phase {
@@ -159,7 +151,6 @@ final class ScanProcessingManager {
     }
 
     /// 앱 lifecycle 전환 시 호출
-    @MainActor
     func handleScenePhase(_ phase: ScenePhase) {
         isInBackground = (phase != .active)
     }
@@ -197,7 +188,6 @@ final class ScanProcessingManager {
 
     // MARK: - Full Process
 
-    @MainActor
     private func fullProcess(encoder: DatasetEncoder, houseId: Int) async {
         guard let scanRepository else { return }
 
@@ -205,11 +195,13 @@ final class ScanProcessingManager {
         await encoder.wrapUp()
         if Task.isCancelled { return }
 
-        // 2. Zip
+        // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다
         let datasetDir = encoder.datasetDirectoryURL
         let zipURL = datasetDir.deletingLastPathComponent().appendingPathComponent("\(encoder.id.uuidString).zip")
         do {
-            try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
+            try await Task.detached(priority: .userInitiated) {
+                try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
+            }.value
         } catch {
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("압축 실패: \(error.localizedDescription)"))
             return
@@ -247,7 +239,6 @@ final class ScanProcessingManager {
         try? FileManager.default.removeItem(at: datasetDir)
     }
 
-    @MainActor
     private func discardPendingRetry() {
         if let pendingRetry {
             try? FileManager.default.removeItem(at: pendingRetry.zipURL)
@@ -257,7 +248,6 @@ final class ScanProcessingManager {
 
     // MARK: - Retry
 
-    @MainActor
     private func retryUploadProcess(zipURL: URL, houseId: Int) async {
         guard let scanRepository else { return }
         let scanResult: ScanResult
@@ -286,7 +276,6 @@ final class ScanProcessingManager {
         static let maxConsecutiveErrors = 3
     }
 
-    @MainActor
     private func pollAndDownload(scanId: Int, houseId: Int) async {
         guard let scanRepository else { return }
 

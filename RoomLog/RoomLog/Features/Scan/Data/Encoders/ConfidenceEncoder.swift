@@ -11,7 +11,9 @@
 import Foundation
 import CoreImage
 
-final class ConfidenceEncoder {
+/// Confidence 맵을 8-bit PNG로 저장하는 인코더.
+/// DatasetEncoder의 직렬 인코딩 체인에서만 접근된다 (@unchecked Sendable 근거는 VideoEncoder 참고).
+nonisolated final class ConfidenceEncoder: @unchecked Sendable {
     enum Status { case allGood, encodingError }
 
     private let baseDirectory: URL

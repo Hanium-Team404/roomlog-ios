@@ -9,10 +9,12 @@
 //
 
 import Foundation
-import ARKit
+import simd
 import Accelerate
 
-final class OdometryEncoder {
+/// 카메라 포즈를 CSV로 기록하는 인코더.
+/// DatasetEncoder의 직렬 인코딩 체인에서만 접근된다 (@unchecked Sendable 근거는 VideoEncoder 참고).
+nonisolated final class OdometryEncoder: @unchecked Sendable {
     private let path: URL
     private let fileHandle: FileHandle
     private let q_AC = simd_quatf(ix: 1.0, iy: 0.0, iz: 0.0, r: 0.0)
@@ -24,13 +26,12 @@ final class OdometryEncoder {
         try fileHandle.write(contentsOf: Data("timestamp, frame, x, y, z, qx, qy, qz, qw\n".utf8))
     }
 
-    func add(frame: ARFrame, currentFrame: Int) {
-        let transform = frame.camera.transform
+    func add(timestamp: TimeInterval, transform: simd_float4x4, currentFrame: Int) {
         let t = transform[3]
         let xyz = vector_float3(t.x, t.y, t.z)
         let q = (simd_quatf(transform) * q_AC).vector
         let frameNumber = String(format: "%06d", currentFrame)
-        let line = "\(frame.timestamp), \(frameNumber), \(xyz.x), \(xyz.y), \(xyz.z), \(q.x), \(q.y), \(q.z), \(q.w)\n"
+        let line = "\(timestamp), \(frameNumber), \(xyz.x), \(xyz.y), \(xyz.z), \(q.x), \(q.y), \(q.z), \(q.w)\n"
         try? fileHandle.write(contentsOf: Data(line.utf8))
     }
 
