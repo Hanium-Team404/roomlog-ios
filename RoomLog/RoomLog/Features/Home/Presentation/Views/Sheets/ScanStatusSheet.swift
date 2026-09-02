@@ -12,7 +12,6 @@ struct ScanStatusSheet: View {
     let phase: ScanProcessingManager.ProcessingPhase
     var onPreview: ((URL) -> Void)?
     var onCancel: (() -> Void)?
-    var onDismiss: (() -> Void)?
     var onRetry: (() -> Void)?
 
     @State private var showCancelAlert: Bool = false
@@ -127,6 +126,7 @@ struct ScanStatusSheet: View {
             .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
             .padding(.horizontal, 32)
         case .failed:
+            // 스와이프로 시트를 내리면 상태가 유지되므로, 포기는 명시적 취소 버튼으로만 가능하다
             VStack(spacing: 12) {
                 if let onRetry {
                     Button {
@@ -142,10 +142,11 @@ struct ScanStatusSheet: View {
                     .padding(.horizontal, 32)
                 }
                 Button {
-                    onDismiss?()
+                    showCancelAlert = true
                 } label: {
-                    Text("닫기")
+                    Text("스캔 취소하기")
                         .font(.semibold, 16)
+                        .foregroundStyle(.red)
                 }
             }
         }
