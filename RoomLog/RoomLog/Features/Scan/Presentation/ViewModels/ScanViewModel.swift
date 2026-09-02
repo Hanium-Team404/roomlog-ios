@@ -25,6 +25,11 @@ final class ScanViewModel: NSObject {
     private(set) var phase: Phase = .idle
     private(set) var recordingSeconds: Int = 0
     private(set) var showDepthWarning: Bool = false
+    /// AR 세션이 실패해 재시작 중일 때 true. 재시작 후 첫 프레임이 도착하면 해제된다.
+    private(set) var showSessionError: Bool = false
+    /// 세션 실패 시각 (uptime 기준). 에러 이전에 캡처돼 큐에 남아 있던 프레임이
+    /// 배너를 조기 해제하지 않도록, 이 시각 이후 프레임만 해제 조건으로 인정한다.
+    private var sessionErrorUptime: TimeInterval = 0
     private var warningFrames: Int = 0
     private var okFrames: Int = 0
     private var totalFrameCount: Int = 0
@@ -165,9 +170,29 @@ final class ScanViewModel: NSObject {
 
 extension ScanViewModel: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        if showSessionError, frame.timestamp > sessionErrorUptime {
+            showSessionError = false
+        }
         updateDepthWarning(frame: frame)
         guard phase == .recording else { return }
         encoder?.add(frame: frame)
+    }
+
+    /// 카메라 등 필수 센서 실패 시 호출된다 (예: 이전 인스턴스가 카메라를 점유 중일 때 Code=102).
+    /// 진행 중이던 녹화는 폐기하고 세션을 재시작해 복구를 시도한다.
+    func session(_ session: ARSession, didFailWithError error: Error) {
+        #if DEBUG
+        print("ScanViewModel: AR 세션 실패, 재시작 시도. \(error.localizedDescription)")
+        #endif
+        showSessionError = true
+        sessionErrorUptime = ProcessInfo.processInfo.systemUptime
+        // 녹화 중 데이터는 재시작 후 좌표계가 달라지므로 폐기한다.
+        // 촬영 완료(.recorded) 상태의 인코더는 변환 대기 데이터이므로 보존한다.
+        if phase == .recording {
+            stopIMU()
+            reset()
+        }
+        session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
     private func updateDepthWarning(frame: ARFrame) {

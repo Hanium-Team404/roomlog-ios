@@ -12,13 +12,37 @@ import Foundation
 import ARKit
 import CryptoKit
 import CoreMotion
+import Synchronization
 
-final class DatasetEncoder {
+/// ARFrame에서 인코딩에 필요한 데이터만 추출한 스냅샷.
+/// Task 체인이 ARFrame 전체를 보유하면 ARKit의 고정 크기 프레임 풀이 고갈되어
+/// 카메라 프레임 공급이 중단되므로, 필요한 버퍼만 남기고 ARFrame은 즉시 해제한다.
+/// CVPixelBuffer는 캡처 이후 읽기 전용으로만 접근하므로 스레드 간 전달이 안전하다.
+private nonisolated struct FramePayload: @unchecked Sendable {
+    let capturedImage: CVPixelBuffer
+    let depthMap: CVPixelBuffer?
+    let confidenceMap: CVPixelBuffer?
+    let timestamp: TimeInterval
+    let transform: simd_float4x4
+}
+
+/// 스캔 데이터셋 인코딩 진입점.
+///
+/// 동시성 구조:
+/// - 모든 메서드는 main thread에서 호출된다 (ARSession delegate와 CMMotionManager 콜백 모두 main 큐).
+///   mutable 상태(currentFrame, savedFrames, lastTask, isFinalizing 등)도 main에서만 접근한다.
+/// - 실제 인코딩은 detached Task 직렬 체인에서 백그라운드로 수행된다. 각 Task가 이전 Task의
+///   완료를 await하므로 프레임 순서가 보장되고, 하위 인코더들은 이 체인 안에서만 접근된다.
+///   이 두 불변식이 @unchecked Sendable의 근거다.
+nonisolated final class DatasetEncoder: @unchecked Sendable {
     enum Status {
         case allGood
         case videoEncodingError
         case directoryCreationError
     }
+
+    /// 인코딩 대기 프레임 상한. 초과분은 드롭해 인코딩 지연 시 버퍼 보유가 무한정 쌓이지 않게 한다.
+    private static let maxPendingFrames = 3
 
     private let rgbEncoder: VideoEncoder
     private let depthEncoder: DepthEncoder
@@ -30,9 +54,11 @@ final class DatasetEncoder {
     private var isFinalizing = false
     private let frameInterval: Int
     private let imuLock = NSLock()
+    /// main(증가)과 인코딩 체인(감소) 양쪽에서 접근하므로 Mutex로 보호한다.
+    private let pendingFrames = Mutex(0)
     private var currentFrame: Int = -1
     private var savedFrames: Int = 0
-    private var lastFrame: ARFrame?
+    private var latestIntrinsics: simd_float3x3?
     private var latestAccelerometerData: (timestamp: Double, data: simd_double3)?
     private var latestGyroscopeData: (timestamp: Double, data: simd_double3)?
 
@@ -89,24 +115,45 @@ final class DatasetEncoder {
         currentFrame += 1
         guard currentFrame % frameInterval == 0 else { return }
 
+        // Backpressure: 인코딩이 프레임 유입을 따라가지 못하면 이번 프레임은 드롭한다
+        let isBacklogged = pendingFrames.withLock { (count: inout Int) -> Bool in
+            guard count < Self.maxPendingFrames else { return true }
+            count += 1
+            return false
+        }
+        if isBacklogged { return }
+
         let frameNumber = savedFrames
         savedFrames += 1
+        latestIntrinsics = frame.camera.intrinsics
+
+        let payload = FramePayload(
+            capturedImage: frame.capturedImage,
+            depthMap: frame.sceneDepth?.depthMap,
+            confidenceMap: frame.sceneDepth?.confidenceMap,
+            timestamp: frame.timestamp,
+            transform: frame.camera.transform
+        )
 
         let previous = lastTask
-        lastTask = Task(priority: .utility) { [weak self] in
+        lastTask = Task.detached(priority: .utility) { [weak self] in
             await previous?.value
             guard let self else { return }
-            if let sceneDepth = frame.sceneDepth {
-                depthEncoder.encodeFrame(frame: sceneDepth.depthMap, frameNumber: frameNumber)
-                if let confidence = sceneDepth.confidenceMap {
-                    confidenceEncoder.encodeFrame(frame: confidence, frameNumber: frameNumber)
+            defer { self.pendingFrames.withLock { $0 -= 1 } }
+            if let depthMap = payload.depthMap {
+                self.depthEncoder.encodeFrame(frame: depthMap, frameNumber: frameNumber)
+                if let confidenceMap = payload.confidenceMap {
+                    self.confidenceEncoder.encodeFrame(frame: confidenceMap, frameNumber: frameNumber)
                 }
             }
-            await rgbEncoder.add(
-                frame: VideoEncoderInput(buffer: frame.capturedImage, time: frame.timestamp)
+            await self.rgbEncoder.add(
+                frame: VideoEncoderInput(buffer: payload.capturedImage, time: payload.timestamp)
             )
-            odometryEncoder.add(frame: frame, currentFrame: frameNumber)
-            lastFrame = frame
+            self.odometryEncoder.add(
+                timestamp: payload.timestamp,
+                transform: payload.transform,
+                currentFrame: frameNumber
+            )
         }
     }
 
@@ -167,7 +214,7 @@ final class DatasetEncoder {
     }
 
     private func writeIntrinsics() {
-        guard let cameraMatrix = lastFrame?.camera.intrinsics else { return }
+        guard let cameraMatrix = latestIntrinsics else { return }
         let rows = cameraMatrix.transpose.columns
         let csv = [rows.0, rows.1, rows.2].map { "\($0.x), \($0.y), \($0.z)" }.joined(separator: "\n")
         do {

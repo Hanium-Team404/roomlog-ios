@@ -12,12 +12,15 @@ import Foundation
 @preconcurrency import AVFoundation
 import ARKit
 
-struct VideoEncoderInput {
+nonisolated struct VideoEncoderInput {
     let buffer: CVPixelBuffer
     let time: TimeInterval
 }
 
-final class VideoEncoder: @unchecked Sendable {
+/// AVAssetWriter 기반 RGB 비디오 인코더.
+/// DatasetEncoder의 직렬 인코딩 체인에서만 접근된다 — 체인의 각 Task가 이전 Task의 완료를
+/// await하므로 모든 상태 접근이 순차 실행됨이 보장된다. 이 직렬 접근 불변식이 @unchecked Sendable의 근거다.
+nonisolated final class VideoEncoder: @unchecked Sendable {
     enum EncodingStatus { case allGood, error }
 
     private var videoWriter: AVAssetWriter?
