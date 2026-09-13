@@ -44,6 +44,10 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     /// 인코딩 대기 프레임 상한. 초과분은 드롭해 인코딩 지연 시 버퍼 보유가 무한정 쌓이지 않게 한다.
     private static let maxPendingFrames = 3
 
+    /// 인코딩 대기 키프레임 상한. JPEG 인코딩이 키프레임 간격보다 느려질 때
+    /// 복사된 픽셀 버퍼(장당 약 4MB)가 무한정 쌓이지 않게 한다.
+    private static let maxPendingKeyframes = 2
+
     /// 키프레임 선정 파라미터. 임계값은 실측 후 조정 가능하도록 상수로 분리.
     private enum KeyframeSelection {
         /// 목표 저장 간격 (초)
@@ -70,6 +74,8 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     private let imuLock = NSLock()
     /// main(증가)과 인코딩 체인(감소) 양쪽에서 접근하므로 Mutex로 보호한다.
     private let pendingFrames = Mutex(0)
+    /// main(증가)과 키프레임 체인(감소) 양쪽에서 접근하므로 Mutex로 보호한다.
+    private let pendingKeyframes = Mutex(0)
     private var currentFrame: Int = -1
     private var savedFrames: Int = 0
     private var latestIntrinsics: simd_float3x3?
@@ -168,10 +174,15 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
         let isKeyframe = (elapsed >= KeyframeSelection.targetInterval && gyroMagnitude < KeyframeSelection.gyroThreshold)
             || elapsed >= KeyframeSelection.timeout
         if isKeyframe {
-            lastKeyframeTime = frame.timestamp
+            // Backpressure: JPEG 인코딩이 키프레임 유입을 따라가지 못하면 이번 키프레임은 드롭한다.
+            // 증가는 main에서만 일어나므로 검사-증가 사이에 상한을 넘을 일이 없다.
+            let isKeyframeBacklogged = pendingKeyframes.withLock { $0 >= Self.maxPendingKeyframes }
             // 픽셀 버퍼를 즉시 복사하고 메타데이터만 뽑아서 ARFrame은 바로 놓아준다.
             // 원본 capturedImage를 JPEG 인코딩 동안 보관하면 카메라 버퍼 풀이 고갈되어 프레임 공급이 멈춘다.
-            if let pixelBufferCopy = KeyframeEncoder.copyPixelBuffer(frame.capturedImage) {
+            // 드롭되거나 복사에 실패하면 lastKeyframeTime을 갱신하지 않아 다음 프레임에서 다시 시도한다.
+            if !isKeyframeBacklogged, let pixelBufferCopy = KeyframeEncoder.copyPixelBuffer(frame.capturedImage) {
+                lastKeyframeTime = frame.timestamp
+                pendingKeyframes.withLock { $0 += 1 }
                 let keyframe = KeyframeEncoder.Keyframe(
                     pixelBuffer: pixelBufferCopy,
                     frameNumber: frameNumber,
@@ -184,7 +195,9 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
                 let previousKeyframe = lastKeyframeTask
                 lastKeyframeTask = Task(priority: .utility) { [weak self] in
                     await previousKeyframe?.value
-                    self?.keyframeEncoder.encode(keyframe)
+                    guard let self else { return }
+                    defer { self.pendingKeyframes.withLock { $0 -= 1 } }
+                    self.keyframeEncoder.encode(keyframe)
                 }
             }
         }
@@ -211,19 +224,21 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
         }
     }
 
+    // IMU 콜백은 전용 큐(ScanViewModel.imuQueue)에서 들어오므로, isFinalizing 검사도
+    // imuLock 안에서 해야 wrapUp()의 imu.csv 닫기와 겹치지 않는다.
     func addRawAccelerometer(data: CMAccelerometerData) {
-        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
+        guard !isFinalizing else { return }
         let acceleration = simd_double3(data.acceleration.x, data.acceleration.y, data.acceleration.z)
         latestAccelerometerData = (timestamp: data.timestamp, data: acceleration)
         tryWritingIMUData()
     }
 
     func addRawGyroscope(data: CMGyroData) {
-        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
+        guard !isFinalizing else { return }
         let rotationRate = simd_double3(data.rotationRate.x, data.rotationRate.y, data.rotationRate.z)
         latestGyroscopeData = (timestamp: data.timestamp, data: rotationRate)
         latestGyroForKeyframe = rotationRate
@@ -231,7 +246,11 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     }
 
     func wrapUp() async {
+        // 진행 중인 IMU 콜백이 끝난 뒤에 플래그가 서도록 락 안에서 갱신한다.
+        // (이후 imuEncoder.done()으로 파일을 닫을 때 쓰기와 충돌하지 않음)
+        imuLock.lock()
         isFinalizing = true
+        imuLock.unlock()
 
         await lastTask?.value
         lastTask = nil

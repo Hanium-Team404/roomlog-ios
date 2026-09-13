@@ -84,7 +84,14 @@ final class KeyframeEncoder {
             keyframe.exposureOffset,
             keyframe.gyroMagnitude
         )
-        try? fileHandle.write(contentsOf: Data(line.utf8))
+        do {
+            try fileHandle.write(contentsOf: Data(line.utf8))
+        } catch {
+            #if DEBUG
+            print("KeyframeEncoder: CSV 기록 실패 (frame \(keyframe.frameNumber)). \(error.localizedDescription)")
+            #endif
+            status = .encodingError
+        }
     }
 
     func done() {
@@ -94,6 +101,7 @@ final class KeyframeEncoder {
             #if DEBUG
             print("KeyframeEncoder: 파일 닫기 실패. \(error.localizedDescription)")
             #endif
+            status = .encodingError
         }
     }
 

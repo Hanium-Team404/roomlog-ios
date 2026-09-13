@@ -56,6 +56,16 @@ final class ScanViewModel: NSObject {
     private let motionManager = CMMotionManager()
     private var encoder: DatasetEncoder?
 
+    /// IMU 전용 직렬 큐. 고빈도 센서 콜백을 메인 큐로 받는 것은 Apple이 비권장한다
+    /// (`startAccelerometerUpdates(to:)` 문서). 원본 strayrobots/scanner도 전용 큐를 사용한다.
+    private let imuQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.roomlog.scan.imu"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .userInitiated
+        return queue
+    }()
+
     // MARK: - Init
 
     init(
@@ -147,16 +157,20 @@ final class ScanViewModel: NSObject {
 
     private func startIMU() {
         guard motionManager.isAccelerometerAvailable, motionManager.isGyroAvailable else { return }
+        guard let encoder else { return }
+        // 100Hz는 iOS CMMotionManager의 하드웨어 상한. 더 높게 요청해도 클램프되며,
+        // 프로퍼티를 다시 읽어도 반영되지 않으므로 실제 주기는 데이터 timestamp로만 확인 가능.
         motionManager.accelerometerUpdateInterval = 1.0 / 100.0
         motionManager.gyroUpdateInterval = 1.0 / 100.0
 
-        motionManager.startAccelerometerUpdates(to: .main) { [weak self] data, _ in
+        // 인코더를 캡처해 콜백에서 MainActor 격리 프로퍼티를 건드리지 않는다 (전용 큐 ↔ 메인 경합 방지)
+        motionManager.startAccelerometerUpdates(to: imuQueue) { data, _ in
             guard let data else { return }
-            self?.encoder?.addRawAccelerometer(data: data)
+            encoder.addRawAccelerometer(data: data)
         }
-        motionManager.startGyroUpdates(to: .main) { [weak self] data, _ in
+        motionManager.startGyroUpdates(to: imuQueue) { data, _ in
             guard let data else { return }
-            self?.encoder?.addRawGyroscope(data: data)
+            encoder.addRawGyroscope(data: data)
         }
     }
 
