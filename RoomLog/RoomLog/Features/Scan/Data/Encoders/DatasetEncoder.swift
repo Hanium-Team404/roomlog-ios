@@ -44,23 +44,47 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     /// 인코딩 대기 프레임 상한. 초과분은 드롭해 인코딩 지연 시 버퍼 보유가 무한정 쌓이지 않게 한다.
     private static let maxPendingFrames = 3
 
+    /// 인코딩 대기 키프레임 상한. JPEG 인코딩이 키프레임 간격보다 느려질 때
+    /// 복사된 픽셀 버퍼(장당 약 4MB)가 무한정 쌓이지 않게 한다.
+    private static let maxPendingKeyframes = 2
+
+    /// 키프레임 선정 파라미터. 임계값은 실측 후 조정 가능하도록 상수로 분리.
+    private enum KeyframeSelection {
+        /// 목표 저장 간격 (초)
+        static let targetInterval: TimeInterval = 0.5
+        /// 이 값(rad/s) 미만이면 흔들림이 적은 순간으로 판단
+        static let gyroThreshold: Double = 0.3
+        /// 이 시간(초) 내내 흔들렸으면 공백 방지를 위해 그냥 저장
+        static let timeout: TimeInterval = 1.5
+    }
+
     private let rgbEncoder: VideoEncoder
     private let depthEncoder: DepthEncoder
     private let confidenceEncoder: ConfidenceEncoder
     private let odometryEncoder: OdometryEncoder
     private let imuEncoder: IMUEncoder
+    private let keyframeEncoder: KeyframeEncoder
     private let datasetDirectory: URL
     private var lastTask: Task<Void, Never>?
+    /// 키프레임 JPEG 인코딩 전용 직렬 체인. 인코딩이 느려도(수백 ms) ARFrame을 붙잡지 않도록
+    /// 메인 체인(lastTask)과 분리하고, 복사된 픽셀 버퍼만 넘긴다.
+    private var lastKeyframeTask: Task<Void, Never>?
     private var isFinalizing = false
     private let frameInterval: Int
     private let imuLock = NSLock()
     /// main(증가)과 인코딩 체인(감소) 양쪽에서 접근하므로 Mutex로 보호한다.
     private let pendingFrames = Mutex(0)
+    /// main(증가)과 키프레임 체인(감소) 양쪽에서 접근하므로 Mutex로 보호한다.
+    private let pendingKeyframes = Mutex(0)
     private var currentFrame: Int = -1
     private var savedFrames: Int = 0
     private var latestIntrinsics: simd_float3x3?
+    private var lastKeyframeTime: TimeInterval = 0
     private var latestAccelerometerData: (timestamp: Double, data: simd_double3)?
     private var latestGyroscopeData: (timestamp: Double, data: simd_double3)?
+    /// 키프레임 전용 최신 각속도 (rad/s). `latestGyroscopeData`는 imu.csv 기록 시 페어링 후 nil로 소비되므로,
+    /// 그 타이밍과 무관하게 "그 순간의 최신 각속도"를 유지하는 별도 값을 둔다. `imuLock`으로 보호.
+    private var latestGyroForKeyframe: simd_double3 = .zero
 
     // 녹화 완료 후 외부에서 접근하는 프로퍼티
     let id: UUID
@@ -107,6 +131,11 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
 
         self.imuPath = directory.appendingPathComponent("imu.csv")
         self.imuEncoder = try IMUEncoder(url: imuPath)
+
+        self.keyframeEncoder = try KeyframeEncoder(
+            imagesDirectory: directory.appendingPathComponent("keyframes", isDirectory: true),
+            csvURL: directory.appendingPathComponent("keyframes.csv")
+        )
     }
 
     func add(frame: ARFrame) {
@@ -135,6 +164,44 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
             transform: frame.camera.transform
         )
 
+        // 각속도는 add(frame:) 시점에 동기로 캡처한다. Task 실행 시점에 읽으면 다른 순간의 값이 기록됨.
+        imuLock.lock()
+        let gyro = latestGyroForKeyframe
+        imuLock.unlock()
+        let gyroMagnitude = simd_length(gyro)
+
+        let elapsed = frame.timestamp - lastKeyframeTime
+        let isKeyframe = (elapsed >= KeyframeSelection.targetInterval && gyroMagnitude < KeyframeSelection.gyroThreshold)
+            || elapsed >= KeyframeSelection.timeout
+        if isKeyframe {
+            // Backpressure: JPEG 인코딩이 키프레임 유입을 따라가지 못하면 이번 키프레임은 드롭한다.
+            // 증가는 main에서만 일어나므로 검사-증가 사이에 상한을 넘을 일이 없다.
+            let isKeyframeBacklogged = pendingKeyframes.withLock { $0 >= Self.maxPendingKeyframes }
+            // 픽셀 버퍼를 즉시 복사하고 메타데이터만 뽑아서 ARFrame은 바로 놓아준다.
+            // 원본 capturedImage를 JPEG 인코딩 동안 보관하면 카메라 버퍼 풀이 고갈되어 프레임 공급이 멈춘다.
+            // 드롭되거나 복사에 실패하면 lastKeyframeTime을 갱신하지 않아 다음 프레임에서 다시 시도한다.
+            if !isKeyframeBacklogged, let pixelBufferCopy = KeyframeEncoder.copyPixelBuffer(frame.capturedImage) {
+                lastKeyframeTime = frame.timestamp
+                pendingKeyframes.withLock { $0 += 1 }
+                let keyframe = KeyframeEncoder.Keyframe(
+                    pixelBuffer: pixelBufferCopy,
+                    frameNumber: frameNumber,
+                    timestamp: frame.timestamp,
+                    intrinsics: frame.camera.intrinsics,
+                    exposureDuration: frame.camera.exposureDuration,
+                    exposureOffset: frame.camera.exposureOffset,
+                    gyroMagnitude: gyroMagnitude
+                )
+                let previousKeyframe = lastKeyframeTask
+                lastKeyframeTask = Task(priority: .utility) { [weak self] in
+                    await previousKeyframe?.value
+                    guard let self else { return }
+                    defer { self.pendingKeyframes.withLock { $0 -= 1 } }
+                    self.keyframeEncoder.encode(keyframe)
+                }
+            }
+        }
+
         let previous = lastTask
         lastTask = Task.detached(priority: .utility) { [weak self] in
             await previous?.value
@@ -157,29 +224,38 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
         }
     }
 
+    // IMU 콜백은 전용 큐(ScanViewModel.imuQueue)에서 들어오므로, isFinalizing 검사도
+    // imuLock 안에서 해야 wrapUp()의 imu.csv 닫기와 겹치지 않는다.
     func addRawAccelerometer(data: CMAccelerometerData) {
-        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
+        guard !isFinalizing else { return }
         let acceleration = simd_double3(data.acceleration.x, data.acceleration.y, data.acceleration.z)
         latestAccelerometerData = (timestamp: data.timestamp, data: acceleration)
         tryWritingIMUData()
     }
 
     func addRawGyroscope(data: CMGyroData) {
-        guard !isFinalizing else { return }
         imuLock.lock()
         defer { imuLock.unlock() }
+        guard !isFinalizing else { return }
         let rotationRate = simd_double3(data.rotationRate.x, data.rotationRate.y, data.rotationRate.z)
         latestGyroscopeData = (timestamp: data.timestamp, data: rotationRate)
+        latestGyroForKeyframe = rotationRate
         tryWritingIMUData()
     }
 
     func wrapUp() async {
+        // 진행 중인 IMU 콜백이 끝난 뒤에 플래그가 서도록 락 안에서 갱신한다.
+        // (이후 imuEncoder.done()으로 파일을 닫을 때 쓰기와 충돌하지 않음)
+        imuLock.lock()
         isFinalizing = true
+        imuLock.unlock()
 
         await lastTask?.value
         lastTask = nil
+        await lastKeyframeTask?.value
+        lastKeyframeTask = nil
 
         await rgbEncoder.finishEncoding()
 
@@ -193,11 +269,13 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
         }
 
         odometryEncoder.done()
+        keyframeEncoder.done()
         writeIntrinsics()
 
         if case .error = rgbEncoder.status { status = .videoEncodingError }
         if case .frameEncodingError = depthEncoder.status { status = .videoEncodingError }
         if case .encodingError = confidenceEncoder.status { status = .videoEncodingError }
+        if case .encodingError = keyframeEncoder.status { status = .videoEncodingError }
     }
 
     // MARK: - Private
