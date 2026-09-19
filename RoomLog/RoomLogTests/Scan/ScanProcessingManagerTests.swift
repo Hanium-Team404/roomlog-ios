@@ -142,7 +142,8 @@ final class ScanProcessingManagerTests {
         sut.handleScenePhase(.background)
         sut.startProcessing(scanId: 1, houseId: 1)
 
-        try await Task.sleep(for: .milliseconds(300))
+        // 파킹을 직접 관측 — 고정 sleep은 루프가 돌기 전의 0회를 '정지'로 오판(false-pass)할 수 있다
+        try await waitUntil { sut.isParked }
 
         #expect(mockRepo.getScanStatusCallCount == 0)
         // 파킹된 폴링 루프를 깨워서 정리 (안 하면 continuation에 매달린 Task가 남는다)
@@ -155,14 +156,45 @@ final class ScanProcessingManagerTests {
         sut.handleScenePhase(.background)
         sut.startProcessing(scanId: 1, houseId: 1)
 
-        // 백그라운드 상태에서 폴링이 나가지 않음을 먼저 관측 (폴링 간격 50ms의 수 배를 대기)
-        try await Task.sleep(for: .milliseconds(300))
+        // 백그라운드 상태에서 루프가 파킹됐음을 먼저 관측
+        try await waitUntil { sut.isParked }
         #expect(mockRepo.getScanStatusCallCount == 0, "백그라운드에서는 폴링하지 않아야 합니다")
 
         sut.handleScenePhase(.active)
 
         try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
         #expect(mockRepo.getScanStatusCallCount > 0, "포그라운드 복귀 후 폴링이 재개되어야 합니다")
+        sut.clear()
+    }
+
+    @Test func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        sut.handleScenePhase(.background)
+        sut.startProcessing(scanId: 1, houseId: 1)
+        try await waitUntil { sut.isParked }
+        let task = try #require(sut.currentTask)
+
+        sut.cancel()
+
+        // 취소가 파킹을 깨우지 못하면(좀비 Task) 여기서 끝나지 않는다
+        await task.value
+        #expect(mockRepo.getScanStatusCallCount == 0, "취소된 Task는 폴링 없이 종료되어야 합니다")
+    }
+
+    @Test func active가_연속으로_와도_크래시없이_재개된다() async throws {
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        sut.handleScenePhase(.background)
+        sut.startProcessing(scanId: 1, houseId: 1)
+        try await waitUntil { sut.isParked }
+
+        // wake가 멱등하지 않으면(이중 resume) 프로세스가 죽는다
+        sut.handleScenePhase(.active)
+        sut.handleScenePhase(.active)
+
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+        #expect(mockRepo.getScanStatusCallCount > 0, "복귀 이벤트가 중복돼도 폴링이 재개되어야 합니다")
         sut.clear()
     }
 
