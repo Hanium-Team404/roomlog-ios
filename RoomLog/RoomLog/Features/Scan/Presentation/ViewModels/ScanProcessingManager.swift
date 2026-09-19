@@ -436,6 +436,9 @@ final class ScanProcessingManager {
         guard let scanRepository else { return }
         do {
             let fileURLString = try await scanRepository.getScanPreview(scanId: scanId)
+            // 취소 후 도착한 응답이 잘못된 URL이면 guard-else가 pendingRetry·.failed를 되살리므로
+            // URL 검증 전에 취소를 확인한다 (불필요한 다운로드 시작도 방지)
+            if Task.isCancelled { return }
             guard let remoteURL = URL(string: fileURLString) else {
                 pendingRetry = PendingRetry(houseId: houseId, source: .download(scanId: scanId))
                 activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("잘못된 파일 URL"))
