@@ -75,6 +75,9 @@ final class ScanProcessingManager {
     private var isInBackground = false
     /// 백그라운드 동안 잠든 폴링 루프를 포그라운드 복귀 시 즉시 깨우기 위한 continuation
     private var foregroundWaiter: CheckedContinuation<Void, Never>?
+    /// 생명주기 전환 시마다 증가. 요청 도중 전환이 있었는지 판별해
+    /// 전환으로 끊긴 실패를 연속 실패 횟수에서 제외하는 데 쓴다
+    private var phaseEpoch = 0
 
     // MARK: - Setup
 
@@ -94,6 +97,9 @@ final class ScanProcessingManager {
     func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
         cancelProcessingTask()
         discardPendingRetry()
+        // 이전 스캔의 pending이 남아 있으면 압축·업로드 중 앱 종료 시
+        // 재시작 복구가 다른 집의 예전 스캔을 되살린다
+        clearPendingScan()
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .zipping)
         processingTask = Task { [weak self] in
             await self?.fullProcess(encoder: encoder, houseId: houseId)
@@ -196,6 +202,7 @@ final class ScanProcessingManager {
     /// `.inactive`(전화 배너, 제어센터 등)에서도 폴링을 멈추는 것은 의도된 정책 —
     /// `.active` 복귀 시 대기 중인 루프를 즉시 깨워 바로 폴링하므로 짧은 중단에도 재개 지연이 없다.
     func handleScenePhase(_ phase: ScenePhase) {
+        phaseEpoch += 1
         isInBackground = (phase != .active)
         if !isInBackground {
             wakeForegroundWaiter()
@@ -210,6 +217,10 @@ final class ScanProcessingManager {
     func setPendingRetry(houseId: Int, source: RetrySource) {
         pendingRetry = PendingRetry(houseId: houseId, source: source)
     }
+
+    /// 테스트에서 폴링 루프가 실제로 파킹됐는지 관측하기 위한 노출
+    var isParked: Bool { foregroundWaiter != nil }
+    var currentTask: Task<Void, Never>? { processingTask }
     #endif
 
     // MARK: - Task Lifecycle
@@ -228,6 +239,15 @@ final class ScanProcessingManager {
     /// 백그라운드 동안 폴링 루프를 재우고 포그라운드 복귀(또는 Task 취소) 시 즉시 깨어난다
     private func waitUntilForeground() async {
         await withCheckedContinuation { continuation in
+            // 파킹 직전에 복귀 이벤트가 먼저 도착했다면 대기하지 않고 통과 (lost wakeup 방어)
+            guard isInBackground else {
+                continuation.resume()
+                return
+            }
+            // 단일 processingTask 관례상 파킹은 항상 1개 —
+            // 새 Task 생성 지점이 cancelProcessingTask()를 빼먹으면 여기서 잡힌다
+            assert(foregroundWaiter == nil, "파킹 슬롯은 항상 1개여야 한다")
+            foregroundWaiter?.resume()
             foregroundWaiter = continuation
         }
     }
@@ -274,6 +294,8 @@ final class ScanProcessingManager {
                 try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
             }.value
         } catch {
+            // 압축 실패는 재시도 경로가 없으므로 대용량 데이터셋을 즉시 정리해 고아 파일을 남기지 않는다
+            cleanup(zipURL: zipURL, datasetDir: datasetDir)
             activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("압축 실패: \(error.localizedDescription)"))
             return
         }
@@ -358,13 +380,19 @@ final class ScanProcessingManager {
             attempts += 1
             if attempts > pollConfig.maxAttempts {
                 try? await scanRepository.cancelScan(scanId: scanId)
+                // await 중 취소됐다면 cancel()이 이미 상태를 정리했으므로 덮어쓰지 않는다
+                if Task.isCancelled { return }
                 activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("처리 시간이 초과되었습니다"))
                 clearPendingScan()
                 return
             }
 
+            // 요청이 나가 있는 동안 생명주기 전환이 있었는지 판별하기 위해 기록
+            let epoch = phaseEpoch
             do {
                 let status = try await scanRepository.getScanStatus(scanId: scanId).uppercased()
+                // 취소 후 늦게 도착한 응답이 상태를 되살리지 않도록 한다
+                if Task.isCancelled { return }
                 consecutiveErrors = 0
                 #if DEBUG
                 print("[ScanProcessing] scanId=\(scanId) status=\(status)")
@@ -378,7 +406,13 @@ final class ScanProcessingManager {
                 }
             } catch {
                 if Task.isCancelled { return }
+                // 요청 도중 생명주기 전환이 있었다면 전환으로 끊긴 실패일 수 있으므로
+                // 횟수에 세지 않고 즉시 재시도한다 (백그라운드면 루프 상단에서 파킹)
+                if epoch != phaseEpoch { continue }
                 consecutiveErrors += 1
+                #if DEBUG
+                print("[ScanProcessing] scanId=\(scanId) 상태 조회 실패(\(consecutiveErrors)/\(pollConfig.maxConsecutiveErrors)): \(error)")
+                #endif
                 if consecutiveErrors >= pollConfig.maxConsecutiveErrors {
                     // 일시적 네트워크 문제일 수 있는 비확정 실패 — pending을 유지해
                     // 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
@@ -402,12 +436,17 @@ final class ScanProcessingManager {
         guard let scanRepository else { return }
         do {
             let fileURLString = try await scanRepository.getScanPreview(scanId: scanId)
+            // 취소 후 도착한 응답이 잘못된 URL이면 guard-else가 pendingRetry·.failed를 되살리므로
+            // URL 검증 전에 취소를 확인한다 (불필요한 다운로드 시작도 방지)
+            if Task.isCancelled { return }
             guard let remoteURL = URL(string: fileURLString) else {
                 pendingRetry = PendingRetry(houseId: houseId, source: .download(scanId: scanId))
                 activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("잘못된 파일 URL"))
                 return
             }
             let localURL = try await fileCache.download(from: remoteURL, roomId: scanId)
+            // 취소 후 완료된 다운로드(캐시 히트 등)가 취소된 스캔을 .completed로 되살리지 않도록 한다
+            if Task.isCancelled { return }
             activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .completed(fileURL: localURL))
         } catch {
             if Task.isCancelled { return }
