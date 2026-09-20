@@ -198,6 +198,32 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
+    @Test func 생명주기_전환으로_끊긴_실패는_타임아웃_횟수를_소모하지_않는다() async throws {
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10)),
+            userDefaults: defaults
+        )
+        sut.configure(scanRepository: mockRepo)
+        mockRepo.getScanStatusResult = .failure(NSError(domain: "test", code: -1))
+        // maxAttempts보다 충분히 많은 횟수만큼 매 실패를 생명주기 전환과 겹치게 만든다.
+        // 이후에는 전환을 멈춰 연속 실패로 정상 종료시킨다 (무한 대기 방지)
+        mockRepo.onGetScanStatus = { [weak sut] callCount in
+            guard let sut, callCount <= 10 else { return }
+            sut.handleScenePhase(.inactive)
+            sut.handleScenePhase(.active)
+        }
+
+        sut.startProcessing(scanId: 1, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let message) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        // 전환은 실제 대기 시간을 만들지 않으므로 타임아웃 예산을 깎아서는 안 된다
+        #expect(message.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(message)")
+        #expect(mockRepo.cancelScanCallCount == 0, "전환으로 타임아웃에 도달해 서버 스캔이 취소되면 안 됩니다")
+        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 1, "pending이 유지되어야 재시도·재시작 복구가 가능합니다")
+        mockRepo.onGetScanStatus = nil
+    }
+
     // MARK: - retry (업로드 실패)
 
     @Test func retry_업로드실패후_재시도하면_업로드가_다시_수행된다() async throws {
