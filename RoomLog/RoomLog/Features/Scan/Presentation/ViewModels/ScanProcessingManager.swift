@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import ZIPFoundation
 
+@MainActor
 @Observable
 final class ScanProcessingManager {
 
@@ -29,7 +30,8 @@ final class ScanProcessingManager {
     }
 
     /// 폴링 간격·시도 횟수 설정. 테스트에서 짧은 간격을 주입할 수 있다.
-    struct PollConfig {
+    /// init의 기본 인자(`PollConfig()`)는 nonisolated 컨텍스트에서 평가되므로 격리에서 제외한다.
+    nonisolated struct PollConfig {
         var maxAttempts = 60
         var interval: Duration = .seconds(7)
         var maxConsecutiveErrors = 3
@@ -108,9 +110,10 @@ final class ScanProcessingManager {
 
     /// 앱 재시작 시 폴링 재개용
     func startProcessing(scanId: Int, houseId: Int) {
+        cancelProcessingTask()
+        discardPendingRetry()
         savePendingScan(scanId: scanId, houseId: houseId)
         activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
-        cancelProcessingTask()
         processingTask = Task { [weak self] in
             await self?.pollAndDownload(scanId: scanId, houseId: houseId)
         }
@@ -408,7 +411,13 @@ final class ScanProcessingManager {
                 if Task.isCancelled { return }
                 // 요청 도중 생명주기 전환이 있었다면 전환으로 끊긴 실패일 수 있으므로
                 // 횟수에 세지 않고 즉시 재시도한다 (백그라운드면 루프 상단에서 파킹)
-                if epoch != phaseEpoch { continue }
+                if epoch != phaseEpoch {
+                    // continue는 sleep을 건너뛰어 시간이 흐르지 않으므로 attempts도 되돌린다.
+                    // 안 되돌리면 전환이 반복될 때 실제 대기 없이 maxAttempts를 소진해
+                    // 타임아웃 취소(cancelScan + pending 삭제)로 스캔을 잃는다
+                    attempts -= 1
+                    continue
+                }
                 consecutiveErrors += 1
                 #if DEBUG
                 print("[ScanProcessing] scanId=\(scanId) 상태 조회 실패(\(consecutiveErrors)/\(pollConfig.maxConsecutiveErrors)): \(error)")

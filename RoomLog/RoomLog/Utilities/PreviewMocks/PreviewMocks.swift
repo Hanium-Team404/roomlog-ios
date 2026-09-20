@@ -76,10 +76,13 @@ private struct MockGetCurrentAddressUseCase: GetCurrentAddressUseCaseProtocol {
 // MARK: - Preview DIContainer
 
 extension DIContainer {
-    static func preview(processingManager: ScanProcessingManager = ScanProcessingManager()) -> DIContainer {
+    // 기본값을 본문에서 만드는 이유: 기본 인자 식은 nonisolated 컨텍스트에서 평가되므로
+    // MainActor 격리된 ScanProcessingManager를 기본 인자로 둘 수 없다
+    static func preview(processingManager: ScanProcessingManager? = nil) -> DIContainer {
         let container = DIContainer()
+        let manager = processingManager ?? ScanProcessingManager()
         container.register(PathStore.self) { PathStore() }
-        container.register(ScanProcessingManager.self) { processingManager }
+        container.register(ScanProcessingManager.self) { manager }
         return container
     }
 }
