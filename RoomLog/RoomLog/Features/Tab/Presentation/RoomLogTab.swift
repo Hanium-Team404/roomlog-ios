@@ -16,7 +16,6 @@ struct RoomLogTab: View {
     @State private var showViewerLockedToast: Bool = false
     @Environment(\.di) var di
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.scenePhase) private var scenePhase
 
     private enum TabIdentifier: Hashable {
         case home, viewer, profile
@@ -91,9 +90,6 @@ struct RoomLogTab: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showViewerLockedToast)
-        .onChange(of: scenePhase) { _, newPhase in
-            di.resolve(ScanProcessingManager.self).handleScenePhase(newPhase)
-        }
     }
 }
 
