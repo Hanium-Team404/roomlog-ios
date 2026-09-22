@@ -60,11 +60,15 @@ enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 
-    /// 사용자에게 표시할 문구. 디코딩 덤프 같은 내부 상세는 `errorDescription`(로그)에만 남긴다.
+    /// 사용자에게 표시할 문구. 디코딩 덤프·서버 raw message 같은 내부 상세는 `errorDescription`(로그)에만 남긴다.
     var userMessage: String {
         switch self {
-        case .serverError:
-            return errorDescription ?? "서버 오류가 발생했습니다."
+        case .serverError(_, _, let errorCode):
+            // 앱이 검수한 코드별 문구만 노출 — 서버가 보낸 message는 통제 밖이라 로그로만
+            if let errorCode, errorCode != .unknown {
+                return errorCode.userMessage
+            }
+            return "서버 오류가 발생했습니다."
         case .decodingError:
             return "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요."
         case .transportError:

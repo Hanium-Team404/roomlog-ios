@@ -36,6 +36,14 @@ struct RepositoryErrorTests {
         #expect(!error.userMessage.contains("keyNotFound"))
     }
 
+    @Test func 서버에러_userMessage는_서버_raw_message를_노출하지_않는다() {
+        let unknownCode = RepositoryError.serverError(code: 500, message: "internal detail", errorCode: nil)
+        #expect(unknownCode.userMessage == "서버 오류가 발생했습니다.")
+
+        let knownCode = RepositoryError.serverError(code: 404, message: "raw", errorCode: .scanNotFound)
+        #expect(knownCode.userMessage == ServerErrorCode.scanNotFound.userMessage)
+    }
+
     // MARK: - normalize
 
     @Test func URLError는_transportError로_정규화된다() {

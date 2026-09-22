@@ -482,7 +482,7 @@ final class ScanProcessingManager {
             guard let remoteURL = URL(string: fileURLString) else {
                 activeScan = ActiveScan(
                     scanId: scanId, houseId: houseId,
-                    phase: .failed(ScanFailure(userMessage: "잘못된 파일 URL", retrySource: .download(scanId: scanId)))
+                    phase: .failed(ScanFailure(userMessage: "잘못된 파일 URL", retrySource: nil))
                 )
                 return
             }

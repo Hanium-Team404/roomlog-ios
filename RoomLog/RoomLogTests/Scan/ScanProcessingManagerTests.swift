@@ -300,6 +300,19 @@ final class ScanProcessingManagerTests {
         )
     }
 
+    @Test func 잘못된_파일URL이면_재시도_불가로_실패한다() async throws {
+        mockRepo.getScanStatusResult = .success("COMPLETED")
+        // URL(string: "")은 nil — 서버 데이터 결함 시나리오
+        mockRepo.getScanPreviewResult = .success("")
+
+        sut.startProcessing(scanId: 7, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        #expect(failure.userMessage == "잘못된 파일 URL")
+        #expect(!sut.canRetry, "같은 응답으론 재시도해도 결과가 같으므로 재시도가 노출되면 안 됩니다")
+    }
+
     @Test func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
 
