@@ -57,6 +57,27 @@ struct MoyaNetworkAdapter {
     }
 }
 
+// MARK: - Decoded Request (Repository 진입점)
+
+extension MoyaNetworkAdapter {
+    /// 요청 → `APIResponse` 디코딩 → `unwrap`까지 한 번에 수행한다.
+    /// 실패는 전부 `RepositoryError`로 정규화되므로, Repository는 이 메서드만 쓰면
+    /// typed throws(`throws(RepositoryError)`)를 그대로 전파할 수 있다.
+    func requestDecoded<DTO: Codable>(
+        _ target: some TargetType,
+        as type: DTO.Type = DTO.self,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws(RepositoryError) -> DTO {
+        do {
+            let response = try await request(target)
+            let dto = try decoder.decode(APIResponse<DTO>.self, from: response.data)
+            return try dto.unwrap()
+        } catch {
+            throw RepositoryError.normalize(error)
+        }
+    }
+}
+
 // MARK: - Debug Logging
 
 #if DEBUG

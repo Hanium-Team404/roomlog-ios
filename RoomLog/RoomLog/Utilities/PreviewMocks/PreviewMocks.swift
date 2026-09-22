@@ -11,19 +11,19 @@ import Foundation
 // MARK: - Mock ScanRepository
 
 final class MockScanRepository: ScanRepositoryProtocol {
-    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
+    func uploadScan(houseId: Int, fileURL: URL) async throws(RepositoryError) -> ScanResult {
         ScanResult(scanId: 1, status: "COMPLETED")
     }
 
-    func getScanStatus(scanId: Int) async throws -> String {
+    func getScanStatus(scanId: Int) async throws(RepositoryError) -> String {
         "COMPLETED"
     }
 
-    func getScanPreview(scanId: Int) async throws -> String {
+    func getScanPreview(scanId: Int) async throws(RepositoryError) -> String {
         ""
     }
 
-    func cancelScan(scanId: Int) async throws {}
+    func cancelScan(scanId: Int) async throws(RepositoryError) {}
 }
 
 // MARK: - Mock HomeUseCaseProvider

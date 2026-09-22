@@ -20,7 +20,14 @@ final class ScanProcessingManager {
         case uploading
         case polling
         case completed(fileURL: URL)
-        case failed(String)
+        case failed(ScanFailure)
+    }
+
+    /// 실패 표시 문구와 재개 방법을 한 단위로 보관한다.
+    /// `retrySource`가 nil이면 재시도해도 결과가 같은 실패(디코딩·비즈니스 거부 등)라 재시도 불가.
+    struct ScanFailure: Equatable {
+        let userMessage: String
+        let retrySource: RetrySource?
     }
 
     struct ActiveScan: Equatable {
@@ -47,13 +54,6 @@ final class ScanProcessingManager {
         case download(scanId: Int)
     }
 
-    /// 실패 후 재시도용 정보를 소유 houseId와 함께 보관.
-    /// 다른 집의 새 스캔이 시작돼도 cross-house 재시도가 일어나지 않도록 한 단위로 묶는다.
-    private struct PendingRetry {
-        let houseId: Int
-        let source: RetrySource
-    }
-
     // MARK: - Persistence Keys
 
     private enum Defaults {
@@ -64,8 +64,6 @@ final class ScanProcessingManager {
     // MARK: - State
 
     private(set) var activeScan: ActiveScan?
-    /// 실패 후 재시도용 정보. nil이면 재시도 불가.
-    private var pendingRetry: PendingRetry?
 
     // MARK: - Dependencies
 
@@ -98,7 +96,7 @@ final class ScanProcessingManager {
     /// 촬영 완료 후 호출. wrapUp → 압축 → 업로드 → 폴링 → 다운로드 전체 수행.
     func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
         cancelProcessingTask()
-        discardPendingRetry()
+        discardRetryArtifacts()
         // 이전 스캔의 pending이 남아 있으면 압축·업로드 중 앱 종료 시
         // 재시작 복구가 다른 집의 예전 스캔을 되살린다
         clearPendingScan()
@@ -111,7 +109,7 @@ final class ScanProcessingManager {
     /// 앱 재시작 시 폴링 재개용
     func startProcessing(scanId: Int, houseId: Int) {
         cancelProcessingTask()
-        discardPendingRetry()
+        discardRetryArtifacts()
         savePendingScan(scanId: scanId, houseId: houseId)
         activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
         processingTask = Task { [weak self] in
@@ -123,9 +121,9 @@ final class ScanProcessingManager {
     func cancel() {
         let scanId = activeScan?.scanId ?? 0
         cancelProcessingTask()
+        discardRetryArtifacts()
         activeScan = nil
         clearPendingScan()
-        discardPendingRetry()
 
         if scanId > 0 {
             Task { [weak self] in
@@ -137,43 +135,42 @@ final class ScanProcessingManager {
     /// 완료된 스캔 소비 (저장 완료 후 호출)
     func clear() {
         cancelProcessingTask()
+        discardRetryArtifacts()
         activeScan = nil
         clearPendingScan()
-        discardPendingRetry()
     }
 
     /// 실패 후 사용 가능한 재시도 여부.
-    /// `activeScan`이 `.failed` 상태이고 보관된 retry의 houseId가 일치할 때만 true.
+    /// 재시도 정보가 `.failed` 페이로드에 함께 있으므로 cross-house 오염은 구조적으로 불가능하다.
     var canRetry: Bool {
-        guard let pendingRetry, let activeScan else { return false }
-        guard case .failed = activeScan.phase else { return false }
-        return activeScan.houseId == pendingRetry.houseId
+        guard case .failed(let failure) = activeScan?.phase else { return false }
+        return failure.retrySource != nil
     }
 
     /// 실패 지점에 맞는 방식으로 재시도.
     /// 업로드 실패는 보존된 zip 재업로드, 다운로드 실패는 동일 scanId 재다운로드.
     func retry() {
-        guard let pendingRetry, canRetry else { return }
-        let houseId = pendingRetry.houseId
+        guard let activeScan,
+              case .failed(let failure) = activeScan.phase,
+              let source = failure.retrySource else { return }
+        let houseId = activeScan.houseId
         cancelProcessingTask()
 
-        switch pendingRetry.source {
+        switch source {
         case .upload(let zipURL):
-            activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
+            self.activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
             processingTask = Task { [weak self] in
                 await self?.retryUploadProcess(zipURL: zipURL, houseId: houseId)
             }
         case .polling(let scanId):
-            // 다시 실패하면 pollAndDownload가 pendingRetry를 재설정한다
-            self.pendingRetry = nil
-            activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
+            // 다시 실패하면 pollAndDownload가 .failed(retrySource:)를 재설정한다
+            self.activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
             processingTask = Task { [weak self] in
                 await self?.pollAndDownload(scanId: scanId, houseId: houseId)
             }
         case .download(let scanId):
-            // 다시 실패하면 downloadPreview가 pendingRetry를 재설정한다
-            self.pendingRetry = nil
-            activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
+            // 다시 실패하면 downloadPreview가 .failed(retrySource:)를 재설정한다
+            self.activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
             processingTask = Task { [weak self] in
                 await self?.downloadPreview(scanId: scanId, houseId: houseId)
             }
@@ -215,10 +212,6 @@ final class ScanProcessingManager {
     #if DEBUG
     func setActiveScan(_ scan: ActiveScan?) {
         activeScan = scan
-    }
-
-    func setPendingRetry(houseId: Int, source: RetrySource) {
-        pendingRetry = PendingRetry(houseId: houseId, source: source)
     }
 
     /// 테스트에서 폴링 루프가 실제로 파킹됐는지 관측하기 위한 노출
@@ -299,7 +292,13 @@ final class ScanProcessingManager {
         } catch {
             // 압축 실패는 재시도 경로가 없으므로 대용량 데이터셋을 즉시 정리해 고아 파일을 남기지 않는다
             cleanup(zipURL: zipURL, datasetDir: datasetDir)
-            activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("압축 실패: \(error.localizedDescription)"))
+            #if DEBUG
+            print("[ScanProcessing] 압축 실패: \(error)")
+            #endif
+            activeScan = ActiveScan(
+                scanId: 0, houseId: houseId,
+                phase: .failed(ScanFailure(userMessage: "스캔 데이터 압축에 실패했습니다", retrySource: nil))
+            )
             return
         }
         if Task.isCancelled { cleanup(zipURL: zipURL, datasetDir: datasetDir); return }
@@ -314,10 +313,20 @@ final class ScanProcessingManager {
                 cleanup(zipURL: zipURL, datasetDir: datasetDir)
                 return
             }
-            // 재시도 가능하도록 zip은 보존하고 datasetDir만 정리
             try? FileManager.default.removeItem(at: datasetDir)
-            pendingRetry = PendingRetry(houseId: houseId, source: .upload(zipURL: zipURL))
-            activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
+            let retrySource: RetrySource?
+            if error.isRetryable {
+                // 재시도 가능하도록 zip은 보존
+                retrySource = .upload(zipURL: zipURL)
+            } else {
+                // 재시도해도 결과가 같은 실패면 zip을 보존할 이유가 없다
+                try? FileManager.default.removeItem(at: zipURL)
+                retrySource = nil
+            }
+            activeScan = ActiveScan(
+                scanId: 0, houseId: houseId,
+                phase: .failed(ScanFailure(userMessage: "업로드 실패: \(error.userMessage)", retrySource: retrySource))
+            )
             return
         }
         cleanup(zipURL: zipURL, datasetDir: datasetDir)
@@ -335,12 +344,12 @@ final class ScanProcessingManager {
         try? FileManager.default.removeItem(at: datasetDir)
     }
 
-    private func discardPendingRetry() {
-        guard let pendingRetry else { return }
-        if case .upload(let zipURL) = pendingRetry.source {
-            try? FileManager.default.removeItem(at: zipURL)
-        }
-        self.pendingRetry = nil
+    /// 실패 상태를 버릴 때, 재시도용으로 보존해둔 zip이 있으면 함께 삭제한다.
+    /// `activeScan`을 갈아끼우기 전에 호출해야 한다.
+    private func discardRetryArtifacts() {
+        guard case .failed(let failure) = activeScan?.phase,
+              case .upload(let zipURL) = failure.retrySource else { return }
+        try? FileManager.default.removeItem(at: zipURL)
     }
 
     // MARK: - Retry
@@ -351,12 +360,25 @@ final class ScanProcessingManager {
         do {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
-            if Task.isCancelled { return }
-            activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .failed("업로드 실패: \(error.localizedDescription)"))
+            if Task.isCancelled {
+                // 재시도 중에는 실패 phase가 아니라서 cancel()의 zip 정리가 닿지 않는다
+                try? FileManager.default.removeItem(at: zipURL)
+                return
+            }
+            let retrySource: RetrySource?
+            if error.isRetryable {
+                retrySource = .upload(zipURL: zipURL)
+            } else {
+                try? FileManager.default.removeItem(at: zipURL)
+                retrySource = nil
+            }
+            activeScan = ActiveScan(
+                scanId: 0, houseId: houseId,
+                phase: .failed(ScanFailure(userMessage: "업로드 실패: \(error.userMessage)", retrySource: retrySource))
+            )
             return
         }
         try? FileManager.default.removeItem(at: zipURL)
-        pendingRetry = nil
         if Task.isCancelled { return }
 
         let scanId = scanResult.scanId
@@ -385,7 +407,10 @@ final class ScanProcessingManager {
                 try? await scanRepository.cancelScan(scanId: scanId)
                 // await 중 취소됐다면 cancel()이 이미 상태를 정리했으므로 덮어쓰지 않는다
                 if Task.isCancelled { return }
-                activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("처리 시간이 초과되었습니다"))
+                activeScan = ActiveScan(
+                    scanId: scanId, houseId: houseId,
+                    phase: .failed(ScanFailure(userMessage: "처리 시간이 초과되었습니다", retrySource: nil))
+                )
                 clearPendingScan()
                 return
             }
@@ -403,7 +428,10 @@ final class ScanProcessingManager {
                 if status == "COMPLETED" {
                     break
                 } else if status == "FAILED" {
-                    activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("서버에서 스캔 처리에 실패했습니다"))
+                    activeScan = ActiveScan(
+                        scanId: scanId, houseId: houseId,
+                        phase: .failed(ScanFailure(userMessage: "서버에서 스캔 처리에 실패했습니다", retrySource: nil))
+                    )
                     clearPendingScan()
                     return
                 }
@@ -425,8 +453,11 @@ final class ScanProcessingManager {
                 if consecutiveErrors >= pollConfig.maxConsecutiveErrors {
                     // 일시적 네트워크 문제일 수 있는 비확정 실패 — pending을 유지해
                     // 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
-                    pendingRetry = PendingRetry(houseId: houseId, source: .polling(scanId: scanId))
-                    activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("상태 조회 실패: \(error.localizedDescription)"))
+                    let retrySource: RetrySource? = error.isRetryable ? .polling(scanId: scanId) : nil
+                    activeScan = ActiveScan(
+                        scanId: scanId, houseId: houseId,
+                        phase: .failed(ScanFailure(userMessage: "상태 조회 실패: \(error.userMessage)", retrySource: retrySource))
+                    )
                     return
                 }
             }
@@ -445,12 +476,14 @@ final class ScanProcessingManager {
         guard let scanRepository else { return }
         do {
             let fileURLString = try await scanRepository.getScanPreview(scanId: scanId)
-            // 취소 후 도착한 응답이 잘못된 URL이면 guard-else가 pendingRetry·.failed를 되살리므로
+            // 취소 후 도착한 응답이 잘못된 URL이면 guard-else가 .failed를 되살리므로
             // URL 검증 전에 취소를 확인한다 (불필요한 다운로드 시작도 방지)
             if Task.isCancelled { return }
             guard let remoteURL = URL(string: fileURLString) else {
-                pendingRetry = PendingRetry(houseId: houseId, source: .download(scanId: scanId))
-                activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("잘못된 파일 URL"))
+                activeScan = ActiveScan(
+                    scanId: scanId, houseId: houseId,
+                    phase: .failed(ScanFailure(userMessage: "잘못된 파일 URL", retrySource: .download(scanId: scanId)))
+                )
                 return
             }
             let localURL = try await fileCache.download(from: remoteURL, roomId: scanId)
@@ -459,8 +492,13 @@ final class ScanProcessingManager {
             activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .completed(fileURL: localURL))
         } catch {
             if Task.isCancelled { return }
-            pendingRetry = PendingRetry(houseId: houseId, source: .download(scanId: scanId))
-            activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .failed("프리뷰 다운로드 실패: \(error.localizedDescription)"))
+            // fileCache.download는 typed throws 경계 밖(URLSession)이라 여기서 정규화한다
+            let repositoryError = RepositoryError.normalize(error)
+            let retrySource: RetrySource? = repositoryError.isRetryable ? .download(scanId: scanId) : nil
+            activeScan = ActiveScan(
+                scanId: scanId, houseId: houseId,
+                phase: .failed(ScanFailure(userMessage: "프리뷰 다운로드 실패: \(repositoryError.userMessage)", retrySource: retrySource))
+            )
         }
     }
 }

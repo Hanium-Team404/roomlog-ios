@@ -19,10 +19,10 @@ final class MockScanRepository: ScanRepositoryProtocol {
 
     // MARK: - Stub Results
 
-    var uploadScanResult: Result<ScanResult, Error> = .success(ScanResult(scanId: 1, status: "COMPLETED"))
-    var getScanStatusResult: Result<String, Error> = .success("COMPLETED")
-    var getScanPreviewResult: Result<String, Error> = .success("https://example.com/preview.ply")
-    var cancelScanResult: Result<Void, Error> = .success(())
+    var uploadScanResult: Result<ScanResult, RepositoryError> = .success(ScanResult(scanId: 1, status: "COMPLETED"))
+    var getScanStatusResult: Result<String, RepositoryError> = .success("COMPLETED")
+    var getScanPreviewResult: Result<String, RepositoryError> = .success("https://example.com/preview.ply")
+    var cancelScanResult: Result<Void, RepositoryError> = .success(())
 
     // MARK: - Hooks
 
@@ -32,23 +32,23 @@ final class MockScanRepository: ScanRepositoryProtocol {
 
     // MARK: - ScanRepositoryProtocol
 
-    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
+    func uploadScan(houseId: Int, fileURL: URL) async throws(RepositoryError) -> ScanResult {
         uploadScanCallCount += 1
         return try uploadScanResult.get()
     }
 
-    func getScanStatus(scanId: Int) async throws -> String {
+    func getScanStatus(scanId: Int) async throws(RepositoryError) -> String {
         getScanStatusCallCount += 1
         onGetScanStatus?(getScanStatusCallCount)
         return try getScanStatusResult.get()
     }
 
-    func getScanPreview(scanId: Int) async throws -> String {
+    func getScanPreview(scanId: Int) async throws(RepositoryError) -> String {
         getScanPreviewCallCount += 1
         return try getScanPreviewResult.get()
     }
 
-    func cancelScan(scanId: Int) async throws {
+    func cancelScan(scanId: Int) async throws(RepositoryError) {
         cancelScanCallCount += 1
         try cancelScanResult.get()
     }

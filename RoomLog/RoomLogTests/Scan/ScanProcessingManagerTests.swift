@@ -204,7 +204,7 @@ final class ScanProcessingManagerTests {
             userDefaults: defaults
         )
         sut.configure(scanRepository: mockRepo)
-        mockRepo.getScanStatusResult = .failure(NSError(domain: "test", code: -1))
+        mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
         // maxAttempts보다 충분히 많은 횟수만큼 매 실패를 생명주기 전환과 겹치게 만든다.
         // 이후에는 전환을 멈춰 연속 실패로 정상 종료시킨다 (무한 대기 방지)
         mockRepo.onGetScanStatus = { [weak sut] callCount in
@@ -216,9 +216,9 @@ final class ScanProcessingManagerTests {
         sut.startProcessing(scanId: 1, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
-        guard case .failed(let message) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
         // 전환은 실제 대기 시간을 만들지 않으므로 타임아웃 예산을 깎아서는 안 된다
-        #expect(message.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(message)")
+        #expect(failure.userMessage.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
         #expect(mockRepo.cancelScanCallCount == 0, "전환으로 타임아웃에 도달해 서버 스캔이 취소되면 안 됩니다")
         #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 1, "pending이 유지되어야 재시도·재시작 복구가 가능합니다")
         mockRepo.onGetScanStatus = nil
@@ -230,9 +230,14 @@ final class ScanProcessingManagerTests {
         mockRepo.uploadScanResult = .success(ScanResult(scanId: 10, status: "PROCESSING"))
         mockRepo.getScanStatusResult = .success("PROCESSING")
         sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(scanId: 0, houseId: 1, phase: .failed("업로드 실패"))
+            ScanProcessingManager.ActiveScan(
+                scanId: 0, houseId: 1,
+                phase: .failed(.init(
+                    userMessage: "업로드 실패",
+                    retrySource: .upload(zipURL: URL(fileURLWithPath: "/tmp/retry.zip"))
+                ))
+            )
         )
-        sut.setPendingRetry(houseId: 1, source: .upload(zipURL: URL(fileURLWithPath: "/tmp/retry.zip")))
 
         #expect(sut.canRetry)
         sut.retry()
@@ -244,25 +249,24 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    @Test func retry_houseId가_불일치하면_거부된다() async throws {
+    @Test func retry_재시도불가_실패면_거부된다() async throws {
+        let failure = ScanProcessingManager.ScanFailure(userMessage: "업로드 실패", retrySource: nil)
         sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(scanId: 0, houseId: 1, phase: .failed("업로드 실패"))
+            ScanProcessingManager.ActiveScan(scanId: 0, houseId: 1, phase: .failed(failure))
         )
-        sut.setPendingRetry(houseId: 2, source: .upload(zipURL: URL(fileURLWithPath: "/tmp/retry.zip")))
 
         #expect(!sut.canRetry)
         sut.retry()
 
         try await Task.sleep(for: .milliseconds(100))
         #expect(mockRepo.uploadScanCallCount == 0)
-        #expect(sut.activeScan?.phase == .failed("업로드 실패"))
+        #expect(sut.activeScan?.phase == .failed(failure))
     }
 
     @Test func retry_failed_상태가_아니면_거부된다() async throws {
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(scanId: 5, houseId: 1, phase: .polling)
         )
-        sut.setPendingRetry(houseId: 1, source: .upload(zipURL: URL(fileURLWithPath: "/tmp/retry.zip")))
 
         #expect(!sut.canRetry)
         sut.retry()
@@ -275,7 +279,7 @@ final class ScanProcessingManagerTests {
 
     @Test func 다운로드실패시_pending이_유지되고_재다운로드를_재시도할_수_있다() async throws {
         mockRepo.getScanStatusResult = .success("COMPLETED")
-        mockRepo.getScanPreviewResult = .failure(NSError(domain: "test", code: -1))
+        mockRepo.getScanPreviewResult = .failure(.transportError(code: .networkConnectionLost))
 
         sut.startProcessing(scanId: 7, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
@@ -297,7 +301,7 @@ final class ScanProcessingManagerTests {
     }
 
     @Test func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {
-        mockRepo.getScanStatusResult = .failure(NSError(domain: "test", code: -1))
+        mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
 
         sut.startProcessing(scanId: 9, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }

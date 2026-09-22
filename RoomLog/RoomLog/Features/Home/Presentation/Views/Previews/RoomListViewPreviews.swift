@@ -72,7 +72,7 @@ import SwiftUI
     }
     .environment(\.di, .preview(processingManager: manager))
     .onAppear {
-        manager.setActiveScan(.init(scanId: 1, houseId: 1, phase: .failed("서버에서 스캔 처리에 실패했습니다")))
+        manager.setActiveScan(.init(scanId: 1, houseId: 1, phase: .failed(.init(userMessage: "서버에서 스캔 처리에 실패했습니다", retrySource: nil))))
     }
 }
 #endif
