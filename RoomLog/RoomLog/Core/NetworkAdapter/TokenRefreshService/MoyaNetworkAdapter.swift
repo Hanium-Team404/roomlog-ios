@@ -57,6 +57,27 @@ struct MoyaNetworkAdapter {
     }
 }
 
+// MARK: - Decoded Request (Repository 진입점)
+
+extension MoyaNetworkAdapter {
+    /// 요청 → `APIResponse` 디코딩 → `unwrap`까지 한 번에 수행한다.
+    /// 실패는 전부 `RepositoryError`로 정규화되므로, Repository는 이 메서드만 쓰면
+    /// typed throws(`throws(RepositoryError)`)를 그대로 전파할 수 있다.
+    func requestDecoded<DTO: Codable>(
+        _ target: some TargetType,
+        as type: DTO.Type = DTO.self,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws(RepositoryError) -> DTO {
+        do {
+            let response = try await request(target)
+            let dto = try decoder.decode(APIResponse<DTO>.self, from: response.data)
+            return try dto.unwrap()
+        } catch {
+            throw RepositoryError.normalize(error)
+        }
+    }
+}
+
 // MARK: - Debug Logging
 
 #if DEBUG
@@ -105,6 +126,9 @@ extension MoyaNetworkAdapter {
 
 extension MoyaNetworkAdapter {
 
+    /// 대용량 zip 업로드가 기본 60초 요청 타임아웃을 초과할 수 있어 업로드 요청만 상향한다
+    private static let uploadTimeoutInterval: TimeInterval = 300
+
     private func buildURLRequest<T: TargetType>(_ target: T) throws -> URLRequest {
         // 1. URL 구성 (baseURL + path)
         let url = target.baseURL.appending(path: target.path)
@@ -145,17 +169,20 @@ extension MoyaNetworkAdapter {
 
         case .uploadFile(let fileURL):
             request.httpBody = try Data(contentsOf: fileURL)
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadMultipart(let multipartData):
             let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadCompositeMultipart(let multipartData, let urlParameters):
             let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request = try encodeURLParameters(request, parameters: urlParameters)
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .downloadDestination, .downloadParameters:
             throw MoyaAdapterError.unsupportedTask(target.task)

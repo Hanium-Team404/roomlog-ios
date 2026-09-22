@@ -20,45 +20,35 @@ final class ScanRepository: ScanRepositoryProtocol {
     }
 
     // MARK: - Function
-    func uploadScan(houseId: Int, fileURL: URL) async throws -> ScanResult {
-        let response = try await adapter.request(
-            ScanTarget.uploadScan(houseId: houseId, fileURL: fileURL)
+    func uploadScan(houseId: Int, fileURL: URL) async throws(RepositoryError) -> ScanResult {
+        try await adapter.requestDecoded(
+            ScanTarget.uploadScan(houseId: houseId, fileURL: fileURL),
+            as: ScanResultResponseDTO.self,
+            decoder: decoder
+        ).toDomain()
+    }
+
+    func getScanStatus(scanId: Int) async throws(RepositoryError) -> String {
+        try await adapter.requestDecoded(
+            ScanTarget.getScanStatus(scanId: scanId),
+            as: ScanStatusResponseDTO.self,
+            decoder: decoder
+        ).status
+    }
+
+    func getScanPreview(scanId: Int) async throws(RepositoryError) -> String {
+        try await adapter.requestDecoded(
+            ScanTarget.getScanPreview(scanId: scanId),
+            as: ScanPreviewResponseDTO.self,
+            decoder: decoder
+        ).fileURL
+    }
+
+    func cancelScan(scanId: Int) async throws(RepositoryError) {
+        _ = try await adapter.requestDecoded(
+            ScanTarget.cancelScan(scanId: scanId),
+            as: EmptyResult.self,
+            decoder: decoder
         )
-        do {
-            let dto = try decoder.decode(APIResponse<ScanResultResponseDTO>.self, from: response.data)
-            return try dto.unwrap().toDomain()
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
-    }
-
-    func getScanStatus(scanId: Int) async throws -> String {
-        let response = try await adapter.request(ScanTarget.getScanStatus(scanId: scanId))
-        do {
-            let dto = try decoder.decode(APIResponse<ScanStatusResponseDTO>.self, from: response.data)
-            return try dto.unwrap().status
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
-    }
-
-    func getScanPreview(scanId: Int) async throws -> String {
-        let response = try await adapter.request(ScanTarget.getScanPreview(scanId: scanId))
-        do {
-            let dto = try decoder.decode(APIResponse<ScanPreviewResponseDTO>.self, from: response.data)
-            return try dto.unwrap().fileURL
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
-    }
-
-    func cancelScan(scanId: Int) async throws {
-        let response = try await adapter.request(ScanTarget.cancelScan(scanId: scanId))
-        do {
-            let dto = try decoder.decode(APIResponse<EmptyResult>.self, from: response.data)
-            _ = try dto.unwrap()
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
     }
 }

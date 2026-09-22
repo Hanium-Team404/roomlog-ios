@@ -89,10 +89,10 @@ struct ScanStatusSheet: View {
                     .font(.medium, 14)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-            case .failed(let msg):
+            case .failed(let failure):
                 Text("스캔 실패")
                     .font(.semibold, 20)
-                Text(msg)
+                Text(failure.userMessage)
                     .font(.medium, 14)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
