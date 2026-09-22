@@ -105,6 +105,9 @@ extension MoyaNetworkAdapter {
 
 extension MoyaNetworkAdapter {
 
+    /// 대용량 zip 업로드가 기본 60초 요청 타임아웃을 초과할 수 있어 업로드 요청만 상향한다
+    private static let uploadTimeoutInterval: TimeInterval = 300
+
     private func buildURLRequest<T: TargetType>(_ target: T) throws -> URLRequest {
         // 1. URL 구성 (baseURL + path)
         let url = target.baseURL.appending(path: target.path)
@@ -145,17 +148,20 @@ extension MoyaNetworkAdapter {
 
         case .uploadFile(let fileURL):
             request.httpBody = try Data(contentsOf: fileURL)
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadMultipart(let multipartData):
             let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadCompositeMultipart(let multipartData, let urlParameters):
             let (body, boundary) = try buildMultipartBody(multipartData)
             request.httpBody = body
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request = try encodeURLParameters(request, parameters: urlParameters)
+            request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .downloadDestination, .downloadParameters:
             throw MoyaAdapterError.unsupportedTask(target.task)
