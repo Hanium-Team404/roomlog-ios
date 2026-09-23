@@ -226,6 +226,24 @@ final class ScanProcessingManagerTests {
         mockRepo.onGetScanStatus = nil
     }
 
+    @Test func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 2, interval: .milliseconds(10)),
+            userDefaults: defaults
+        )
+        sut.configure(scanRepository: mockRepo)
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        sut.resumePolling(scanId: 3, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        #expect(failure.userMessage == "처리 시간이 초과되었습니다")
+        #expect(mockRepo.cancelScanCallCount == 0, "타임아웃이 서버 스캔을 취소하면 안 됩니다")
+        #expect(sut.canRetry, "타임아웃은 재폴링으로 재시도할 수 있어야 합니다")
+        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 3, "pending이 유지되어야 재시작 복구가 가능합니다")
+    }
+
     // MARK: - retry (업로드 실패)
 
     @Test func retry_업로드실패후_재시도하면_업로드가_다시_수행된다() async throws {

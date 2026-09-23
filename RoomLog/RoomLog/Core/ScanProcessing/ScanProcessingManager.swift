@@ -301,14 +301,12 @@ final class ScanProcessingManager {
 
             attempts += 1
             if attempts > pollConfig.maxAttempts {
-                try? await scanRepository.cancelScan(scanId: scanId)
-                // await 중 취소됐다면 cancel()이 이미 상태를 정리했으므로 덮어쓰지 않는다
-                if Task.isCancelled { return }
+                // 서버 스캔은 파괴하지 않는다 — cancelScan은 유저의 명시적 취소에서만.
+                // pending을 유지해 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
                 activeScan = ActiveScan(
                     scanId: scanId, houseId: houseId,
-                    phase: .failed(ScanFailure(userMessage: "처리 시간이 초과되었습니다", retrySource: nil))
+                    phase: .failed(ScanFailure(userMessage: "처리 시간이 초과되었습니다", retrySource: .polling(scanId: scanId)))
                 )
-                clearPendingScan()
                 return
             }
 
