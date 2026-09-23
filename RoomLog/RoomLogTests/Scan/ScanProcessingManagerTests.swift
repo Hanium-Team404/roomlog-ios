@@ -82,6 +82,19 @@ final class ScanProcessingManagerTests {
         #expect(store.restore() == nil)
     }
 
+    @Test func cancel후_매니저가_해제돼도_서버취소_요청이_나간다() async {
+        var manager: ScanProcessingManager? = ScanProcessingManager(artifactStore: store)
+        manager?.configure(scanRepository: mockRepo)
+        manager?.setActiveScan(.init(scanId: 5, houseId: 1, phase: .polling))
+
+        // 로그아웃: cancel 직후 DI 캐시 해제로 매니저가 사라지는 상황
+        let serverCancel = manager?.cancel()
+        manager = nil
+        await serverCancel?.value
+
+        #expect(mockRepo.cancelScanCallCount == 1)
+    }
+
     // MARK: - clear
 
     @Test func clear_호출시_상태가_초기화된다() {

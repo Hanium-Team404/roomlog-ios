@@ -75,15 +75,17 @@ final class ScanProcessingManager {
 
     // MARK: - 종료·신호
 
-    /// 진행 중인 스캔 취소
-    func cancel() {
+    /// 진행 중인 스캔 취소. 서버 스캔이 있으면 취소 요청 Task를 돌려준다 —
+    /// 로그아웃처럼 요청 완료 후에 이어갈 작업(토큰 삭제)이 있으면 await해서 순서를 보장한다.
+    @discardableResult
+    func cancel() -> Task<Void, Never>? {
         let scanId = activeScan?.scanId ?? 0
         reset()
 
-        if scanId > 0 {
-            Task { [weak self] in
-                try? await self?.scanRepository?.cancelScan(scanId: scanId)
-            }
+        // 저장소를 직접 캡처한다 — 로그아웃 시 매니저가 DI 캐시에서 해제돼도 요청이 나가야 한다
+        guard scanId > 0, let scanRepository else { return nil }
+        return Task {
+            try? await scanRepository.cancelScan(scanId: scanId)
         }
     }
 
