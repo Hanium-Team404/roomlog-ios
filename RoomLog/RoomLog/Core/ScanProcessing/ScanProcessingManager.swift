@@ -124,7 +124,7 @@ final class ScanProcessingManager {
                 case .full(let encoder):
                     try await self?.fullProcess(encoder: encoder, houseId: houseId)
                 case .upload(let zipURL):
-                    try await self?.uploadThenPoll(zipURL: zipURL, datasetDir: nil, houseId: houseId)
+                    try await self?.uploadThenPoll(zipURL: zipURL, houseId: houseId)
                 case .polling(let scanId):
                     try await self?.pollAndDownload(scanId: scanId)
                 case .download(let scanId):
@@ -218,23 +218,24 @@ final class ScanProcessingManager {
             throw ScanFailure(userMessage: "스캔 데이터 압축에 실패했습니다", retrySource: nil)
         }
 
-        // zip 완성 — 여기서부터는 앱이 죽어도 업로드 재시도로 복구할 수 있다
+        // zip 완성 — 여기서부터는 앱이 죽어도 업로드 재시도로 복구할 수 있다.
+        // 재시도·복구는 zip만 쓰므로 원본 데이터셋은 바로 지워 디스크 이중 점유를 없앤다
         artifactStore.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: houseId))
+        removeDataset(datasetDir)
 
         // 3. 업로드부터는 재시도 경로와 공유한다
         advance(to: .uploading)
-        try await uploadThenPoll(zipURL: zipURL, datasetDir: datasetDir, houseId: houseId)
+        try await uploadThenPoll(zipURL: zipURL, houseId: houseId)
     }
 
-    /// zip 업로드 후 폴링 단계로 이어간다. 최초 업로드(datasetDir 있음)와 재시도(nil) 공용 경로.
-    private func uploadThenPoll(zipURL: URL, datasetDir: URL?, houseId: Int) async throws {
+    /// zip 업로드 후 폴링 단계로 이어간다. 최초 업로드와 재시도 공용 경로.
+    private func uploadThenPoll(zipURL: URL, houseId: Int) async throws {
         let scanRepository = try repository()
         let scanResult: ScanResult
         do {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
-            // 기록된 zip은 취소 주체(reset·startFullProcess)가 스토어로 폐기한다 — datasetDir만 스토어 밖이다
-            removeDataset(datasetDir)
+            // 기록된 zip은 취소 주체(reset·startFullProcess)가 스토어로 폐기한다
             if Task.isCancelled { throw CancellationError() }
             // 재시도 가능하면 zip과 uploadReady 기록이 이미 영속 상태라 보존을 위해 할 일이 없고,
             // 불가하면 디스패처가 기록·zip을 폐기한다
@@ -243,7 +244,6 @@ final class ScanProcessingManager {
                 retrySource: error.isRetryable ? .upload(zipURL: zipURL) : nil
             )
         }
-        removeDataset(datasetDir)
         // 취소됐다면 기록을 전환하지 않는다 — cancel()의 reset이 이미 기록·zip을 폐기했다
         try Task.checkCancellation()
 
@@ -353,9 +353,8 @@ final class ScanProcessingManager {
 
     // MARK: - File Cleanup
 
-    /// 업로드가 끝나 더 필요 없어진 캡처 데이터셋 삭제
-    private func removeDataset(_ datasetDir: URL?) {
-        guard let datasetDir else { return }
+    /// zip으로 대체됐거나(압축 성공) 쓸 수 없게 된(압축 실패·취소) 캡처 데이터셋 삭제
+    private func removeDataset(_ datasetDir: URL) {
         try? FileManager.default.removeItem(at: datasetDir)
     }
 }
