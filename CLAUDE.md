@@ -44,11 +44,13 @@ Xcode를 통해 빌드 및 실행하며, `RoomLog/RoomLog.xcodeproj` 파일을 �
 RoomLog/RoomLog/
 ├── App/                  — 엔트리 포인트 (RoomLogApp, ContentView)
 ├── Core/
+│   ├── AppLifecycle/     — ScenePhaseGate (scenePhase 기반 파킹/웨이크 게이트)
 │   ├── Config/           — Config.swift, Config.xcconfig (BASE_URL, KAKAO_NATIVE_APP_KEY)
 │   ├── Common/Extensions/— DateFormatter 등 공통 확장
 │   ├── DIContainer/      — DIContainer, UsecaseProvider
 │   ├── Error/            — RepositoryError
 │   ├── Navigation/       — NavigationDestination, PathStore, NavigationRouter, NavigationRoutingView
+│   ├── ScanProcessing/   — ScanProcessingManager, ScanProcessingState (스캔 파이프라인 앱 전역 서비스)
 │   └── NetworkAdapter/
 │       ├── Base/         — BaseTargetType, APIResponse, EmptyResult
 │       ├── NetworkClient/— NetworkClient(actor), TokenStore, TokenPair, DefaultAuthenticationPolicy
@@ -126,7 +128,9 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 
 ### Error Handling
 
-`RepositoryError` (`Core/Error/RepositoryError.swift`): `serverError(code:message:)`와 `decodingError(detail:)` 두 케이스. `isRetryable` 프로퍼티로 재시도 여부 판단.
+`RepositoryError` (`Core/Error/RepositoryError.swift`): `serverError(code:message:errorCode:)`, `decodingError(detail:)`, `transportError(code:)` 세 케이스.
+임의 에러의 도메인 정규화는 `RepositoryError.normalize(_:)` 단일 지점에서 수행하고, 유저 노출 문구는 `userMessage`, 로그용 상세는 `errorDescription`으로 분리.
+`isRetryable`은 전송 실패·5xx만 true (비즈니스 거부·디코딩 실패는 재시도 불가).
 
 ### CI
 
