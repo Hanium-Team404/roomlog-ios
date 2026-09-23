@@ -167,8 +167,10 @@ nonisolated struct ScanArtifactStore {
     }
 
     private func ensureDirectory(_ directory: URL) {
-        guard !FileManager.default.fileExists(atPath: directory.path) else { return }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if !FileManager.default.fileExists(atPath: directory.path) {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        // 백업 제외는 매번 다시 적용한다 (멱등) — 과거 설정 실패로 속성이 빠진 기존 디렉토리도 복구된다
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         var url = directory

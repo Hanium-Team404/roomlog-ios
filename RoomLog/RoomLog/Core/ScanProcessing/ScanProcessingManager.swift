@@ -204,26 +204,28 @@ final class ScanProcessingManager {
     // 실패는 ScanFailure를 던져 디스패처가 기록하고, 취소는 CancellationError로 조용히 끝난다.
 
     private func fullProcess(encoder: DatasetEncoder, houseId: Int) async throws {
-        _ = try repository()
-
-        // 1. WrapUp
-        await encoder.wrapUp()
-        try Task.checkCancellation()
-
-        // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
-        // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
+        // zip 완성 전에는 어떤 이유로 떠나든 데이터셋을 지워야 한다(재시도 경로가 없다) —
+        // 탈출 경로마다 개별 정리하지 않고 catch 한 곳이 불변식을 지킨다
         let datasetDir = encoder.datasetDirectoryURL
         let zipURL = artifactStore.zipDestinationURL()
         do {
+            _ = try repository()
+
+            // 1. WrapUp
+            await encoder.wrapUp()
+            try Task.checkCancellation()
+
+            // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
+            // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
             try await Task.detached(priority: .userInitiated) {
                 try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
             }.value
             try Task.checkCancellation()
         } catch {
-            // 실패·취소 공통: 재시도 경로가 없으므로 파편과 대용량 데이터셋을 즉시 정리한다
+            // 구성 실패·취소·압축 실패 공통: 파편과 대용량 데이터셋을 즉시 정리한다
             artifactStore.discard(zipURL)
             artifactStore.discardDataset(datasetDir)
-            if error is CancellationError { throw error }
+            if error is CancellationError || error is ScanFailure { throw error }
             #if DEBUG
             print("[ScanProcessing] 압축 실패: \(error)")
             #endif

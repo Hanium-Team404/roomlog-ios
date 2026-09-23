@@ -146,6 +146,17 @@ final class ScanArtifactStoreTests {
         #expect(first.path.hasPrefix(baseDirectory.path), "Documents가 아닌 스토어 관리 위치에 만들어야 합니다")
     }
 
+    @Test func 이미_존재하는_데이터셋_디렉토리에도_백업_제외를_적용한다() throws {
+        // 과거 실행에서 속성 설정이 실패한 상황: 디렉토리만 있고 백업 제외 속성이 없다
+        let datasetsDir = baseDirectory.appendingPathComponent("ScanDatasets", isDirectory: true)
+        try FileManager.default.createDirectory(at: datasetsDir, withIntermediateDirectories: true)
+
+        _ = try sut.makeDatasetDirectory()
+
+        let values = try datasetsDir.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        #expect(values.isExcludedFromBackup == true)
+    }
+
     @Test func sweepOrphans는_남은_데이터셋을_전부_지운다() throws {
         let dataset = try sut.makeDatasetDirectory()
         try Data("frame".utf8).write(to: dataset.appendingPathComponent("odometry.csv"))
@@ -158,7 +169,8 @@ final class ScanArtifactStoreTests {
     @Test func sweepOrphans는_구버전_Documents_데이터셋만_골라_지운다() throws {
         let legacy = try makeLegacyItem(named: "a1b2c3d4e5", withOdometry: true)
         let hexWithoutMarker = try makeLegacyItem(named: "0123456789", withOdometry: false)
-        let uppercaseHex = try makeLegacyItem(named: "A1B2C3D4E5", withOdometry: true)
+        // 소문자 항목과 대소문자만 다른 이름은 금물 — 시뮬레이터의 케이스 비구분 APFS에서 같은 항목으로 충돌한다
+        let uppercaseHex = try makeLegacyItem(named: "F9E8D7C6B5", withOdometry: true)
         let otherName = try makeLegacyItem(named: "MyFolder", withOdometry: true)
 
         sut.sweepOrphans()
