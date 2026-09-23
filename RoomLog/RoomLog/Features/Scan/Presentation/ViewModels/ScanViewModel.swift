@@ -101,8 +101,10 @@ final class ScanViewModel: NSObject {
     }
 
     private func prepareEncoder() {
+        discardEncoder()
         do {
-            encoder = try DatasetEncoder(arConfiguration: configuration)
+            let directory = try processingManager.makeDatasetDirectory()
+            encoder = try DatasetEncoder(arConfiguration: configuration, directory: directory)
         } catch {
             #if DEBUG
             print("ScanViewModel: 인코더 사전 준비 실패. \(error.localizedDescription)")
@@ -113,6 +115,15 @@ final class ScanViewModel: NSObject {
     func tearDown() {
         stopIMU()
         session.pause()
+        discardEncoder()
+    }
+
+    /// 변환 없이 버리는 인코더의 데이터셋을 지운다.
+    /// 변환에 넘긴 인코더는 `startConversion`에서 이미 nil이라 대상이 아니다.
+    private func discardEncoder() {
+        guard let encoder else { return }
+        processingManager.discardDataset(encoder.datasetDirectoryURL)
+        self.encoder = nil
     }
 
     // MARK: - Recording
@@ -148,7 +159,7 @@ final class ScanViewModel: NSObject {
     func reset() {
         recordingTimer?.invalidate()
         recordingTimer = nil
-        encoder = nil
+        discardEncoder()
         phase = .idle
         prepareEncoder()
     }

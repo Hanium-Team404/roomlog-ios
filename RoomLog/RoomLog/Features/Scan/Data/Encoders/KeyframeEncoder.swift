@@ -14,7 +14,7 @@ import ImageIO
 /// 흔들림이 적은 순간의 카메라 이미지를 고품질 JPEG 정지 이미지로 저장하고,
 /// 키프레임별 메타데이터(intrinsics, 노출, 각속도)를 keyframes.csv에 기록한다.
 /// 기존 rgb.mp4는 H.264 압축 손실과 모션 블러로 GS 학습 품질의 병목이라, 인코더를 거치지 않은 원본을 별도 보존한다.
-final class KeyframeEncoder {
+nonisolated final class KeyframeEncoder {
     enum Status { case allGood, encodingError }
 
     /// ARFrame에서 추출한 키프레임 데이터.

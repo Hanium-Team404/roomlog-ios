@@ -27,7 +27,11 @@ final class ScanProcessingManagerTests {
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
         mockRepo = MockScanRepository()
-        store = ScanArtifactStore(userDefaults: defaults, baseDirectory: tempDirectory)
+        store = ScanArtifactStore(
+            userDefaults: defaults,
+            baseDirectory: tempDirectory,
+            legacyDocumentsDirectory: tempDirectory.appendingPathComponent("Documents", isDirectory: true)
+        )
         sut = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
             artifactStore: store

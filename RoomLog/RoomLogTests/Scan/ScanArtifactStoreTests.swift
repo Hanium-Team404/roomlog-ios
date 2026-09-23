@@ -15,6 +15,7 @@ final class ScanArtifactStoreTests {
     private let suiteName: String
     private let defaults: UserDefaults
     private let baseDirectory: URL
+    private let legacyDocuments: URL
     private let sut: ScanArtifactStore
 
     init() throws {
@@ -22,7 +23,12 @@ final class ScanArtifactStoreTests {
         defaults = try #require(UserDefaults(suiteName: suiteName))
         baseDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
-        sut = ScanArtifactStore(userDefaults: defaults, baseDirectory: baseDirectory)
+        legacyDocuments = baseDirectory.appendingPathComponent("Documents", isDirectory: true)
+        sut = ScanArtifactStore(
+            userDefaults: defaults,
+            baseDirectory: baseDirectory,
+            legacyDocumentsDirectory: legacyDocuments
+        )
     }
 
     deinit {
@@ -117,6 +123,50 @@ final class ScanArtifactStoreTests {
         #expect(FileManager.default.fileExists(atPath: recorded.path))
         #expect(!FileManager.default.fileExists(atPath: orphan1.path))
         #expect(!FileManager.default.fileExists(atPath: orphan2.path))
+    }
+
+    // MARK: - 캡처 데이터셋
+
+    /// 구버전 인코더가 만들던 형태의 데이터셋 흉내 (odometry.csv는 인코더가 생성 즉시 만든다)
+    private func makeLegacyItem(named name: String, withOdometry: Bool) throws -> URL {
+        let url = legacyDocuments.appendingPathComponent(name, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        if withOdometry {
+            try Data().write(to: url.appendingPathComponent("odometry.csv"))
+        }
+        return url
+    }
+
+    @Test func makeDatasetDirectory는_매번_새_디렉토리를_만든다() throws {
+        let first = try sut.makeDatasetDirectory()
+        let second = try sut.makeDatasetDirectory()
+
+        #expect(first != second)
+        #expect(FileManager.default.fileExists(atPath: first.path))
+        #expect(first.path.hasPrefix(baseDirectory.path), "Documents가 아닌 스토어 관리 위치에 만들어야 합니다")
+    }
+
+    @Test func sweepOrphans는_남은_데이터셋을_전부_지운다() throws {
+        let dataset = try sut.makeDatasetDirectory()
+        try Data("frame".utf8).write(to: dataset.appendingPathComponent("odometry.csv"))
+
+        sut.sweepOrphans()
+
+        #expect(!FileManager.default.fileExists(atPath: dataset.path))
+    }
+
+    @Test func sweepOrphans는_구버전_Documents_데이터셋만_골라_지운다() throws {
+        let legacy = try makeLegacyItem(named: "a1b2c3d4e5", withOdometry: true)
+        let hexWithoutMarker = try makeLegacyItem(named: "0123456789", withOdometry: false)
+        let uppercaseHex = try makeLegacyItem(named: "A1B2C3D4E5", withOdometry: true)
+        let otherName = try makeLegacyItem(named: "MyFolder", withOdometry: true)
+
+        sut.sweepOrphans()
+
+        #expect(!FileManager.default.fileExists(atPath: legacy.path))
+        #expect(FileManager.default.fileExists(atPath: hexWithoutMarker.path), "데이터셋 표식이 없으면 지우면 안 됩니다")
+        #expect(FileManager.default.fileExists(atPath: uppercaseHex.path), "구버전 이름 규칙(소문자 hex)이 아니면 지우면 안 됩니다")
+        #expect(FileManager.default.fileExists(atPath: otherName.path))
     }
 
     @Test func 컨테이너_경로가_바뀌어도_파일명_기록으로_복원된다() throws {

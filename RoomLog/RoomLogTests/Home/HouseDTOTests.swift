@@ -9,6 +9,7 @@ import Testing
 import Foundation
 @testable import RoomLog
 
+@MainActor
 struct HouseDTOTests {
 
     private let decoder = JSONDecoder()

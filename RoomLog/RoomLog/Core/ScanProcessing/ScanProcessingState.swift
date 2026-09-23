@@ -42,7 +42,8 @@ extension ScanProcessingManager {
     }
 
     /// 실패 지점에 따른 재시도 방식.
-    enum RetrySource: Equatable {
+    /// `ScanFailure`(Error)의 Equatable 합성이 nonisolated로 추론되므로 비교되는 이 타입도 격리에서 제외한다.
+    nonisolated enum RetrySource: Equatable {
         /// 업로드 실패: 보존해둔 zip으로 재업로드
         case upload(zipURL: URL)
         /// 상태 조회 실패: 서버 상태를 모르므로 재폴링부터 다시 수행

@@ -32,20 +32,43 @@ nonisolated struct ScanArtifactStore {
 
     private let userDefaults: UserDefaults
     private let directory: URL
+    private let datasetsDirectory: URL
+    private let legacyDatasetsDirectory: URL
 
-    init(userDefaults: UserDefaults = .standard, baseDirectory: URL? = nil) {
+    /// - Parameter legacyDocumentsDirectory: 구버전이 데이터셋을 만들던 위치. 테스트에서 실제 Documents를 건드리지 않도록 주입한다.
+    init(userDefaults: UserDefaults = .standard, baseDirectory: URL? = nil, legacyDocumentsDirectory: URL? = nil) {
         self.userDefaults = userDefaults
         let base = baseDirectory
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.directory = base.appendingPathComponent("ScanUploads", isDirectory: true)
+        self.datasetsDirectory = base.appendingPathComponent("ScanDatasets", isDirectory: true)
+        self.legacyDatasetsDirectory = legacyDocumentsDirectory ?? URL.documentsDirectory
     }
 
     // MARK: - Zip 위치
 
     /// zip 생성 위치 발급. 디렉토리가 없으면 만들고 iCloud 백업에서 제외한다.
     func zipDestinationURL() -> URL {
-        ensureDirectory()
+        ensureDirectory(directory)
         return directory.appendingPathComponent("\(UUID().uuidString).zip")
+    }
+
+    // MARK: - 캡처 데이터셋
+
+    /// 촬영 데이터셋 디렉토리 발급. 데이터셋은 zip 완성 즉시 삭제되므로
+    /// 재실행 시점에 남아 있는 것은 전부 고아다 — `sweepOrphans`가 통째로 청소한다.
+    func makeDatasetDirectory() throws -> URL {
+        ensureDirectory(datasetsDirectory)
+        let url = datasetsDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        log("데이터셋 생성 \(url.lastPathComponent.prefix(8)) → 현재 \(contents(of: datasetsDirectory).count)개")
+        return url
+    }
+
+    /// 다 쓴(zip 완성) 또는 버려진(변환 없이 종료) 데이터셋 삭제
+    func discardDataset(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
+        log("데이터셋 삭제 \(url.lastPathComponent.prefix(8)) → 현재 \(contents(of: datasetsDirectory).count)개")
     }
 
     // MARK: - 단계 기록
@@ -98,15 +121,19 @@ nonisolated struct ScanArtifactStore {
         }
     }
 
-    /// 기록에 없는 zip 파일 청소 — 압축 중 크래시 파편, 단계 전환 후 잔여물.
+    /// 재실행 시점의 고아 청소.
+    /// - 기록에 없는 zip: 압축 중 크래시 파편, 단계 전환 후 잔여물
+    /// - 데이터셋 전부: 압축 중 종료·변환 없이 버려진 것
+    /// - 구버전이 `Documents`에 남긴 데이터셋
     func sweepOrphans() {
         let recordedFileName = recordedZipFileName()
-        guard let files = try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: nil
-        ) else { return }
-        for file in files where file.lastPathComponent != recordedFileName {
-            try? FileManager.default.removeItem(at: file)
+        let orphanZips = contents(of: directory).filter { $0.lastPathComponent != recordedFileName }
+        let datasets = contents(of: datasetsDirectory)
+        let legacyDatasets = contents(of: legacyDatasetsDirectory).filter(isLegacyDataset)
+        for item in orphanZips + datasets + legacyDatasets {
+            try? FileManager.default.removeItem(at: item)
         }
+        log("고아 청소 — zip \(orphanZips.count)개, 데이터셋 \(datasets.count)개, 구버전 Documents \(legacyDatasets.count)개")
     }
 
     // MARK: - Private
@@ -121,7 +148,25 @@ nonisolated struct ScanArtifactStore {
         return fileName
     }
 
-    private func ensureDirectory() {
+    private func log(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        print("[ScanArtifact] \(message())")
+        #endif
+    }
+
+    private func contents(of directory: URL) -> [URL] {
+        (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+    }
+
+    /// 구버전 데이터셋 판별. Documents의 다른 파일을 지우지 않도록 보수적으로 본다 —
+    /// 이름이 10자리 소문자 hex(UUID SHA256 앞 5바이트)이고, 인코더가 생성 즉시 만드는 `odometry.csv`가 있어야 한다.
+    private func isLegacyDataset(_ url: URL) -> Bool {
+        let name = url.lastPathComponent
+        guard name.count == 10, name.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else { return false }
+        return FileManager.default.fileExists(atPath: url.appendingPathComponent("odometry.csv").path)
+    }
+
+    private func ensureDirectory(_ directory: URL) {
         guard !FileManager.default.fileExists(atPath: directory.path) else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var values = URLResourceValues()
