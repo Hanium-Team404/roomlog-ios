@@ -267,6 +267,26 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
+    @Test func 재시도불가_업로드실패면_기록과_zip이_폐기된다() async throws {
+        mockRepo.uploadScanResult = .failure(.decodingError(detail: "bad"))
+        let zipURL = store.zipDestinationURL()
+        try Data("zip".utf8).write(to: zipURL)
+        store.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: 1))
+        sut.setActiveScan(
+            ScanProcessingManager.ActiveScan(
+                scanId: 0, houseId: 1,
+                phase: .failed(.init(userMessage: "업로드 실패", retrySource: .upload(zipURL: zipURL)))
+            )
+        )
+
+        sut.retry()
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        #expect(!sut.canRetry)
+        #expect(store.restore() == nil, "재시도 불가 실패는 재시작 복구 대상이 아니어야 합니다")
+        #expect(!FileManager.default.fileExists(atPath: zipURL.path))
+    }
+
     @Test func retry_재시도불가_실패면_거부된다() {
         let failure = ScanProcessingManager.ScanFailure(userMessage: "업로드 실패", retrySource: nil)
         sut.setActiveScan(
@@ -331,6 +351,7 @@ final class ScanProcessingManagerTests {
         guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
         #expect(failure.userMessage == "잘못된 파일 URL")
         #expect(!sut.canRetry, "같은 응답으론 재시도해도 결과가 같으므로 재시도가 노출되면 안 됩니다")
+        #expect(store.restore() == nil, "재시도 불가 실패는 재시작 시에도 되살아나면 안 됩니다")
     }
 
     @Test func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {

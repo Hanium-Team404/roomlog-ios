@@ -114,6 +114,7 @@ final class ScanProcessingManager {
     /// 진행 중인 Task를 취소하고 지정한 진입점부터 파이프라인을 실행한다.
     /// 시작·재시도·복원이 전부 이 디스패처를 통과하고,
     /// 단계가 던진 `ScanFailure`도 여기서만 `.failed`로 기록된다.
+    /// 재시도 불가 실패의 기록·zip 폐기도 여기서만 한다 — 재시도 가능 여부와 재시작 복구 여부가 항상 일치한다.
     private func start(_ entry: PipelineEntry, houseId: Int) {
         cancelProcessingTask()
         activeScan = ActiveScan(scanId: entry.scanId, houseId: houseId, phase: entry.initialPhase)
@@ -132,6 +133,9 @@ final class ScanProcessingManager {
             } catch let failure as ScanFailure {
                 // 취소된 Task의 늦은 실패가 정리·교체된 상태를 되살리지 않도록 한다
                 guard let self, !Task.isCancelled else { return }
+                if failure.retrySource == nil {
+                    self.artifactStore.clear()
+                }
                 // 단계 전환이 반영된 최신 scanId를 유지한다 (업로드 성공 후 폴링 실패 등)
                 self.activeScan = ActiveScan(
                     scanId: self.activeScan?.scanId ?? entry.scanId,
@@ -233,13 +237,12 @@ final class ScanProcessingManager {
                 throw CancellationError()
             }
             removeDataset(datasetDir)
-            guard error.isRetryable else {
-                // 재시도해도 결과가 같은 실패면 zip·기록을 보존할 이유가 없다
-                artifactStore.clear()
-                throw ScanFailure(userMessage: "업로드 실패: \(error.userMessage)", retrySource: nil)
-            }
-            // zip과 uploadReady 기록은 이미 영속 상태 — 보존을 위해 할 일이 없다
-            throw ScanFailure(userMessage: "업로드 실패: \(error.userMessage)", retrySource: .upload(zipURL: zipURL))
+            // 재시도 가능하면 zip과 uploadReady 기록이 이미 영속 상태라 보존을 위해 할 일이 없고,
+            // 불가하면 디스패처가 기록·zip을 폐기한다
+            throw ScanFailure(
+                userMessage: "업로드 실패: \(error.userMessage)",
+                retrySource: error.isRetryable ? .upload(zipURL: zipURL) : nil
+            )
         }
         removeDataset(datasetDir)
         // 취소됐다면 기록을 전환하지 않는다 — cancel()의 reset이 이미 기록·zip을 폐기했다
@@ -283,7 +286,6 @@ final class ScanProcessingManager {
                 #endif
                 if status == "COMPLETED" { break }
                 if status == "FAILED" {
-                    artifactStore.clear()
                     throw ScanFailure(userMessage: "서버에서 스캔 처리에 실패했습니다", retrySource: nil)
                 }
             } catch let error as RepositoryError {
@@ -315,7 +317,7 @@ final class ScanProcessingManager {
     }
 
     /// 프리뷰 다운로드. 폴링에서 COMPLETED를 확인한 뒤에만 호출된다.
-    /// 실패해도 서버 처리는 이미 완료이므로 pending을 지우지 않는다 —
+    /// 재시도 가능한 실패는 서버 처리가 이미 완료이므로 기록을 유지한다 —
     /// 앱 재시작 시 폴링 재개 → COMPLETED 즉시 확인 → 재다운로드로 자연 복구된다.
     private func downloadPreview(scanId: Int) async throws {
         guard let scanRepository else { return }
