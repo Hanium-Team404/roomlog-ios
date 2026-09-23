@@ -247,13 +247,13 @@ final class ScanProcessingManagerTests {
     @Test func retry_업로드실패후_재시도하면_업로드가_다시_수행된다() async throws {
         mockRepo.uploadScanResult = .success(ScanResult(scanId: 10, status: "PROCESSING"))
         mockRepo.getScanStatusResult = .success("PROCESSING")
+        let zipURL = store.zipDestinationURL()
+        try Data("zip".utf8).write(to: zipURL)
+        store.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: 1))
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(
                 scanId: 0, houseId: 1,
-                phase: .failed(.init(
-                    userMessage: "업로드 실패",
-                    retrySource: .upload(zipURL: URL(fileURLWithPath: "/tmp/retry.zip"))
-                ))
+                phase: .failed(.init(userMessage: "업로드 실패", retrySource: .upload(zipURL: zipURL)))
             )
         )
 
@@ -264,6 +264,8 @@ final class ScanProcessingManagerTests {
         try await waitUntil { sut.activeScan?.phase == .polling }
         #expect(mockRepo.uploadScanCallCount == 1)
         #expect(sut.activeScan?.scanId == 10)
+        #expect(store.restore() == .polling(scanId: 10, houseId: 1), "업로드 성공 시 기록이 폴링으로 전환돼야 합니다")
+        #expect(!FileManager.default.fileExists(atPath: zipURL.path), "업로드된 zip은 지워져야 합니다")
         sut.clear()
     }
 

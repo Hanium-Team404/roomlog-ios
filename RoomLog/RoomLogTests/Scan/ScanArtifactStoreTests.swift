@@ -85,6 +85,27 @@ final class ScanArtifactStoreTests {
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
 
+    @Test func markUploaded는_polling으로_전환하고_업로드된_zip을_지운다() throws {
+        let url = try makeZip()
+        sut.save(.uploadReady(zipFileName: url.lastPathComponent, houseId: 5))
+
+        sut.markUploaded(scanId: 42, houseId: 5)
+
+        #expect(sut.restore() == .polling(scanId: 42, houseId: 5))
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test func discard는_기록되지_않은_zip만_지우고_기록은_건드리지_않는다() throws {
+        let recorded = try makeZip()
+        let fragment = try makeZip()
+        sut.save(.uploadReady(zipFileName: recorded.lastPathComponent, houseId: 5))
+
+        sut.discard(fragment)
+
+        #expect(!FileManager.default.fileExists(atPath: fragment.path))
+        #expect(sut.restore() == .uploadRetry(zipURL: recorded, houseId: 5))
+    }
+
     @Test func sweepOrphans는_기록된_zip만_남긴다() throws {
         let recorded = try makeZip()
         let orphan1 = try makeZip()

@@ -55,12 +55,27 @@ nonisolated struct ScanArtifactStore {
         userDefaults.set(data, forKey: Self.stageKey)
     }
 
+    /// 업로드 성공 — 단계를 polling으로 원자 전환한 뒤 다 쓴 zip을 지운다.
+    /// 전환과 삭제 사이에 앱이 죽어도 남은 zip은 다음 실행의 `sweepOrphans`가 청소한다.
+    func markUploaded(scanId: Int, houseId: Int) {
+        let uploadedFileName = recordedZipFileName()
+        save(.polling(scanId: scanId, houseId: houseId))
+        if let uploadedFileName {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(uploadedFileName))
+        }
+    }
+
     /// 기록과 기록된 zip 파일을 함께 폐기한다 (완료·취소·재시도 불가 실패).
     func clear() {
-        if case .uploadReady(let fileName, _) = loadStage() {
+        if let fileName = recordedZipFileName() {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(fileName))
         }
         userDefaults.removeObject(forKey: Self.stageKey)
+    }
+
+    /// 기록되기 전의 zip 폐기 (압축 실패·취소로 생긴 파편).
+    func discard(_ zipURL: URL) {
+        try? FileManager.default.removeItem(at: zipURL)
     }
 
     // MARK: - 복원·청소
@@ -85,11 +100,7 @@ nonisolated struct ScanArtifactStore {
 
     /// 기록에 없는 zip 파일 청소 — 압축 중 크래시 파편, 단계 전환 후 잔여물.
     func sweepOrphans() {
-        let recordedFileName: String? = if case .uploadReady(let fileName, _) = loadStage() {
-            fileName
-        } else {
-            nil
-        }
+        let recordedFileName = recordedZipFileName()
         guard let files = try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil
         ) else { return }
@@ -103,6 +114,11 @@ nonisolated struct ScanArtifactStore {
     private func loadStage() -> PersistedStage? {
         guard let data = userDefaults.data(forKey: Self.stageKey) else { return nil }
         return try? JSONDecoder().decode(PersistedStage.self, from: data)
+    }
+
+    private func recordedZipFileName() -> String? {
+        guard case .uploadReady(let fileName, _) = loadStage() else { return nil }
+        return fileName
     }
 
     private func ensureDirectory() {

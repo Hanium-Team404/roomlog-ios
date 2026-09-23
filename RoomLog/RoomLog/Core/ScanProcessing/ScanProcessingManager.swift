@@ -208,7 +208,8 @@ final class ScanProcessingManager {
             try Task.checkCancellation()
         } catch {
             // 실패·취소 공통: 재시도 경로가 없으므로 파편과 대용량 데이터셋을 즉시 정리한다
-            cleanup(zipURL: zipURL, datasetDir: datasetDir)
+            artifactStore.discard(zipURL)
+            removeDataset(datasetDir)
             if error is CancellationError { throw error }
             #if DEBUG
             print("[ScanProcessing] 압축 실패: \(error)")
@@ -231,12 +232,9 @@ final class ScanProcessingManager {
         do {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
-            if Task.isCancelled {
-                // cancel()의 reset이 기록·zip을 정리하지만 datasetDir는 스토어 밖이라 여기서 지운다
-                cleanup(zipURL: zipURL, datasetDir: datasetDir)
-                throw CancellationError()
-            }
+            // 기록된 zip은 취소 주체(reset·startFullProcess)가 스토어로 폐기한다 — datasetDir만 스토어 밖이다
             removeDataset(datasetDir)
+            if Task.isCancelled { throw CancellationError() }
             // 재시도 가능하면 zip과 uploadReady 기록이 이미 영속 상태라 보존을 위해 할 일이 없고,
             // 불가하면 디스패처가 기록·zip을 폐기한다
             throw ScanFailure(
@@ -248,10 +246,9 @@ final class ScanProcessingManager {
         // 취소됐다면 기록을 전환하지 않는다 — cancel()의 reset이 이미 기록·zip을 폐기했다
         try Task.checkCancellation()
 
-        // 업로드 성공 — 단계를 폴링으로 원자 전환하고, 고아가 된 zip은 청소
+        // 업로드 성공 — 단계를 폴링으로 원자 전환하고 다 쓴 zip을 지운다
         let scanId = scanResult.scanId
-        artifactStore.save(.polling(scanId: scanId, houseId: houseId))
-        artifactStore.sweepOrphans()
+        artifactStore.markUploaded(scanId: scanId, houseId: houseId)
         advance(to: .polling, scanId: scanId)
         try await pollAndDownload(scanId: scanId)
     }
@@ -346,12 +343,6 @@ final class ScanProcessingManager {
     }
 
     // MARK: - File Cleanup
-
-    /// 압축·업로드 도중 중단 시 진행 중이던 파일 정리 (기록된 자산은 스토어가 관리)
-    private func cleanup(zipURL: URL, datasetDir: URL?) {
-        try? FileManager.default.removeItem(at: zipURL)
-        removeDataset(datasetDir)
-    }
 
     /// 업로드가 끝나 더 필요 없어진 캡처 데이터셋 삭제
     private func removeDataset(_ datasetDir: URL?) {
