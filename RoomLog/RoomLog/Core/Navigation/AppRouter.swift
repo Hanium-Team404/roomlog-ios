@@ -36,7 +36,11 @@ final class AppRouter {
     }
 
     func logout() {
+        // 재로그인 후엔 진행 중이던 스캔을 이어받을 경로가 없으므로 서버 스캔까지 취소한다.
+        // 인증된 취소 요청이 나가도록 토큰 삭제는 취소 요청이 끝난 뒤에 한다
+        let scanCancellation = container.resolve(ScanProcessingManager.self).cancel()
         Task {
+            await scanCancellation?.value
             try? await container.resolve(NetworkClient.self).logout()
         }
         container.resetCache()
