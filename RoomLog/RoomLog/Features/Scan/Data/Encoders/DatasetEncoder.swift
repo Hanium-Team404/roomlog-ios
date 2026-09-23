@@ -10,7 +10,6 @@
 
 import Foundation
 import ARKit
-import CryptoKit
 import CoreMotion
 import Synchronization
 
@@ -38,7 +37,6 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     enum Status {
         case allGood
         case videoEncodingError
-        case directoryCreationError
     }
 
     /// 인코딩 대기 프레임 상한. 초과분은 드롭해 인코딩 지연 시 버퍼 보유가 무한정 쌓이지 않게 한다.
@@ -87,7 +85,6 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     private var latestGyroForKeyframe: simd_double3 = .zero
 
     // 녹화 완료 후 외부에서 접근하는 프로퍼티
-    let id: UUID
     let datasetDirectoryURL: URL
     let rgbFilePath: URL
     let depthFilePath: URL
@@ -96,23 +93,13 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     let imuPath: URL
     var status: Status = .allGood
 
-    init(arConfiguration: ARWorldTrackingConfiguration, fpsDivider: Int = 1) throws {
+    /// - Parameter directory: 데이터셋을 기록할 빈 디렉토리. 생성·청소는 `ScanArtifactStore`가 관리한다.
+    init(arConfiguration: ARWorldTrackingConfiguration, directory: URL, fpsDivider: Int = 1) throws {
         self.frameInterval = max(1, fpsDivider)
 
         let width = arConfiguration.videoFormat.imageResolution.width
         let height = arConfiguration.videoFormat.imageResolution.height
 
-        var theId = UUID()
-        let directory: URL
-        do {
-            directory = try DatasetEncoder.createDirectory(id: &theId)
-        } catch {
-            self.status = .directoryCreationError
-            let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(theId.uuidString, isDirectory: true)
-            try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            directory = tempDir
-        }
-        self.id = theId
         self.datasetDirectory = directory
         self.datasetDirectoryURL = directory
 
@@ -303,26 +290,5 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
             #endif
             status = .videoEncodingError
         }
-    }
-
-    private static func createDirectory(id: inout UUID) throws -> URL {
-        let directoryName = hashUUID(id: id)
-        let documentsURL = URL.documentsDirectory
-        let directory = documentsURL.appendingPathComponent(directoryName, isDirectory: true)
-
-        if FileManager.default.fileExists(atPath: directory.path) {
-            id = UUID()
-            return try createDirectory(id: &id)
-        }
-
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
-    }
-
-    private static func hashUUID(id: UUID) -> String {
-        var hasher = SHA256()
-        hasher.update(data: Data(id.uuidString.utf8))
-        let digest = hasher.finalize()
-        return digest.prefix(5).map { String(format: "%02x", $0) }.joined()
     }
 }

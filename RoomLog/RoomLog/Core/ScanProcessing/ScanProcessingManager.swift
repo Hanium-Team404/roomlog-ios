@@ -67,6 +67,18 @@ final class ScanProcessingManager {
         start(source.entry, houseId: activeScan.houseId)
     }
 
+    // MARK: - 캡처 데이터셋
+
+    /// 촬영용 데이터셋 디렉토리 발급 — 생성·청소 위치를 스토어 한 곳에서 관리한다
+    func makeDatasetDirectory() throws -> URL {
+        try artifactStore.makeDatasetDirectory()
+    }
+
+    /// 변환 없이 버려지는 데이터셋 삭제 (다시 촬영·화면 이탈)
+    func discardDataset(_ url: URL) {
+        artifactStore.discardDataset(url)
+    }
+
     // MARK: - 종료·신호
 
     /// 진행 중인 스캔 취소. 서버 스캔이 있으면 취소 요청 Task를 돌려준다 —
@@ -192,26 +204,28 @@ final class ScanProcessingManager {
     // 실패는 ScanFailure를 던져 디스패처가 기록하고, 취소는 CancellationError로 조용히 끝난다.
 
     private func fullProcess(encoder: DatasetEncoder, houseId: Int) async throws {
-        _ = try repository()
-
-        // 1. WrapUp
-        await encoder.wrapUp()
-        try Task.checkCancellation()
-
-        // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
-        // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
+        // zip 완성 전에는 어떤 이유로 떠나든 데이터셋을 지워야 한다(재시도 경로가 없다) —
+        // 탈출 경로마다 개별 정리하지 않고 catch 한 곳이 불변식을 지킨다
         let datasetDir = encoder.datasetDirectoryURL
         let zipURL = artifactStore.zipDestinationURL()
         do {
+            _ = try repository()
+
+            // 1. WrapUp
+            await encoder.wrapUp()
+            try Task.checkCancellation()
+
+            // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
+            // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
             try await Task.detached(priority: .userInitiated) {
                 try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
             }.value
             try Task.checkCancellation()
         } catch {
-            // 실패·취소 공통: 재시도 경로가 없으므로 파편과 대용량 데이터셋을 즉시 정리한다
+            // 구성 실패·취소·압축 실패 공통: 파편과 대용량 데이터셋을 즉시 정리한다
             artifactStore.discard(zipURL)
-            removeDataset(datasetDir)
-            if error is CancellationError { throw error }
+            artifactStore.discardDataset(datasetDir)
+            if error is CancellationError || error is ScanFailure { throw error }
             #if DEBUG
             print("[ScanProcessing] 압축 실패: \(error)")
             #endif
@@ -221,7 +235,7 @@ final class ScanProcessingManager {
         // zip 완성 — 여기서부터는 앱이 죽어도 업로드 재시도로 복구할 수 있다.
         // 재시도·복구는 zip만 쓰므로 원본 데이터셋은 바로 지워 디스크 이중 점유를 없앤다
         artifactStore.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: houseId))
-        removeDataset(datasetDir)
+        artifactStore.discardDataset(datasetDir)
 
         // 3. 업로드부터는 재시도 경로와 공유한다
         advance(to: .uploading)
@@ -349,12 +363,5 @@ final class ScanProcessingManager {
             throw ScanFailure(userMessage: "스캔 서비스를 사용할 수 없습니다", retrySource: nil)
         }
         return scanRepository
-    }
-
-    // MARK: - File Cleanup
-
-    /// zip으로 대체됐거나(압축 성공) 쓸 수 없게 된(압축 실패·취소) 캡처 데이터셋 삭제
-    private func removeDataset(_ datasetDir: URL) {
-        try? FileManager.default.removeItem(at: datasetDir)
     }
 }
