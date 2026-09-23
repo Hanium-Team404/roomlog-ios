@@ -48,27 +48,6 @@ final class ScanProcessingManager {
         return failure.retrySource != nil
     }
 
-    /// 특정 houseId에 완료된 스캔이 있는지 확인
-    func completedScan(for houseId: Int) -> ActiveScan? {
-        guard let scan = activeScan,
-              scan.houseId == houseId,
-              case .completed = scan.phase else {
-            return nil
-        }
-        return scan
-    }
-
-    /// 특정 houseId에 진행 중인 스캔이 있는지 확인
-    func isProcessing(for houseId: Int) -> Bool {
-        guard let scan = activeScan, scan.houseId == houseId else { return false }
-        switch scan.phase {
-        case .zipping, .uploading, .polling:
-            return true
-        default:
-            return false
-        }
-    }
-
     // MARK: - 시동
 
     /// 촬영 완료 후 호출. wrapUp → 압축 → 업로드 → 폴링 → 다운로드 전체 수행.

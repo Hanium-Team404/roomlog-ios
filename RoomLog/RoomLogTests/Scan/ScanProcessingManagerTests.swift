@@ -97,51 +97,6 @@ final class ScanProcessingManagerTests {
         #expect(sut.activeScan == nil)
     }
 
-    // MARK: - completedScan
-
-    @Test func completedScan_완료된_스캔이_있으면_반환한다() {
-        let fileURL = URL(fileURLWithPath: "/tmp/test.ply")
-        sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(scanId: 1, houseId: 5, phase: .completed(fileURL: fileURL))
-        )
-
-        let result = sut.completedScan(for: 5)
-
-        #expect(result?.scanId == 1)
-    }
-
-    @Test func completedScan_다른_houseId면_nil을_반환한다() {
-        let fileURL = URL(fileURLWithPath: "/tmp/test.ply")
-        sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(scanId: 1, houseId: 5, phase: .completed(fileURL: fileURL))
-        )
-
-        let result = sut.completedScan(for: 99)
-
-        #expect(result == nil)
-    }
-
-    // MARK: - isProcessing
-
-    @Test func isProcessing_polling중이면_true를_반환한다() {
-        sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(scanId: 1, houseId: 3, phase: .polling)
-        )
-
-        #expect(sut.isProcessing(for: 3))
-    }
-
-    @Test func isProcessing_completed면_false를_반환한다() {
-        sut.setActiveScan(
-            ScanProcessingManager.ActiveScan(
-                scanId: 1, houseId: 3,
-                phase: .completed(fileURL: URL(fileURLWithPath: "/tmp/test.ply"))
-            )
-        )
-
-        #expect(!sut.isProcessing(for: 3))
-    }
-
     // MARK: - handleScenePhase
 
     @Test func handleScenePhase_background시_폴링이_일시정지된다() async throws {
