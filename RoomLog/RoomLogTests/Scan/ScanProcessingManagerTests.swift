@@ -289,6 +289,22 @@ final class ScanProcessingManagerTests {
         #expect(!FileManager.default.fileExists(atPath: zipURL.path))
     }
 
+    @Test func configure_전에_실행하면_진행단계에_멈추지_않고_실패한다() async throws {
+        let unconfigured = ScanProcessingManager(artifactStore: store)
+        unconfigured.setActiveScan(
+            ScanProcessingManager.ActiveScan(
+                scanId: 1, houseId: 1,
+                phase: .failed(.init(userMessage: "상태 조회 실패", retrySource: .polling(scanId: 1)))
+            )
+        )
+
+        unconfigured.retry()
+        try await waitUntil { if case .failed = unconfigured.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let failure) = unconfigured.activeScan?.phase else { return }
+        #expect(failure.userMessage == "스캔 서비스를 사용할 수 없습니다")
+    }
+
     @Test func retry_재시도불가_실패면_거부된다() {
         let failure = ScanProcessingManager.ScanFailure(userMessage: "업로드 실패", retrySource: nil)
         sut.setActiveScan(

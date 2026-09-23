@@ -58,12 +58,6 @@ final class ScanProcessingManager {
         start(.full(encoder: encoder), houseId: houseId)
     }
 
-    /// 중단된 스캔의 폴링 재개 (앱 재시작 복구용)
-    func resumePolling(scanId: Int, houseId: Int) {
-        artifactStore.save(.polling(scanId: scanId, houseId: houseId))
-        start(.polling(scanId: scanId), houseId: houseId)
-    }
-
     /// 실패 지점에 맞는 진입점부터 재시도.
     /// 다시 실패하면 단계가 던진 실패를 디스패처가 `.failed(retrySource:)`로 재설정한다.
     func retry() {
@@ -100,6 +94,12 @@ final class ScanProcessingManager {
     }
 
     #if DEBUG
+    /// 폴링 기록을 남기고 폴링 단계부터 시작 (재시작 복구 시뮬레이션)
+    func resumePolling(scanId: Int, houseId: Int) {
+        artifactStore.save(.polling(scanId: scanId, houseId: houseId))
+        start(.polling(scanId: scanId), houseId: houseId)
+    }
+
     func setActiveScan(_ scan: ActiveScan?) {
         activeScan = scan
     }
@@ -175,7 +175,8 @@ final class ScanProcessingManager {
     private func resumeRestoredWork() {
         switch artifactStore.restore() {
         case .polling(let scanId, let houseId):
-            resumePolling(scanId: scanId, houseId: houseId)
+            // 기록은 이미 있으므로 다시 저장하지 않고 폴링만 시작한다
+            start(.polling(scanId: scanId), houseId: houseId)
         case .uploadRetry(let zipURL, let houseId):
             // Task를 띄우지 않고 상태만 복원 — 기존 재시도 UI(ScanStatusSheet)가 그대로 작동한다
             activeScan = ActiveScan(
@@ -191,7 +192,7 @@ final class ScanProcessingManager {
     // 실패는 ScanFailure를 던져 디스패처가 기록하고, 취소는 CancellationError로 조용히 끝난다.
 
     private func fullProcess(encoder: DatasetEncoder, houseId: Int) async throws {
-        guard scanRepository != nil else { return }
+        _ = try repository()
 
         // 1. WrapUp
         await encoder.wrapUp()
@@ -227,7 +228,7 @@ final class ScanProcessingManager {
 
     /// zip 업로드 후 폴링 단계로 이어간다. 최초 업로드(datasetDir 있음)와 재시도(nil) 공용 경로.
     private func uploadThenPoll(zipURL: URL, datasetDir: URL?, houseId: Int) async throws {
-        guard let scanRepository else { return }
+        let scanRepository = try repository()
         let scanResult: ScanResult
         do {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
@@ -254,7 +255,7 @@ final class ScanProcessingManager {
     }
 
     private func pollAndDownload(scanId: Int) async throws {
-        guard let scanRepository else { return }
+        let scanRepository = try repository()
 
         // COMPLETED가 나올 때까지 폴링
         var attempts = 0
@@ -317,7 +318,7 @@ final class ScanProcessingManager {
     /// 재시도 가능한 실패는 서버 처리가 이미 완료이므로 기록을 유지한다 —
     /// 앱 재시작 시 폴링 재개 → COMPLETED 즉시 확인 → 재다운로드로 자연 복구된다.
     private func downloadPreview(scanId: Int) async throws {
-        guard let scanRepository else { return }
+        let scanRepository = try repository()
         do {
             let fileURLString = try await scanRepository.getScanPreview(scanId: scanId)
             try Task.checkCancellation()
@@ -340,6 +341,14 @@ final class ScanProcessingManager {
                 retrySource: repositoryError.isRetryable ? .download(scanId: scanId) : nil
             )
         }
+    }
+
+    /// configure 전에는 파이프라인을 돌릴 수 없다 — 조용히 끝나면 상태가 진행 단계에 멈추므로 실패로 던진다
+    private func repository() throws -> ScanRepositoryProtocol {
+        guard let scanRepository else {
+            throw ScanFailure(userMessage: "스캔 서비스를 사용할 수 없습니다", retrySource: nil)
+        }
+        return scanRepository
     }
 
     // MARK: - File Cleanup
