@@ -13,13 +13,6 @@ import ZIPFoundation
 @Observable
 final class ScanProcessingManager {
 
-    // MARK: - Persistence Keys
-
-    private enum Defaults {
-        static let scanIdKey = "ScanProcessing_scanId"
-        static let houseIdKey = "ScanProcessing_houseId"
-    }
-
     // MARK: - State
 
     private(set) var activeScan: ActiveScan?
@@ -29,30 +22,30 @@ final class ScanProcessingManager {
     private var scanRepository: ScanRepositoryProtocol?
     private let fileCache = PLYFileCache.shared
     private let pollConfig: PollConfig
-    private let userDefaults: UserDefaults
+    private let artifactStore: ScanArtifactStore
     private let gate = ScenePhaseGate()
     private var processingTask: Task<Void, Never>?
 
     // MARK: - Setup
 
-    init(pollConfig: PollConfig = PollConfig(), userDefaults: UserDefaults = .standard) {
+    init(pollConfig: PollConfig = PollConfig(), artifactStore: ScanArtifactStore = ScanArtifactStore()) {
         self.pollConfig = pollConfig
-        self.userDefaults = userDefaults
+        self.artifactStore = artifactStore
     }
 
     func configure(scanRepository: ScanRepositoryProtocol) {
         self.scanRepository = scanRepository
-        resumeIfNeeded()
+        artifactStore.sweepOrphans()
+        resumeRestoredWork()
     }
 
     // MARK: - Public
 
     /// 촬영 완료 후 호출. wrapUp → 압축 → 업로드 → 폴링 → 다운로드 전체 수행.
     func startFullProcess(encoder: DatasetEncoder, houseId: Int) {
-        discardRetryArtifacts()
-        // 이전 스캔의 pending이 남아 있으면 압축·업로드 중 앱 종료 시
+        // 이전 스캔의 기록·zip이 남아 있으면 압축·업로드 중 앱 종료 시
         // 재시작 복구가 다른 집의 예전 스캔을 되살린다
-        clearPendingScan()
+        artifactStore.clear()
         startStage(ActiveScan(scanId: 0, houseId: houseId, phase: .zipping)) { [weak self] in
             await self?.fullProcess(encoder: encoder, houseId: houseId)
         }
@@ -60,8 +53,7 @@ final class ScanProcessingManager {
 
     /// 중단된 스캔의 폴링 재개 (앱 재시작 복구용)
     func resumePolling(scanId: Int, houseId: Int) {
-        discardRetryArtifacts()
-        savePendingScan(scanId: scanId, houseId: houseId)
+        artifactStore.save(.polling(scanId: scanId, houseId: houseId))
         startStage(ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)) { [weak self] in
             await self?.pollAndDownload(scanId: scanId, houseId: houseId)
         }
@@ -168,40 +160,30 @@ final class ScanProcessingManager {
         gate.wake()
     }
 
-    /// 취소·소비 공통 정리: Task 취소, 보존 zip 삭제, 상태·pending 제거
+    /// 취소·소비 공통 정리: Task 취소, 상태 제거, 기록·zip 폐기
     private func reset() {
         cancelProcessingTask()
-        discardRetryArtifacts()
         activeScan = nil
-        clearPendingScan()
+        artifactStore.clear()
     }
 
-    /// 실패 상태를 버릴 때, 재시도용으로 보존해둔 zip이 있으면 함께 삭제한다.
-    /// `activeScan`을 갈아끼우기 전에 호출해야 한다.
-    private func discardRetryArtifacts() {
-        guard case .failed(let failure) = activeScan?.phase,
-              case .upload(let zipURL) = failure.retrySource else { return }
-        try? FileManager.default.removeItem(at: zipURL)
-    }
+    // MARK: - Restore
 
-    // MARK: - Persistence
-
-    private func savePendingScan(scanId: Int, houseId: Int) {
-        userDefaults.set(scanId, forKey: Defaults.scanIdKey)
-        userDefaults.set(houseId, forKey: Defaults.houseIdKey)
-    }
-
-    private func clearPendingScan() {
-        userDefaults.removeObject(forKey: Defaults.scanIdKey)
-        userDefaults.removeObject(forKey: Defaults.houseIdKey)
-    }
-
-    /// 앱 재시작 시 저장된 스캔이 있으면 폴링 재개
-    private func resumeIfNeeded() {
-        let scanId = userDefaults.integer(forKey: Defaults.scanIdKey)
-        let houseId = userDefaults.integer(forKey: Defaults.houseIdKey)
-        guard scanId > 0, houseId > 0 else { return }
-        resumePolling(scanId: scanId, houseId: houseId)
+    /// 앱 재시작 시 저장된 진행 단계 복원.
+    /// 폴링 기록은 재폴링으로, 업로드 미완 기록은 재시도 가능한 실패 상태로 되살린다.
+    private func resumeRestoredWork() {
+        switch artifactStore.restore() {
+        case .polling(let scanId, let houseId):
+            resumePolling(scanId: scanId, houseId: houseId)
+        case .uploadRetry(let zipURL, let houseId):
+            // Task를 띄우지 않고 상태만 복원 — 기존 재시도 UI(ScanStatusSheet)가 그대로 작동한다
+            activeScan = ActiveScan(
+                scanId: 0, houseId: houseId,
+                phase: .failed(ScanFailure(userMessage: "업로드가 완료되지 않았습니다", retrySource: .upload(zipURL: zipURL)))
+            )
+        case nil:
+            break
+        }
     }
 
     // MARK: - Pipeline
@@ -213,15 +195,16 @@ final class ScanProcessingManager {
         await encoder.wrapUp()
         if Task.isCancelled { return }
 
-        // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다
+        // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
+        // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
         let datasetDir = encoder.datasetDirectoryURL
-        let zipURL = datasetDir.deletingLastPathComponent().appendingPathComponent("\(encoder.id.uuidString).zip")
+        let zipURL = artifactStore.zipDestinationURL()
         do {
             try await Task.detached(priority: .userInitiated) {
                 try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
             }.value
         } catch {
-            // 압축 실패는 재시도 경로가 없으므로 대용량 데이터셋을 즉시 정리해 고아 파일을 남기지 않는다
+            // 압축 실패는 재시도 경로가 없으므로 대용량 데이터셋을 즉시 정리해 파일을 남기지 않는다
             cleanup(zipURL: zipURL, datasetDir: datasetDir)
             #if DEBUG
             print("[ScanProcessing] 압축 실패: \(error)")
@@ -233,6 +216,9 @@ final class ScanProcessingManager {
             return
         }
         if Task.isCancelled { cleanup(zipURL: zipURL, datasetDir: datasetDir); return }
+
+        // zip 완성 — 여기서부터는 앱이 죽어도 업로드 재시도로 복구할 수 있다
+        artifactStore.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: houseId))
 
         // 3. 업로드부터는 재시도 경로와 공유한다
         activeScan = ActiveScan(scanId: 0, houseId: houseId, phase: .uploading)
@@ -247,7 +233,7 @@ final class ScanProcessingManager {
             scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
         } catch {
             if Task.isCancelled {
-                // 업로드 중에는 실패 phase가 아니라서 cancel()의 zip 정리가 닿지 않는다
+                // cancel()의 reset이 기록·zip을 정리하지만 datasetDir는 스토어 밖이라 여기서 지운다
                 cleanup(zipURL: zipURL, datasetDir: datasetDir)
                 return
             }
@@ -256,11 +242,11 @@ final class ScanProcessingManager {
             }
             let retrySource: RetrySource?
             if error.isRetryable {
-                // 재시도 가능하도록 zip은 보존
+                // zip과 uploadReady 기록은 이미 영속 상태 — 보존을 위해 할 일이 없다
                 retrySource = .upload(zipURL: zipURL)
             } else {
-                // 재시도해도 결과가 같은 실패면 zip을 보존할 이유가 없다
-                try? FileManager.default.removeItem(at: zipURL)
+                // 재시도해도 결과가 같은 실패면 zip·기록을 보존할 이유가 없다
+                artifactStore.clear()
                 retrySource = nil
             }
             activeScan = ActiveScan(
@@ -269,12 +255,16 @@ final class ScanProcessingManager {
             )
             return
         }
-        cleanup(zipURL: zipURL, datasetDir: datasetDir)
+        if let datasetDir {
+            try? FileManager.default.removeItem(at: datasetDir)
+        }
+        // 취소됐다면 기록을 전환하지 않는다 — cancel()의 reset이 이미 기록·zip을 폐기했다
         if Task.isCancelled { return }
 
-        // 업로드 성공 — scanId가 생겼으니 재시작 복구용으로 저장하고 폴링 진입
+        // 업로드 성공 — 단계를 폴링으로 원자 전환하고, 고아가 된 zip은 청소
         let scanId = scanResult.scanId
-        savePendingScan(scanId: scanId, houseId: houseId)
+        artifactStore.save(.polling(scanId: scanId, houseId: houseId))
+        artifactStore.sweepOrphans()
         activeScan = ActiveScan(scanId: scanId, houseId: houseId, phase: .polling)
         await pollAndDownload(scanId: scanId, houseId: houseId)
     }
@@ -327,7 +317,7 @@ final class ScanProcessingManager {
                         scanId: scanId, houseId: houseId,
                         phase: .failed(ScanFailure(userMessage: "서버에서 스캔 처리에 실패했습니다", retrySource: nil))
                     )
-                    clearPendingScan()
+                    artifactStore.clear()
                     return
                 }
             } catch {

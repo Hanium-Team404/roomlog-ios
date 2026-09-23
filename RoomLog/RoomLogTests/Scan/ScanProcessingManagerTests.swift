@@ -14,24 +14,30 @@ internal import SwiftUI
 final class ScanProcessingManagerTests {
 
     private let mockRepo: MockScanRepository
-    /// 테스트마다 고유한 suite를 사용해 호스트 앱 UserDefaults 오염과 병렬 실행 간 간섭을 차단
+    /// 테스트마다 고유한 suite·디렉토리를 사용해 호스트 앱 오염과 병렬 실행 간 간섭을 차단
     private let suiteName: String
     private let defaults: UserDefaults
+    private let tempDirectory: URL
+    private let store: ScanArtifactStore
     private let sut: ScanProcessingManager
 
     init() throws {
         suiteName = "ScanProcessingManagerTests-\(UUID().uuidString)"
         defaults = try #require(UserDefaults(suiteName: suiteName))
+        tempDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
         mockRepo = MockScanRepository()
+        store = ScanArtifactStore(userDefaults: defaults, baseDirectory: tempDirectory)
         sut = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
-            userDefaults: defaults
+            artifactStore: store
         )
         sut.configure(scanRepository: mockRepo)
     }
 
     deinit {
         defaults.removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(at: tempDirectory)
     }
 
     /// 조건이 충족될 때까지 폴링 대기. 충족 즉시 반환하므로 고정 sleep과 달리
@@ -73,7 +79,7 @@ final class ScanProcessingManagerTests {
         sut.cancel()
 
         #expect(sut.activeScan == nil)
-        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 0)
+        #expect(store.restore() == nil)
     }
 
     // MARK: - clear
@@ -203,7 +209,7 @@ final class ScanProcessingManagerTests {
     @Test func 생명주기_전환으로_끊긴_실패는_타임아웃_횟수를_소모하지_않는다() async throws {
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10)),
-            userDefaults: defaults
+            artifactStore: store
         )
         sut.configure(scanRepository: mockRepo)
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
@@ -222,14 +228,14 @@ final class ScanProcessingManagerTests {
         // 전환은 실제 대기 시간을 만들지 않으므로 타임아웃 예산을 깎아서는 안 된다
         #expect(failure.userMessage.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
         #expect(mockRepo.cancelScanCallCount == 0, "전환으로 타임아웃에 도달해 서버 스캔이 취소되면 안 됩니다")
-        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 1, "pending이 유지되어야 재시도·재시작 복구가 가능합니다")
+        #expect(store.restore() == .polling(scanId: 1, houseId: 1), "기록이 유지되어야 재시도·재시작 복구가 가능합니다")
         mockRepo.onGetScanStatus = nil
     }
 
     @Test func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 2, interval: .milliseconds(10)),
-            userDefaults: defaults
+            artifactStore: store
         )
         sut.configure(scanRepository: mockRepo)
         mockRepo.getScanStatusResult = .success("PROCESSING")
@@ -241,7 +247,31 @@ final class ScanProcessingManagerTests {
         #expect(failure.userMessage == "처리 시간이 초과되었습니다")
         #expect(mockRepo.cancelScanCallCount == 0, "타임아웃이 서버 스캔을 취소하면 안 됩니다")
         #expect(sut.canRetry, "타임아웃은 재폴링으로 재시도할 수 있어야 합니다")
-        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 3, "pending이 유지되어야 재시작 복구가 가능합니다")
+        #expect(store.restore() == .polling(scanId: 3, houseId: 1), "기록이 유지되어야 재시작 복구가 가능합니다")
+    }
+
+    // MARK: - 재시작 복구
+
+    @Test func 업로드미완_기록이_있으면_재시도가능_실패로_복원된다() throws {
+        let zipURL = store.zipDestinationURL()
+        try Data("zip".utf8).write(to: zipURL)
+        store.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: 4))
+
+        // 앱 재시작 시뮬레이션: 같은 스토어로 새 매니저를 구성
+        let restored = ScanProcessingManager(
+            pollConfig: .init(interval: .milliseconds(50)),
+            artifactStore: store
+        )
+        restored.configure(scanRepository: mockRepo)
+
+        guard case .failed(let failure) = restored.activeScan?.phase else {
+            Issue.record("업로드 미완 기록은 재시도 가능한 실패 상태로 복원돼야 합니다")
+            return
+        }
+        #expect(restored.activeScan?.houseId == 4)
+        #expect(failure.retrySource == .upload(zipURL: zipURL))
+        #expect(restored.canRetry)
+        #expect(FileManager.default.fileExists(atPath: zipURL.path), "sweep이 기록된 zip을 지우면 안 됩니다")
     }
 
     // MARK: - retry (업로드 실패)
@@ -307,8 +337,8 @@ final class ScanProcessingManagerTests {
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        // pending을 유지해야 앱 재시작 시 폴링 재개 → 재다운로드로 복구할 수 있다
-        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 7)
+        // 기록을 유지해야 앱 재시작 시 폴링 재개 → 재다운로드로 복구할 수 있다
+        #expect(store.restore() == .polling(scanId: 7, houseId: 1))
         #expect(sut.canRetry)
         let statusCallCountBeforeRetry = mockRepo.getScanStatusCallCount
 
@@ -342,8 +372,8 @@ final class ScanProcessingManagerTests {
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        // 일시적 네트워크 문제일 수 있으므로 pending을 유지해 재시도·재시작 복구가 가능해야 한다
-        #expect(defaults.integer(forKey: "ScanProcessing_scanId") == 9)
+        // 일시적 네트워크 문제일 수 있으므로 기록을 유지해 재시도·재시작 복구가 가능해야 한다
+        #expect(store.restore() == .polling(scanId: 9, houseId: 1))
         #expect(sut.canRetry)
 
         let callCountBeforeRetry = mockRepo.getScanStatusCallCount
