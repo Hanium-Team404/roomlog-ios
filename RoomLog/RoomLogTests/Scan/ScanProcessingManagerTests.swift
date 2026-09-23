@@ -51,22 +51,24 @@ final class ScanProcessingManagerTests {
         }
     }
 
-    // MARK: - startProcessing (폴링 재개)
+    // MARK: - resumePolling (폴링 재개)
 
-    @Test func startProcessing_호출시_polling_상태가_된다() {
+    @Test func resumePolling_호출시_polling_상태가_된다() {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
-        sut.startProcessing(scanId: 100, houseId: 1)
+        sut.resumePolling(scanId: 100, houseId: 1)
 
         #expect(sut.activeScan?.scanId == 100)
         #expect(sut.activeScan?.houseId == 1)
         #expect(sut.activeScan?.phase == .polling)
+        // 시동된 폴링 루프 정리 (안 하면 maxAttempts 소진까지 백그라운드에서 계속 돈다)
+        sut.clear()
     }
 
     // MARK: - cancel
 
     @Test func cancel_호출시_activeScan이_nil이_된다() {
-        sut.startProcessing(scanId: 100, houseId: 1)
+        sut.resumePolling(scanId: 100, houseId: 1)
 
         sut.cancel()
 
@@ -140,7 +142,7 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
-        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.resumePolling(scanId: 1, houseId: 1)
 
         // 파킹을 직접 관측 — 고정 sleep은 루프가 돌기 전의 0회를 '정지'로 오판(false-pass)할 수 있다
         try await waitUntil { sut.isParked }
@@ -154,7 +156,7 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
-        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.resumePolling(scanId: 1, houseId: 1)
 
         // 백그라운드 상태에서 루프가 파킹됐음을 먼저 관측
         try await waitUntil { sut.isParked }
@@ -171,7 +173,7 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
-        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.resumePolling(scanId: 1, houseId: 1)
         try await waitUntil { sut.isParked }
         let task = try #require(sut.currentTask)
 
@@ -186,7 +188,7 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
-        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.resumePolling(scanId: 1, houseId: 1)
         try await waitUntil { sut.isParked }
 
         // wake가 멱등하지 않으면(이중 resume) 프로세스가 죽는다
@@ -213,7 +215,7 @@ final class ScanProcessingManagerTests {
             sut.handleScenePhase(.active)
         }
 
-        sut.startProcessing(scanId: 1, houseId: 1)
+        sut.resumePolling(scanId: 1, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
@@ -249,7 +251,7 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    @Test func retry_재시도불가_실패면_거부된다() async throws {
+    @Test func retry_재시도불가_실패면_거부된다() {
         let failure = ScanProcessingManager.ScanFailure(userMessage: "업로드 실패", retrySource: nil)
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(scanId: 0, houseId: 1, phase: .failed(failure))
@@ -258,12 +260,13 @@ final class ScanProcessingManagerTests {
         #expect(!sut.canRetry)
         sut.retry()
 
-        try await Task.sleep(for: .milliseconds(100))
+        // 거부된 retry는 startStage에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
+        #expect(sut.currentTask == nil)
         #expect(mockRepo.uploadScanCallCount == 0)
         #expect(sut.activeScan?.phase == .failed(failure))
     }
 
-    @Test func retry_failed_상태가_아니면_거부된다() async throws {
+    @Test func retry_failed_상태가_아니면_거부된다() {
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(scanId: 5, houseId: 1, phase: .polling)
         )
@@ -271,7 +274,8 @@ final class ScanProcessingManagerTests {
         #expect(!sut.canRetry)
         sut.retry()
 
-        try await Task.sleep(for: .milliseconds(100))
+        // 거부된 retry는 startStage에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
+        #expect(sut.currentTask == nil)
         #expect(mockRepo.uploadScanCallCount == 0)
     }
 
@@ -281,7 +285,7 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("COMPLETED")
         mockRepo.getScanPreviewResult = .failure(.transportError(code: .networkConnectionLost))
 
-        sut.startProcessing(scanId: 7, houseId: 1)
+        sut.resumePolling(scanId: 7, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
@@ -305,7 +309,7 @@ final class ScanProcessingManagerTests {
         // URL(string: "")은 nil — 서버 데이터 결함 시나리오
         mockRepo.getScanPreviewResult = .success("")
 
-        sut.startProcessing(scanId: 7, houseId: 1)
+        sut.resumePolling(scanId: 7, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
@@ -316,7 +320,7 @@ final class ScanProcessingManagerTests {
     @Test func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
 
-        sut.startProcessing(scanId: 9, houseId: 1)
+        sut.resumePolling(scanId: 9, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
