@@ -10,13 +10,37 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      # 배포 타겟이 iOS 26.4라 26.4 이상 SDK가 필요하다. 러너 기본 Xcode에 기대지 않고
+      # 설치된 26.x 정식 버전 중 가장 높은 버전을 고른다. 없으면 설치 목록을 남기고 실패한다.
+      # 이름이 숫자로만 된 것(Xcode_26.6.0.app)만 허용해 beta·Release_Candidate를 제외한다.
+      - name: Select Xcode 26.4+
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26.*.app 2>/dev/null | grep -E '/Xcode_26\.[0-9]+(\.[0-9]+)*\.app$' | sort -V | tail -n 1)
+          if [ -z "$XCODE_PATH" ]; then
+            echo "❌ Xcode 26.x not found on runner. Available:"
+            ls -d /Applications/Xcode_*.app 2>/dev/null || true
+            exit 1
+          fi
+          VERSION=$(basename "$XCODE_PATH" .app | sed 's/Xcode_//')
+          if [ "$(printf '%s\n' 26.4 "$VERSION" | sort -V | head -n 1)" != "26.4" ]; then
+            echo "❌ Xcode $VERSION < 26.4. Available:"
+            ls -d /Applications/Xcode_*.app
+            exit 1
+          fi
+          echo "Selecting $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
 
       - name: Create Config.xcconfig placeholder
         run: |
@@ -30,18 +54,69 @@ jobs:
       # 기본값(DerivedData/RoomLog-<해시>/SourcePackages)은 프로젝트별 해시가 붙어
       # 워크플로에서 경로를 지목할 수 없다 — 그래서 저장·복원·빌드가 볼 위치를 고정한다.
       - name: Cache SPM dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .spm-cache
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: ${{ runner.os }}-spm-
 
-      - name: Build
+      # 앱과 테스트 번들을 한 번만 빌드한다. 빌드와 테스트를 스텝으로 나눠 실패 지점이 바로 보이게 하고,
+      # 빌드는 특정 기기가 필요 없으므로 generic destination을 쓴다 — 러너 콜드스타트 때
+      # CoreSimulator가 기기를 열거하지 못해 name 지정 destination이 실패하는 경우가 있었다.
+      - name: Build for testing
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project RoomLog/RoomLog.xcodeproj \
             -scheme RoomLog \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
             -clonedSourcePackagesDirPath .spm-cache \
             CODE_SIGNING_ALLOWED=NO
+
+      # 테스트는 실제 시뮬레이터가 필요하다. 기기 이름을 고정하면 러너 이미지에서 그 기기가 빠질 때
+      # 깨지므로, 설치된 iPhone 중 최신 런타임의 기기를 골라 다음 스텝에 넘긴다.
+      # 목록 출력은 CoreSimulator를 미리 띄우고, 실패 시 러너의 기기 목록을 로그에 남기는 역할도 한다.
+      # OS=latest는 SDK의 최신 OS로 해석돼 설치된 런타임과 어긋날 수 있으므로, 고른 런타임 버전을 그대로 넘긴다.
+      - name: Select iOS simulator
+        id: simulator
+        run: |
+          xcrun simctl list devices available
+          DEVICE_INFO=$(xcrun simctl list devices available --json | python3 -c '
+          import json, re, sys
+          candidates = []
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not match:
+                  continue
+              version = tuple(map(int, match.groups()))
+              candidates += [(version, d["name"]) for d in devices if d["name"].startswith("iPhone")]
+          if not candidates:
+              sys.exit("No available iPhone simulator found")
+          version, name = max(candidates, key=lambda c: c[0])
+          print(f"{version[0]}.{version[1]}\t{name}")
+          ')
+          IFS=$'\t' read -r DEVICE_OS DEVICE_NAME <<< "$DEVICE_INFO"
+          DESTINATION="platform=iOS Simulator,name=${DEVICE_NAME},OS=${DEVICE_OS}"
+          echo "Selected: ${DESTINATION}"
+          echo "destination=${DESTINATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: |
+          xcodebuild test-without-building \
+            -project RoomLog/RoomLog.xcodeproj \
+            -scheme RoomLog \
+            -destination '${{ steps.simulator.outputs.destination }}' \
+            -configuration Debug \
+            -clonedSourcePackagesDirPath .spm-cache \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      # 실패 원인을 로컬 재현 없이 보기 위해 결과 번들을 남긴다 (Xcode로 열면 실패한 테스트와 로그가 보인다)
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: TestResults.xcresult
+          path: TestResults.xcresult
+          retention-days: 7
+          if-no-files-found: ignore

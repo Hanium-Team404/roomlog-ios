@@ -47,7 +47,7 @@ final class ScanProcessingManagerTests {
     /// 조건이 충족될 때까지 폴링 대기. 충족 즉시 반환하므로 고정 sleep과 달리
     /// CI 부하에 따른 flakiness 없이 빠르게 끝난다. 타임아웃 시 Issue를 기록한다.
     private func waitUntil(
-        timeout: Duration = .seconds(2),
+        timeout: Duration = .seconds(5),
         _ condition: () -> Bool
     ) async throws {
         let clock = ContinuousClock()
