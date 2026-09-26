@@ -61,10 +61,16 @@ private struct RefreshTokenRequestBody: Encodable {
     let refreshToken: String
 }
 
+/// 서버 재발급 응답은 로그인 응답(`LoginResponseDTO`)과 같은 snake_case 형식
 private struct TokenResult: Codable, Sendable {
     let accessToken: String
-    
+
     let refreshToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+    }
 }
 
 public enum TokenRefreshError: Error, LocalizedError {
