@@ -76,11 +76,12 @@ jobs:
       # 테스트는 실제 시뮬레이터가 필요하다. 기기 이름을 고정하면 러너 이미지에서 그 기기가 빠질 때
       # 깨지므로, 설치된 iPhone 중 최신 런타임의 기기를 골라 다음 스텝에 넘긴다.
       # 목록 출력은 CoreSimulator를 미리 띄우고, 실패 시 러너의 기기 목록을 로그에 남기는 역할도 한다.
+      # OS=latest는 SDK의 최신 OS로 해석돼 설치된 런타임과 어긋날 수 있으므로, 고른 런타임 버전을 그대로 넘긴다.
       - name: Select iOS simulator
         id: simulator
         run: |
           xcrun simctl list devices available
-          DEVICE_NAME=$(xcrun simctl list devices available --json | python3 -c '
+          DEVICE_INFO=$(xcrun simctl list devices available --json | python3 -c '
           import json, re, sys
           candidates = []
           for runtime, devices in json.load(sys.stdin)["devices"].items():
@@ -91,9 +92,11 @@ jobs:
               candidates += [(version, d["name"]) for d in devices if d["name"].startswith("iPhone")]
           if not candidates:
               sys.exit("No available iPhone simulator found")
-          print(max(candidates, key=lambda c: c[0])[1])
+          version, name = max(candidates, key=lambda c: c[0])
+          print(f"{version[0]}.{version[1]}\t{name}")
           ')
-          DESTINATION="platform=iOS Simulator,name=${DEVICE_NAME},OS=latest"
+          IFS=$'\t' read -r DEVICE_OS DEVICE_NAME <<< "$DEVICE_INFO"
+          DESTINATION="platform=iOS Simulator,name=${DEVICE_NAME},OS=${DEVICE_OS}"
           echo "Selected: ${DESTINATION}"
           echo "destination=${DESTINATION}" >> "$GITHUB_OUTPUT"
 
