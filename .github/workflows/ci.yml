@@ -10,13 +10,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 배포 타겟이 iOS 26.4라 26.4 이상 SDK가 필요하다. 러너 기본 Xcode에 기대지 않고
+      # 설치된 26.x 중 가장 높은 버전을 고른다. 없으면 설치 목록을 남기고 실패한다.
+      - name: Select Xcode 26.4+
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26.*.app 2>/dev/null | grep -v -i beta | sort -V | tail -n 1)
+          if [ -z "$XCODE_PATH" ]; then
+            echo "❌ Xcode 26.x not found on runner. Available:"
+            ls -d /Applications/Xcode_*.app 2>/dev/null || true
+            exit 1
+          fi
+          VERSION=$(basename "$XCODE_PATH" .app | sed 's/Xcode_//')
+          if [ "$(printf '%s\n' 26.4 "$VERSION" | sort -V | head -n 1)" != "26.4" ]; then
+            echo "❌ Xcode $VERSION < 26.4. Available:"
+            ls -d /Applications/Xcode_*.app
+            exit 1
+          fi
+          echo "Selecting $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
 
       - name: Create Config.xcconfig placeholder
         run: |
@@ -36,12 +59,41 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: ${{ runner.os }}-spm-
 
-      - name: Build
+      # 앱과 테스트 번들을 한 번만 빌드한다. 빌드와 테스트를 스텝으로 나눠 실패 지점이 바로 보이게 하고,
+      # 빌드는 특정 기기가 필요 없으므로 generic destination을 쓴다 — 러너 콜드스타트 때
+      # CoreSimulator가 기기를 열거하지 못해 name 지정 destination이 실패하는 경우가 있었다.
+      - name: Build for testing
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
+            -project RoomLog/RoomLog.xcodeproj \
+            -scheme RoomLog \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            -clonedSourcePackagesDirPath .spm-cache \
+            CODE_SIGNING_ALLOWED=NO
+
+      # 테스트는 실제 시뮬레이터가 필요하다. CoreSimulator를 미리 띄워 두고,
+      # 기기를 못 찾아 실패하면 러너에 어떤 기기가 있었는지 로그로 바로 보이게 한다.
+      - name: List available simulators
+        run: xcrun simctl list devices available
+
+      - name: Test
+        run: |
+          xcodebuild test-without-building \
             -project RoomLog/RoomLog.xcodeproj \
             -scheme RoomLog \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -configuration Debug \
             -clonedSourcePackagesDirPath .spm-cache \
+            -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
+
+      # 실패 원인을 로컬 재현 없이 보기 위해 결과 번들을 남긴다 (Xcode로 열면 실패한 테스트와 로그가 보인다)
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults.xcresult
+          path: TestResults.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
