@@ -63,7 +63,7 @@ final class ScanProcessingManagerTests {
 
     // MARK: - resumePolling (폴링 재개)
 
-    @Test func resumePolling_호출시_polling_상태가_된다() {
+    @Test func resumePolling_호출시_polling_상태가_된다() async throws {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.resumePolling(scanId: 100, houseId: 1)
@@ -71,6 +71,9 @@ final class ScanProcessingManagerTests {
         #expect(sut.activeScan?.scanId == 100)
         #expect(sut.activeScan?.houseId == 1)
         #expect(sut.activeScan?.phase == .polling)
+        // 상태만 바뀌고 루프가 돌지 않는 회귀를 잡기 위해 실제 상태 조회를 관측한다
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+        #expect(mockRepo.getScanStatusCallCount > 0, "폴링 루프가 실제로 상태 조회를 시작해야 합니다")
         // 시동된 폴링 루프 정리 (안 하면 maxAttempts 소진까지 백그라운드에서 계속 돈다)
         sut.clear()
     }
@@ -102,6 +105,7 @@ final class ScanProcessingManagerTests {
     // MARK: - clear
 
     @Test func clear_호출시_상태가_초기화된다() {
+        store.save(.polling(scanId: 1, houseId: 1))
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(
                 scanId: 1, houseId: 1,
@@ -112,6 +116,7 @@ final class ScanProcessingManagerTests {
         sut.clear()
 
         #expect(sut.activeScan == nil)
+        #expect(store.restore() == nil, "소비된 스캔의 기록이 남으면 재시작 시 되살아난다")
     }
 
     // MARK: - handleScenePhase
@@ -300,6 +305,9 @@ final class ScanProcessingManagerTests {
         #expect(failure.retrySource == .upload(zipURL: zipURL))
         #expect(restored.canRetry)
         #expect(FileManager.default.fileExists(atPath: zipURL.path), "sweep이 기록된 zip을 지우면 안 됩니다")
+        // 복원은 상태만 되살리고 자동으로 업로드를 재개하지 않는다 — 재시도는 유저의 명시적 선택
+        #expect(restored.currentTask == nil, "복원 시 Task를 띄우면 안 됩니다")
+        #expect(mockRepo.uploadScanCallCount == 0, "복원 시 자동 업로드가 나가면 안 됩니다")
     }
 
     // MARK: - retry (업로드 실패)
