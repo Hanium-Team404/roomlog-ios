@@ -250,6 +250,36 @@ final class ScanProcessingManagerTests {
 
     // MARK: - 재시작 복구
 
+    @Test func 재시작시_폴링기록이_있으면_configure만으로_폴링이_재개된다() async throws {
+        store.save(.polling(scanId: 7, houseId: 3))
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        // 앱 재시작 시뮬레이션: 같은 스토어로 새 매니저를 구성 — resumePolling 없이 configure만 호출한다
+        let restored = ScanProcessingManager(
+            pollConfig: .init(interval: .milliseconds(50)),
+            artifactStore: store
+        )
+        restored.configure(scanRepository: mockRepo)
+
+        #expect(restored.activeScan?.scanId == 7)
+        #expect(restored.activeScan?.houseId == 3)
+        #expect(restored.activeScan?.phase == .polling)
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+        #expect(mockRepo.getScanStatusCallCount > 0, "복원된 폴링은 실제로 상태 조회를 시작해야 합니다")
+        restored.clear()
+    }
+
+    @Test func 재시작시_uploadReady인데_zip이_없으면_복원하지_않는다() {
+        // zip 파일 없이 기록만 남긴 상황 (앱 삭제·컨테이너 정리 등)
+        store.save(.uploadReady(zipFileName: "ghost.zip", houseId: 4))
+
+        let restored = ScanProcessingManager(artifactStore: store)
+        restored.configure(scanRepository: mockRepo)
+
+        #expect(restored.activeScan == nil, "실체 없는 zip으로 재시도 UI를 띄우면 안 됩니다")
+        #expect(store.restore() == nil, "죽은 기록은 정리돼야 합니다")
+    }
+
     @Test func 업로드미완_기록이_있으면_재시도가능_실패로_복원된다() throws {
         let zipURL = store.zipDestinationURL()
         try Data("zip".utf8).write(to: zipURL)
