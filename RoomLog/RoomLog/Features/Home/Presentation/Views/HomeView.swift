@@ -70,6 +70,7 @@ struct HomeView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .accessibilityLabel("집 추가")
             }
         }
         .chatbotEntryButton {

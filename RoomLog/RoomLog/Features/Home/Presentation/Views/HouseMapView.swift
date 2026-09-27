@@ -98,6 +98,7 @@ struct HouseMapView: View {
                                 onHouseTap(house)
                             }
                         }
+                        .accessibilityAddTraits(.isButton)
                     }
                 }
             }

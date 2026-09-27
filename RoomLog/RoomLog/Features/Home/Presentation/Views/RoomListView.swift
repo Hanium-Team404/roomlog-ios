@@ -138,9 +138,10 @@ struct RoomListView: View {
         if isEditing {
             roomRowContent(room: room) {
                 Button(action: onDelete) {
-                    Image(systemName: "trash")
+                    Label("삭제", systemImage: "trash")
+                        .labelStyle(.iconOnly)
                         .foregroundStyle(.red)
-                        .frame(width: 24, height: 24)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
             }
         } else {
