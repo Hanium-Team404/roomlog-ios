@@ -180,29 +180,53 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    @Test func 생명주기_전환으로_끊긴_실패는_타임아웃_횟수를_소모하지_않는다() async throws {
-        let sut = ScanProcessingManager(
-            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10)),
-            artifactStore: store
-        )
-        sut.configure(scanRepository: mockRepo)
+    /// 처음 10회 실패를 생명주기 전환과 겹치게 만들고, 이후에는 전환을 멈춰 정상 종료시킨다 (무한 대기 방지).
+    /// 전환으로 끊긴 실패가 어느 예산도 깎지 않았다면 총 호출 수는 10 + (예산 소진에 필요한 횟수)가 된다.
+    private func failStatusWithTransitions(on sut: ScanProcessingManager) {
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
-        // maxAttempts보다 충분히 많은 횟수만큼 매 실패를 생명주기 전환과 겹치게 만든다.
-        // 이후에는 전환을 멈춰 연속 실패로 정상 종료시킨다 (무한 대기 방지)
         mockRepo.onGetScanStatus = { [weak sut] callCount in
             guard let sut, callCount <= 10 else { return }
             sut.handleScenePhase(.inactive)
             sut.handleScenePhase(.active)
         }
+    }
+
+    @Test func 생명주기_전환으로_끊긴_실패는_연속실패_예산을_소모하지_않는다() async throws {
+        // 시도 예산은 넉넉히 두고 연속 실패 예산(3)만 소진되게 한다
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 100, interval: .milliseconds(10), maxConsecutiveErrors: 3),
+            artifactStore: store
+        )
+        sut.configure(scanRepository: mockRepo)
+        failStatusWithTransitions(on: sut)
 
         sut.resumePolling(scanId: 1, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        // 전환은 실제 대기 시간을 만들지 않으므로 타임아웃 예산을 깎아서는 안 된다
         #expect(failure.userMessage.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
-        #expect(mockRepo.cancelScanCallCount == 0, "전환으로 타임아웃에 도달해 서버 스캔이 취소되면 안 됩니다")
+        // 전환 10회가 연속 실패로 세어졌다면 3회에서 끝나 총 3회가 된다
+        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 연속 실패 3회 = 13회여야 합니다")
         #expect(store.restore() == .polling(scanId: 1, houseId: 1), "기록이 유지되어야 재시도·재시작 복구가 가능합니다")
+        mockRepo.onGetScanStatus = nil
+    }
+
+    @Test func 생명주기_전환으로_끊긴_실패는_시도_횟수를_소모하지_않는다() async throws {
+        // 연속 실패 예산은 넉넉히 두고 시도 예산(3)만 소진되게 한다
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10), maxConsecutiveErrors: 100),
+            artifactStore: store
+        )
+        sut.configure(scanRepository: mockRepo)
+        failStatusWithTransitions(on: sut)
+
+        sut.resumePolling(scanId: 1, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        #expect(failure.userMessage == "처리 시간이 초과되었습니다", "시도 횟수 초과로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
+        // 전환은 실제 대기 시간을 만들지 않으므로 attempts를 되돌려야 한다 — 되돌리지 않으면 3회에서 끝난다
+        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 정상 시도 3회 = 13회여야 합니다")
         mockRepo.onGetScanStatus = nil
     }
 
