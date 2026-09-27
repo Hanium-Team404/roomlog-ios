@@ -64,12 +64,15 @@ final class HouseListViewModelTests: XCTestCase {
     }
 
     func test_setMainHouse_selectedId가_nil이면_아무것도_안한다() async {
+        // use case가 호출되면 errorMessage가 설정되도록 스텁 — guard가 실제로 호출을 막는지 증명
+        provider.setMainHouseResult = .failure(NSError(domain: "test", code: -1))
         sut.selectedHouseId = nil
 
         await sut.setMainHouse()
 
         XCTAssertNil(sut.mainHouse)
         XCTAssertFalse(sut.showSetMainSuccess)
+        XCTAssertNil(sut.errorMessage)
     }
 
     func test_setMainHouse_실패시_errorMessage가_설정된다() async {

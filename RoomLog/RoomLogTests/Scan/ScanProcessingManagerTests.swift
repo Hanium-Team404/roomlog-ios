@@ -95,8 +95,11 @@ final class ScanProcessingManagerTests {
         manager?.setActiveScan(.init(scanId: 5, houseId: 1, phase: .polling))
 
         // 로그아웃: cancel 직후 DI 캐시 해제로 매니저가 사라지는 상황
+        weak let released = manager
         let serverCancel = manager?.cancel()
         manager = nil
+        // 요청이 끝나기 전에 해제됐음을 먼저 확인 — Task 종료 후에 검사하면 해제 전제가 증명되지 않는다
+        #expect(released == nil, "cancel Task가 매니저를 붙잡고 있으면 안 됩니다")
         await serverCancel?.value
 
         #expect(mockRepo.cancelScanCallCount == 1)
