@@ -147,7 +147,9 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    @Test func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
+    // 취소가 파킹을 깨우지 못하면 `await task.value`가 영원히 끝나지 않으므로 시간 제한으로 회귀를 잡는다
+    @Test(.timeLimit(.minutes(1)))
+    func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
