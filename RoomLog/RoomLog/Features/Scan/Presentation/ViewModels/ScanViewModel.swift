@@ -117,6 +117,7 @@ final class ScanViewModel: NSObject {
     }
 
     func tearDown() {
+        stopRecordingTimer()
         stopIMU()
         session.pause()
         discardEncoder()
@@ -144,8 +145,7 @@ final class ScanViewModel: NSObject {
     }
 
     func stopRecording() {
-        recordingTimer?.invalidate()
-        recordingTimer = nil
+        stopRecordingTimer()
         stopIMU()
         phase = .recorded
     }
@@ -161,11 +161,15 @@ final class ScanViewModel: NSObject {
     }
 
     func reset() {
-        recordingTimer?.invalidate()
-        recordingTimer = nil
+        stopRecordingTimer()
         discardEncoder()
         phase = .idle
         prepareEncoder()
+    }
+
+    private func stopRecordingTimer() {
+        recordingTimer?.invalidate()
+        recordingTimer = nil
     }
 
     // MARK: - IMU
