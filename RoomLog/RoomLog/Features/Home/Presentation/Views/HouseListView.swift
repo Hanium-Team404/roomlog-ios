@@ -197,6 +197,7 @@ struct HouseListView: View {
         .onTapGesture {
             viewModel.houseToEdit = house
         }
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Grid Item
@@ -247,6 +248,7 @@ struct HouseListView: View {
                 viewModel.houseToEdit = house
             }
         }
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Radio Button

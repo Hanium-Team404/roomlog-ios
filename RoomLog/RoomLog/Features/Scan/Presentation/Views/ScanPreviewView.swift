@@ -67,19 +67,15 @@ struct ScanPreviewView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
+                Button("다시 스캔", systemImage: "arrow.counterclockwise") {
                     showRescanAlert = true
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
                 }
                 .disabled(isSaving)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Button("저장", systemImage: "square.and.arrow.down") {
                     roomName = ""
                     showSaveAlert = true
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
                 }
                 .disabled(isSaving)
             }

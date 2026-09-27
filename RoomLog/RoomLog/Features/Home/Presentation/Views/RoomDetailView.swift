@@ -49,6 +49,7 @@ struct RoomDetailView: View {
                 } label: {
                     Image(systemName: "pencil")
                 }
+                .accessibilityLabel("방 정보 수정")
             }
         }
         .sheet(isPresented: $viewModel.showEditSheet) {

@@ -43,7 +43,7 @@ struct ScanView: View {
     var body: some View {
         scanPhase
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .tabBar)
+            .toolbarVisibility(.hidden, for: .tabBar)
             .onAppear { viewModel.setup() }
             .onDisappear { viewModel.tearDown() }
             .onChange(of: viewModel.phase) {
@@ -153,6 +153,7 @@ struct ScanView: View {
                 .frame(width: 68, height: 68)
                 .glassEffect(.regular.interactive(), in: .circle)
         }
+        .accessibilityLabel("촬영 시작")
     }
 
     private var stopButton: some View {
@@ -165,6 +166,7 @@ struct ScanView: View {
                 .frame(width: 68, height: 68)
                 .glassEffect(.regular.interactive(), in: .circle)
         }
+        .accessibilityLabel("촬영 종료")
     }
 }
 

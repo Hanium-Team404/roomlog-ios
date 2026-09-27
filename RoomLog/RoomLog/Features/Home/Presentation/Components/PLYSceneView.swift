@@ -615,6 +615,7 @@ struct PLYCameraDirectionBar: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: 44, minHeight: 44)
             }
+            .accessibilityLabel("시점 초기화")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
