@@ -62,8 +62,8 @@ final class ScanArtifactStoreTests {
         sut.save(.uploadReady(zipFileName: "ghost.zip", houseId: 5))
 
         #expect(sut.restore() == nil)
-        // 기록 자체가 정리됐는지 재확인 — 남아 있으면 매 실행마다 파일 검사를 반복하게 된다
-        #expect(sut.restore() == nil)
+        // 기록 자체가 정리됐는지 저장소 키로 직접 확인 — 남아 있으면 매 실행마다 파일 검사를 반복하게 된다
+        #expect(defaults.data(forKey: "ScanArtifact_stage") == nil)
     }
 
     @Test func polling_저장후_복원하면_polling이다() {

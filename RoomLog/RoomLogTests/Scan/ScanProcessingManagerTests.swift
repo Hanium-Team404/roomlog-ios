@@ -63,7 +63,7 @@ final class ScanProcessingManagerTests {
 
     // MARK: - resumePolling (폴링 재개)
 
-    @Test func resumePolling_호출시_polling_상태가_된다() {
+    @Test func resumePolling_호출시_polling_상태가_된다() async throws {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.resumePolling(scanId: 100, houseId: 1)
@@ -71,6 +71,9 @@ final class ScanProcessingManagerTests {
         #expect(sut.activeScan?.scanId == 100)
         #expect(sut.activeScan?.houseId == 1)
         #expect(sut.activeScan?.phase == .polling)
+        // 상태만 바뀌고 루프가 돌지 않는 회귀를 잡기 위해 실제 상태 조회를 관측한다
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+        #expect(mockRepo.getScanStatusCallCount > 0, "폴링 루프가 실제로 상태 조회를 시작해야 합니다")
         // 시동된 폴링 루프 정리 (안 하면 maxAttempts 소진까지 백그라운드에서 계속 돈다)
         sut.clear()
     }
@@ -92,8 +95,11 @@ final class ScanProcessingManagerTests {
         manager?.setActiveScan(.init(scanId: 5, houseId: 1, phase: .polling))
 
         // 로그아웃: cancel 직후 DI 캐시 해제로 매니저가 사라지는 상황
+        weak let released = manager
         let serverCancel = manager?.cancel()
         manager = nil
+        // 요청이 끝나기 전에 해제됐음을 먼저 확인 — Task 종료 후에 검사하면 해제 전제가 증명되지 않는다
+        #expect(released == nil, "cancel Task가 매니저를 붙잡고 있으면 안 됩니다")
         await serverCancel?.value
 
         #expect(mockRepo.cancelScanCallCount == 1)
@@ -102,6 +108,7 @@ final class ScanProcessingManagerTests {
     // MARK: - clear
 
     @Test func clear_호출시_상태가_초기화된다() {
+        store.save(.polling(scanId: 1, houseId: 1))
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(
                 scanId: 1, houseId: 1,
@@ -112,6 +119,7 @@ final class ScanProcessingManagerTests {
         sut.clear()
 
         #expect(sut.activeScan == nil)
+        #expect(store.restore() == nil, "소비된 스캔의 기록이 남으면 재시작 시 되살아난다")
     }
 
     // MARK: - handleScenePhase
@@ -147,6 +155,12 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
+    /// Task 완료를 관측하기 위한 플래그 박스 — 클로저 안에서 지역 var를 바꿀 수 없어 참조 타입으로 둔다
+    @MainActor
+    private final class TaskCompletion {
+        var isDone = false
+    }
+
     @Test func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
@@ -157,8 +171,16 @@ final class ScanProcessingManagerTests {
 
         sut.cancel()
 
-        // 취소가 파킹을 깨우지 못하면(좀비 Task) 여기서 끝나지 않는다
-        await task.value
+        // `await task.value`를 직접 기다리면 취소가 파킹을 깨우지 못하는 회귀(좀비 Task)에서 테스트가 영원히 멈춘다.
+        // (.timeLimit은 테스트 Task만 취소하고 이 대기를 끊지 못한다) — 완료를 플래그로 관측해 waitUntil의 제한 시간 안에 실패시킨다
+        let completion = TaskCompletion()
+        let observer = Task { @MainActor in
+            await task.value
+            completion.isDone = true
+        }
+        try await waitUntil { completion.isDone }
+        #expect(completion.isDone, "취소가 파킹을 깨우지 못해 Task가 끝나지 않았습니다")
+        observer.cancel()
         #expect(mockRepo.getScanStatusCallCount == 0, "취소된 Task는 폴링 없이 종료되어야 합니다")
     }
 
@@ -178,29 +200,53 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    @Test func 생명주기_전환으로_끊긴_실패는_타임아웃_횟수를_소모하지_않는다() async throws {
-        let sut = ScanProcessingManager(
-            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10)),
-            artifactStore: store
-        )
-        sut.configure(scanRepository: mockRepo)
+    /// 처음 10회 실패를 생명주기 전환과 겹치게 만들고, 이후에는 전환을 멈춰 정상 종료시킨다 (무한 대기 방지).
+    /// 전환으로 끊긴 실패가 어느 예산도 깎지 않았다면 총 호출 수는 10 + (예산 소진에 필요한 횟수)가 된다.
+    private func failStatusWithTransitions(on sut: ScanProcessingManager) {
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
-        // maxAttempts보다 충분히 많은 횟수만큼 매 실패를 생명주기 전환과 겹치게 만든다.
-        // 이후에는 전환을 멈춰 연속 실패로 정상 종료시킨다 (무한 대기 방지)
         mockRepo.onGetScanStatus = { [weak sut] callCount in
             guard let sut, callCount <= 10 else { return }
             sut.handleScenePhase(.inactive)
             sut.handleScenePhase(.active)
         }
+    }
+
+    @Test func 생명주기_전환으로_끊긴_실패는_연속실패_예산을_소모하지_않는다() async throws {
+        // 시도 예산은 넉넉히 두고 연속 실패 예산(3)만 소진되게 한다
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 100, interval: .milliseconds(10), maxConsecutiveErrors: 3),
+            artifactStore: store
+        )
+        sut.configure(scanRepository: mockRepo)
+        failStatusWithTransitions(on: sut)
 
         sut.resumePolling(scanId: 1, houseId: 1)
         try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
 
         guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        // 전환은 실제 대기 시간을 만들지 않으므로 타임아웃 예산을 깎아서는 안 된다
         #expect(failure.userMessage.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
-        #expect(mockRepo.cancelScanCallCount == 0, "전환으로 타임아웃에 도달해 서버 스캔이 취소되면 안 됩니다")
+        // 전환 10회가 연속 실패로 세어졌다면 3회에서 끝나 총 3회가 된다
+        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 연속 실패 3회 = 13회여야 합니다")
         #expect(store.restore() == .polling(scanId: 1, houseId: 1), "기록이 유지되어야 재시도·재시작 복구가 가능합니다")
+        mockRepo.onGetScanStatus = nil
+    }
+
+    @Test func 생명주기_전환으로_끊긴_실패는_시도_횟수를_소모하지_않는다() async throws {
+        // 연속 실패 예산은 넉넉히 두고 시도 예산(3)만 소진되게 한다
+        let sut = ScanProcessingManager(
+            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10), maxConsecutiveErrors: 100),
+            artifactStore: store
+        )
+        sut.configure(scanRepository: mockRepo)
+        failStatusWithTransitions(on: sut)
+
+        sut.resumePolling(scanId: 1, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        #expect(failure.userMessage == "처리 시간이 초과되었습니다", "시도 횟수 초과로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
+        // 전환은 실제 대기 시간을 만들지 않으므로 attempts를 되돌려야 한다 — 되돌리지 않으면 3회에서 끝난다
+        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 정상 시도 3회 = 13회여야 합니다")
         mockRepo.onGetScanStatus = nil
     }
 
@@ -224,6 +270,36 @@ final class ScanProcessingManagerTests {
 
     // MARK: - 재시작 복구
 
+    @Test func 재시작시_폴링기록이_있으면_configure만으로_폴링이_재개된다() async throws {
+        store.save(.polling(scanId: 7, houseId: 3))
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        // 앱 재시작 시뮬레이션: 같은 스토어로 새 매니저를 구성 — resumePolling 없이 configure만 호출한다
+        let restored = ScanProcessingManager(
+            pollConfig: .init(interval: .milliseconds(50)),
+            artifactStore: store
+        )
+        restored.configure(scanRepository: mockRepo)
+
+        #expect(restored.activeScan?.scanId == 7)
+        #expect(restored.activeScan?.houseId == 3)
+        #expect(restored.activeScan?.phase == .polling)
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+        #expect(mockRepo.getScanStatusCallCount > 0, "복원된 폴링은 실제로 상태 조회를 시작해야 합니다")
+        restored.clear()
+    }
+
+    @Test func 재시작시_uploadReady인데_zip이_없으면_복원하지_않는다() {
+        // zip 파일 없이 기록만 남긴 상황 (앱 삭제·컨테이너 정리 등)
+        store.save(.uploadReady(zipFileName: "ghost.zip", houseId: 4))
+
+        let restored = ScanProcessingManager(artifactStore: store)
+        restored.configure(scanRepository: mockRepo)
+
+        #expect(restored.activeScan == nil, "실체 없는 zip으로 재시도 UI를 띄우면 안 됩니다")
+        #expect(store.restore() == nil, "죽은 기록은 정리돼야 합니다")
+    }
+
     @Test func 업로드미완_기록이_있으면_재시도가능_실패로_복원된다() throws {
         let zipURL = store.zipDestinationURL()
         try Data("zip".utf8).write(to: zipURL)
@@ -244,6 +320,9 @@ final class ScanProcessingManagerTests {
         #expect(failure.retrySource == .upload(zipURL: zipURL))
         #expect(restored.canRetry)
         #expect(FileManager.default.fileExists(atPath: zipURL.path), "sweep이 기록된 zip을 지우면 안 됩니다")
+        // 복원은 상태만 되살리고 자동으로 업로드를 재개하지 않는다 — 재시도는 유저의 명시적 선택
+        #expect(restored.currentTask == nil, "복원 시 Task를 띄우면 안 됩니다")
+        #expect(mockRepo.uploadScanCallCount == 0, "복원 시 자동 업로드가 나가면 안 됩니다")
     }
 
     // MARK: - retry (업로드 실패)

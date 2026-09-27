@@ -12,7 +12,6 @@ struct ScanPreviewView: View {
     let fileURL: URL
     let scanId: Int
     let houseId: Int
-    private var isPreview: Bool = false
 
     @Environment(\.di) private var di
     @State private var showSaveAlert: Bool = false
@@ -27,7 +26,6 @@ struct ScanPreviewView: View {
             .appendingPathComponent("preview.ply")
         self.scanId = 1
         self.houseId = 1
-        self.isPreview = true
     }
     #endif
 

@@ -11,11 +11,9 @@ import SwiftUI
 struct RoomLogTab: View {
 
     // MARK: - Property
-    @State var isShowMyPage: Bool = false
     @State private var selectedTab: TabIdentifier = .home
     @State private var showViewerLockedToast: Bool = false
     @Environment(\.di) var di
-    @Environment(\.colorScheme) var colorScheme
 
     private enum TabIdentifier: Hashable {
         case home, viewer, profile
@@ -25,7 +23,6 @@ struct RoomLogTab: View {
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
         let homeState = di.resolve(HomeState.self)
-        let _ = di.resolve(ScanProcessingManager.self)
 
         let tabSelection = Binding<TabIdentifier>(
             get: { selectedTab },
@@ -52,10 +49,17 @@ struct RoomLogTab: View {
                 }
             }
             Tab("Profile", systemImage: "person.fill", value: .profile) {
-                NavigationStack {
+                NavigationStack(path: Bindable(pathStore).mypagePath) {
                     MyPageView(provider: di.resolve(MyPageUseCaseProvider.self))
+                        .navigationDestination(for: NavigationDestination.self) {
+                            NavigationRoutingView(destination: $0)
+                        }
                 }
             }
+        }
+        .task {
+            // 메인 진입 시 매니저를 생성해 중단된 스캔 복구(configure → resumeRestoredWork)를 시작한다
+            _ = di.resolve(ScanProcessingManager.self)
         }
         .onChange(of: selectedTab) { _, newValue in
             if newValue == .viewer && !homeState.hasHouses {

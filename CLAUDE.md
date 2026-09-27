@@ -49,7 +49,7 @@ RoomLog/RoomLog/
 │   ├── Common/Extensions/— DateFormatter 등 공통 확장
 │   ├── DIContainer/      — DIContainer, UsecaseProvider
 │   ├── Error/            — RepositoryError
-│   ├── Navigation/       — NavigationDestination, PathStore, NavigationRouter, NavigationRoutingView
+│   ├── Navigation/       — NavigationDestination, PathStore, NavigationRoutingView
 │   ├── ScanProcessing/   — ScanProcessingManager, ScanProcessingState (스캔 파이프라인 앱 전역 서비스)
 │   └── NetworkAdapter/
 │       ├── Base/         — BaseTargetType, APIResponse, EmptyResult
@@ -95,7 +95,6 @@ SwiftUI 환경 변수 `\.di`를 통해 전달됩니다 (`Resources/EnvironmentKe
 각 탭(`homePath`, `defectPath`, `mypagePath`)에 대해 별도의 `NavigationDestination` 배열을 가집니다.
 
 - **NavigationDestination**: 라우팅 가능한 모든 화면을 정의한 Enum. 기능별(`auth`, `home`, `defect`, `myPage`) 네임스페이스로 구분.
-- **NavigationRouter**: `NavigationRoutable`을 구현한 `@Observable` 클래스. `push`, `pop`, `popToRootView` 제공.
 - **NavigationRoutingView**: `NavigationDestination`을 실제 SwiftUI 뷰로 변환하는 Switch문 기반 뷰.
 
 ### Tab Structure

@@ -108,6 +108,9 @@ final class RoomDetailViewModelTests: XCTestCase {
     }
 
     func test_updateRoom_roomDetail이_nil이면_아무것도_안한다() async throws {
+        // use case가 호출되면 throw로 테스트가 실패하도록 스텁 — guard가 실제로 호출을 막는지 증명
+        provider.updateRoomResult = .failure(NSError(domain: "test", code: -1))
+
         try await sut.updateRoom(name: "이름", moveInDate: Date(), moveOutDate: nil)
 
         XCTAssertNil(sut.roomDetail)

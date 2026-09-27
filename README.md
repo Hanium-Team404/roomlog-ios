@@ -149,7 +149,7 @@ RoomLog/RoomLog/
 │   ├── Common/           — Extensions, UIComponents
 │   ├── DIContainer/      — 의존성 컨테이너
 │   ├── Error/            — RepositoryError
-│   ├── Navigation/       — PathStore, NavigationRouter, NavigationDestination
+│   ├── Navigation/       — PathStore, NavigationDestination
 │   └── NetworkAdapter/   — NetworkClient(actor), TokenStore, MoyaAdapter
 ├── Features/             — Auth · Home · Scan · Viewer · Defect · Comparison · Estimate · MyPage · Splash · Tab
 ├── Resources/            — Assets, Fonts, EnvironmentKey
