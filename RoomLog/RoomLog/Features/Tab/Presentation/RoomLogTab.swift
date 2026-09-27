@@ -51,6 +51,9 @@ struct RoomLogTab: View {
             Tab("Profile", systemImage: "person.fill", value: .profile) {
                 NavigationStack(path: Bindable(pathStore).mypagePath) {
                     MyPageView(provider: di.resolve(MyPageUseCaseProvider.self))
+                        .navigationDestination(for: NavigationDestination.self) {
+                            NavigationRoutingView(destination: $0)
+                        }
                 }
             }
         }

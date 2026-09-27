@@ -155,9 +155,13 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
-    // 취소가 파킹을 깨우지 못하면 `await task.value`가 영원히 끝나지 않으므로 시간 제한으로 회귀를 잡는다
-    @Test(.timeLimit(.minutes(1)))
-    func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
+    /// Task 완료를 관측하기 위한 플래그 박스 — 클로저 안에서 지역 var를 바꿀 수 없어 참조 타입으로 둔다
+    @MainActor
+    private final class TaskCompletion {
+        var isDone = false
+    }
+
+    @Test func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.handleScenePhase(.background)
@@ -167,8 +171,16 @@ final class ScanProcessingManagerTests {
 
         sut.cancel()
 
-        // 취소가 파킹을 깨우지 못하면(좀비 Task) 여기서 끝나지 않는다
-        await task.value
+        // `await task.value`를 직접 기다리면 취소가 파킹을 깨우지 못하는 회귀(좀비 Task)에서 테스트가 영원히 멈춘다.
+        // (.timeLimit은 테스트 Task만 취소하고 이 대기를 끊지 못한다) — 완료를 플래그로 관측해 waitUntil의 제한 시간 안에 실패시킨다
+        let completion = TaskCompletion()
+        let observer = Task { @MainActor in
+            await task.value
+            completion.isDone = true
+        }
+        try await waitUntil { completion.isDone }
+        #expect(completion.isDone, "취소가 파킹을 깨우지 못해 Task가 끝나지 않았습니다")
+        observer.cancel()
         #expect(mockRepo.getScanStatusCallCount == 0, "취소된 Task는 폴링 없이 종료되어야 합니다")
     }
 
