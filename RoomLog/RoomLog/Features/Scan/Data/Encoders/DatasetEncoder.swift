@@ -235,9 +235,7 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
     func wrapUp() async {
         // 진행 중인 IMU 콜백이 끝난 뒤에 플래그가 서도록 락 안에서 갱신한다.
         // (이후 imuEncoder.done()으로 파일을 닫을 때 쓰기와 충돌하지 않음)
-        imuLock.lock()
-        isFinalizing = true
-        imuLock.unlock()
+        imuLock.withLock { isFinalizing = true }
 
         await lastTask?.value
         lastTask = nil
