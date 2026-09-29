@@ -15,10 +15,14 @@ actor PLYFileCache {
     private let cacheDirectory: URL
 
     /// 테스트에서 임시 디렉터리를 주입할 수 있게 한다. nil이면 기존 Caches/PLYFiles 경로.
+    /// (`??`의 우변은 autoclosure라 actor init에서 `fileManager`를 잡으면 격리 경고가 나므로 분기로 쓴다)
     init(cacheDirectory: URL? = nil) {
-        self.cacheDirectory = cacheDirectory
-            ?? fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        if let cacheDirectory {
+            self.cacheDirectory = cacheDirectory
+        } else {
+            self.cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("PLYFiles", isDirectory: true)
+        }
     }
 
     // MARK: - Public
