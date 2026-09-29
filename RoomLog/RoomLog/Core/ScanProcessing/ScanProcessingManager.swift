@@ -20,7 +20,7 @@ final class ScanProcessingManager {
     // MARK: - Dependencies
 
     private var scanRepository: ScanRepositoryProtocol?
-    private let fileCache = PLYFileCache.shared
+    private let fileCache: PLYFileCacheProtocol
     private let pollConfig: PollConfig
     private let artifactStore: ScanArtifactStore
     private let gate = ScenePhaseGate()
@@ -28,9 +28,14 @@ final class ScanProcessingManager {
 
     // MARK: - Setup
 
-    init(pollConfig: PollConfig = PollConfig(), artifactStore: ScanArtifactStore = ScanArtifactStore()) {
+    init(
+        pollConfig: PollConfig = PollConfig(),
+        artifactStore: ScanArtifactStore = ScanArtifactStore(),
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.pollConfig = pollConfig
         self.artifactStore = artifactStore
+        self.fileCache = fileCache
     }
 
     func configure(scanRepository: ScanRepositoryProtocol) {

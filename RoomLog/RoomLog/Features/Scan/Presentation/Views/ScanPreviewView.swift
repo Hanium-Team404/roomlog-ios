@@ -12,6 +12,7 @@ struct ScanPreviewView: View {
     let fileURL: URL
     let scanId: Int
     let houseId: Int
+    private let fileCache: PLYFileCacheProtocol
 
     @Environment(\.di) private var di
     @State private var showSaveAlert: Bool = false
@@ -26,13 +27,20 @@ struct ScanPreviewView: View {
             .appendingPathComponent("preview.ply")
         self.scanId = 1
         self.houseId = 1
+        self.fileCache = PLYFileCache.shared
     }
     #endif
 
-    init(fileURL: URL, scanId: Int, houseId: Int) {
+    init(
+        fileURL: URL,
+        scanId: Int,
+        houseId: Int,
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.fileURL = fileURL
         self.scanId = scanId
         self.houseId = houseId
+        self.fileCache = fileCache
     }
 
     private var provider: HomeUseCaseProvider {
@@ -125,7 +133,7 @@ struct ScanPreviewView: View {
                 name: name,
                 scanId: scanId
             )
-            await PLYFileCache.shared.rekey(from: scanId, to: roomId)
+            await fileCache.rekey(from: scanId, to: roomId)
             processingManager.clear()
             _ = pathStore.homePath.popLast()
         } catch {

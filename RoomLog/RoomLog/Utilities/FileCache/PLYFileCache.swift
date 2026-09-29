@@ -12,10 +12,13 @@ actor PLYFileCache {
     static let shared = PLYFileCache()
 
     private let fileManager = FileManager.default
+    private let cacheDirectory: URL
 
-    private var cacheDirectory: URL {
-        let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        return caches.appendingPathComponent("PLYFiles", isDirectory: true)
+    /// 테스트에서 임시 디렉터리를 주입할 수 있게 한다. nil이면 기존 Caches/PLYFiles 경로.
+    init(cacheDirectory: URL? = nil) {
+        self.cacheDirectory = cacheDirectory
+            ?? fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("PLYFiles", isDirectory: true)
     }
 
     // MARK: - Public
