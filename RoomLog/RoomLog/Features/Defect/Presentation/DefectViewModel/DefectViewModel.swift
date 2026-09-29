@@ -26,6 +26,7 @@ final class DefectViewModel {
     // MARK: - Provider
     let roomId: Int
     private let provider: DefectUseCaseProvider
+    private let fileCache: PLYFileCacheProtocol
 
     // MARK: - Local Analysis Tracking
     private static let analysisIdPrefix = "pendingAnalysisId_room_"
@@ -54,9 +55,14 @@ final class DefectViewModel {
         UserDefaults.standard.set(true, forKey: "\(analysisCompletedPrefix)\(roomId)")
     }
 
-    init(roomId: Int, provider: DefectUseCaseProvider) {
+    init(
+        roomId: Int,
+        provider: DefectUseCaseProvider,
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.roomId = roomId
         self.provider = provider
+        self.fileCache = fileCache
     }
 
     // MARK: - Function
@@ -67,7 +73,7 @@ final class DefectViewModel {
     /// 3. 없으면 POST /analyses → 분석 시작
     func loadOrAnalyze() async {
         // 0. PLY 캐시 먼저 확인 (불필요한 다운로드 방지)
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
+        if let cached = await fileCache.cachedFileURL(for: roomId) {
             plyLocalURL = cached
         }
 
@@ -247,10 +253,10 @@ final class DefectViewModel {
               let remoteURL = URL(string: urlString) else { return }
 
         do {
-            plyLocalURL = try await PLYFileCache.shared.download(from: remoteURL, roomId: roomId)
+            plyLocalURL = try await fileCache.download(from: remoteURL, roomId: roomId)
         } catch {
             if plyLocalURL == nil {
-                plyLocalURL = await PLYFileCache.shared.cachedFileURL(for: roomId)
+                plyLocalURL = await fileCache.cachedFileURL(for: roomId)
             }
             print("[Defect] PLY download failed: \(error)")
         }

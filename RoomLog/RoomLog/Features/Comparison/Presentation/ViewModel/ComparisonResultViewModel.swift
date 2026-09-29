@@ -45,11 +45,19 @@ final class ComparisonResultViewModel {
     let moveInRoomId: Int
     let moveOutRoomId: Int
     private let provider: DefectUseCaseProvider
+    private let fileCache: PLYFileCacheProtocol
 
-    init(moveInRoomId: Int, moveOutRoomId: Int, analysisID: Int? = nil, provider: DefectUseCaseProvider) {
+    init(
+        moveInRoomId: Int,
+        moveOutRoomId: Int,
+        analysisID: Int? = nil,
+        provider: DefectUseCaseProvider,
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.moveInRoomId = moveInRoomId
         self.moveOutRoomId = moveOutRoomId
         self.provider = provider
+        self.fileCache = fileCache
         // 내역에서 진입 시 analysisId를 바로 저장
         if let analysisID {
             saveAnalysisId(analysisID)
@@ -80,10 +88,10 @@ final class ComparisonResultViewModel {
 
     func loadOrAnalyze() async {
         // 0. PLY 캐시 먼저 확인 (입주 전 / 퇴거 후 각각)
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: moveInRoomId) {
+        if let cached = await fileCache.cachedFileURL(for: moveInRoomId) {
             moveInPLYURL = cached
         }
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: moveOutRoomId) {
+        if let cached = await fileCache.cachedFileURL(for: moveOutRoomId) {
             moveOutPLYURL = cached
         }
 
@@ -229,7 +237,7 @@ final class ComparisonResultViewModel {
     }
 
     private func downloadPLY(for roomId: Int, assign keyPath: ReferenceWritableKeyPath<ComparisonResultViewModel, URL?>) async {
-        if let cached = await PLYFileCache.shared.cachedFileURL(for: roomId) {
+        if let cached = await fileCache.cachedFileURL(for: roomId) {
             self[keyPath: keyPath] = cached
             return
         }
@@ -240,7 +248,7 @@ final class ComparisonResultViewModel {
               let remoteURL = URL(string: urlString) else { return }
 
         do {
-            self[keyPath: keyPath] = try await PLYFileCache.shared.download(from: remoteURL, roomId: roomId)
+            self[keyPath: keyPath] = try await fileCache.download(from: remoteURL, roomId: roomId)
         } catch {
             print("[Comparison] PLY download failed for room \(roomId): \(error)")
         }
