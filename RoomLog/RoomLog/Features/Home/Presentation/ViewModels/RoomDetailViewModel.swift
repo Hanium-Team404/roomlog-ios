@@ -14,7 +14,7 @@ final class RoomDetailViewModel {
 
     private let provider: HomeUseCaseProvider
     private let scanRepository: ScanRepositoryProtocol
-    private let fileCache = PLYFileCache.shared
+    private let fileCache: PLYFileCacheProtocol
     private var isPreview: Bool = false
 
     // MARK: - State
@@ -30,10 +30,16 @@ final class RoomDetailViewModel {
 
     // MARK: - Init
 
-    init(roomId: Int, provider: HomeUseCaseProvider, scanRepository: ScanRepositoryProtocol) {
+    init(
+        roomId: Int,
+        provider: HomeUseCaseProvider,
+        scanRepository: ScanRepositoryProtocol,
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.roomId = roomId
         self.provider = provider
         self.scanRepository = scanRepository
+        self.fileCache = fileCache
     }
 
     #if DEBUG
@@ -41,6 +47,7 @@ final class RoomDetailViewModel {
         self.roomId = roomDetail?.id ?? 0
         self.provider = MockHomeUseCaseProvider()
         self.scanRepository = MockScanRepository()
+        self.fileCache = PLYFileCache.shared
         self.roomDetail = roomDetail
         self.localPLYURL = localPLYURL
         self.errorMessage = errorMessage

@@ -13,6 +13,7 @@ final class RoomListViewModel {
     // MARK: - Provider
 
     private let provider: HomeUseCaseProvider
+    private let fileCache: PLYFileCacheProtocol
 
     // MARK: - State
 
@@ -27,10 +28,16 @@ final class RoomListViewModel {
 
     // MARK: - Init
 
-    init(houseId: Int, houseName: String, provider: HomeUseCaseProvider) {
+    init(
+        houseId: Int,
+        houseName: String,
+        provider: HomeUseCaseProvider,
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+    ) {
         self.houseId = houseId
         self.houseName = houseName
         self.provider = provider
+        self.fileCache = fileCache
     }
 
     // MARK: - Actions
@@ -54,7 +61,7 @@ final class RoomListViewModel {
         do {
             try await provider.makeDeleteRoomUseCase().execute(roomId: room.id)
             rooms.removeAll { $0.id == room.id }
-            await PLYFileCache.shared.removeCache(for: room.id)
+            await fileCache.removeCache(for: room.id)
         } catch {
             errorMessage = error.localizedDescription
         }

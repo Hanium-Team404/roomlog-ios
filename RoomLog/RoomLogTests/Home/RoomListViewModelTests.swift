@@ -12,12 +12,19 @@ import XCTest
 final class RoomListViewModelTests: XCTestCase {
 
     private var provider: MockHomeUseCaseProvider!
+    private var fileCache: MockPLYFileCache!
     private var sut: RoomListViewModel!
 
     override func setUp() {
         super.setUp()
         provider = MockHomeUseCaseProvider()
-        sut = RoomListViewModel(houseId: 1, houseName: "초기 이름", provider: provider)
+        fileCache = MockPLYFileCache()
+        sut = RoomListViewModel(
+            houseId: 1,
+            houseName: "초기 이름",
+            provider: provider,
+            fileCache: fileCache
+        )
     }
 
     // MARK: - fetchRooms
@@ -62,6 +69,7 @@ final class RoomListViewModelTests: XCTestCase {
 
         XCTAssertTrue(sut.rooms.isEmpty)
         XCTAssertNil(sut.errorMessage)
+        XCTAssertEqual(fileCache.removeCacheCallCount, 1)
     }
 
     func test_deleteRoom_실패시_errorMessage가_설정되고_목록은_유지된다() async {
@@ -76,5 +84,6 @@ final class RoomListViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.rooms.count, 1)
         XCTAssertEqual(sut.errorMessage, "삭제 권한 없음")
+        XCTAssertEqual(fileCache.removeCacheCallCount, 0)
     }
 }
