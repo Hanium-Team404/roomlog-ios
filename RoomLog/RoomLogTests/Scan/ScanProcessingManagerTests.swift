@@ -14,6 +14,7 @@ internal import SwiftUI
 final class ScanProcessingManagerTests {
 
     private let mockRepo: MockScanRepository
+    private let mockCache: MockPLYFileCache
     /// 테스트마다 고유한 suite·디렉토리를 사용해 호스트 앱 오염과 병렬 실행 간 간섭을 차단
     private let suiteName: String
     private let defaults: UserDefaults
@@ -27,6 +28,7 @@ final class ScanProcessingManagerTests {
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
         mockRepo = MockScanRepository()
+        mockCache = MockPLYFileCache()
         store = ScanArtifactStore(
             userDefaults: defaults,
             baseDirectory: tempDirectory,
@@ -34,7 +36,8 @@ final class ScanProcessingManagerTests {
         )
         sut = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         sut.configure(scanRepository: mockRepo)
     }
@@ -90,7 +93,7 @@ final class ScanProcessingManagerTests {
     }
 
     @Test func cancel후_매니저가_해제돼도_서버취소_요청이_나간다() async {
-        var manager: ScanProcessingManager? = ScanProcessingManager(artifactStore: store)
+        var manager: ScanProcessingManager? = ScanProcessingManager(artifactStore: store, fileCache: mockCache)
         manager?.configure(scanRepository: mockRepo)
         manager?.setActiveScan(.init(scanId: 5, houseId: 1, phase: .polling))
 
@@ -215,7 +218,8 @@ final class ScanProcessingManagerTests {
         // 시도 예산은 넉넉히 두고 연속 실패 예산(3)만 소진되게 한다
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 100, interval: .milliseconds(10), maxConsecutiveErrors: 3),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         sut.configure(scanRepository: mockRepo)
         failStatusWithTransitions(on: sut)
@@ -235,7 +239,8 @@ final class ScanProcessingManagerTests {
         // 연속 실패 예산은 넉넉히 두고 시도 예산(3)만 소진되게 한다
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10), maxConsecutiveErrors: 100),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         sut.configure(scanRepository: mockRepo)
         failStatusWithTransitions(on: sut)
@@ -253,7 +258,8 @@ final class ScanProcessingManagerTests {
     @Test func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 2, interval: .milliseconds(10)),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         sut.configure(scanRepository: mockRepo)
         mockRepo.getScanStatusResult = .success("PROCESSING")
@@ -277,7 +283,8 @@ final class ScanProcessingManagerTests {
         // 앱 재시작 시뮬레이션: 같은 스토어로 새 매니저를 구성 — resumePolling 없이 configure만 호출한다
         let restored = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         restored.configure(scanRepository: mockRepo)
 
@@ -293,7 +300,7 @@ final class ScanProcessingManagerTests {
         // zip 파일 없이 기록만 남긴 상황 (앱 삭제·컨테이너 정리 등)
         store.save(.uploadReady(zipFileName: "ghost.zip", houseId: 4))
 
-        let restored = ScanProcessingManager(artifactStore: store)
+        let restored = ScanProcessingManager(artifactStore: store, fileCache: mockCache)
         restored.configure(scanRepository: mockRepo)
 
         #expect(restored.activeScan == nil, "실체 없는 zip으로 재시도 UI를 띄우면 안 됩니다")
@@ -308,7 +315,8 @@ final class ScanProcessingManagerTests {
         // 앱 재시작 시뮬레이션: 같은 스토어로 새 매니저를 구성
         let restored = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
-            artifactStore: store
+            artifactStore: store,
+            fileCache: mockCache
         )
         restored.configure(scanRepository: mockRepo)
 
@@ -373,7 +381,7 @@ final class ScanProcessingManagerTests {
     }
 
     @Test func configure_전에_실행하면_진행단계에_멈추지_않고_실패한다() async throws {
-        let unconfigured = ScanProcessingManager(artifactStore: store)
+        let unconfigured = ScanProcessingManager(artifactStore: store, fileCache: mockCache)
         unconfigured.setActiveScan(
             ScanProcessingManager.ActiveScan(
                 scanId: 1, houseId: 1,
@@ -414,6 +422,24 @@ final class ScanProcessingManagerTests {
         // 거부된 retry는 startStage에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
         #expect(sut.currentTask == nil)
         #expect(mockRepo.uploadScanCallCount == 0)
+    }
+
+    // MARK: - 성공 경로
+
+    @Test func 폴링_COMPLETED후_프리뷰_다운로드가_끝나면_completed가_된다() async throws {
+        mockRepo.getScanStatusResult = .success("COMPLETED")
+        let localURL = tempDirectory.appendingPathComponent("room_7.ply")
+        mockCache.downloadResult = .success(localURL)
+
+        sut.resumePolling(scanId: 7, houseId: 1)
+        try await waitUntil { if case .completed = sut.activeScan?.phase { true } else { false } }
+
+        guard case .completed(let fileURL) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        #expect(fileURL == localURL, "캐시가 돌려준 로컬 경로가 그대로 완료 상태에 실려야 합니다")
+        #expect(mockRepo.getScanPreviewCallCount == 1)
+        #expect(mockCache.downloadCallCount == 1)
+        #expect(sut.activeScan?.scanId == 7)
+        #expect(sut.activeScan?.houseId == 1)
     }
 
     // MARK: - retry (다운로드 실패)
