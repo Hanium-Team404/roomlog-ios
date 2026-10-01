@@ -47,7 +47,7 @@ actor NetworkClient {
     
     /// 토큰 갱신을 요청한다. 진행 중인 갱신이 있으면 그 결과에 합류한다
     func forceRefreshToken() async throws -> TokenPair {
-        try await refreshToken(force: true)
+        try await refreshToken()
     }
     
     /// 로그아웃 처리를 수행
@@ -95,7 +95,7 @@ extension NetworkClient {
                 throw NetworkError.unauthorized
             }
 
-            _ = try await refreshToken(force: true)
+            _ = try await refreshToken()
 
             return try await performRequest(urlRequest, retryCount: retryCount + 1)
         }
@@ -109,7 +109,7 @@ extension NetworkClient {
     }
     
     /// 토큰 갱신 수행
-    private func refreshToken(force: Bool = false) async throws -> TokenPair {
+    private func refreshToken() async throws -> TokenPair {
         // 토큰 갱신 중인지 Task 확인
         if let existTask = refreshTask {
             // 기존 Task의 결과를 대기하여 반환
@@ -125,20 +125,16 @@ extension NetworkClient {
             guard let refreshToken = await tokenStore.getRefreshToken() else {
                 throw NetworkError.unauthorized
             }
-            
-            do {
-                // Token 갱신 요청
-                let tokenPair = try await refreshService.refresh(refreshToken)
-                // 새 TokenPair 저장
-                try await tokenStore.save(
-                    accessToken: tokenPair.accessToken,
-                    refreshToken: tokenPair.refreshToken
-                )
-                
-                return tokenPair
-            } catch {
-                throw error
-            }
+
+            // Token 갱신 요청
+            let tokenPair = try await refreshService.refresh(refreshToken)
+            // 새 TokenPair 저장
+            try await tokenStore.save(
+                accessToken: tokenPair.accessToken,
+                refreshToken: tokenPair.refreshToken
+            )
+
+            return tokenPair
         }
         // refreshTask에 Task 저장 (다른 요청이 대기할 수 있도록)
         refreshTask = task
