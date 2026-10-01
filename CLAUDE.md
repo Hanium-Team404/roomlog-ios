@@ -42,25 +42,28 @@ Xcode를 통해 빌드 및 실행하며, `RoomLog/RoomLog.xcodeproj` 파일을 �
 
 ```text
 RoomLog/RoomLog/
-├── App/                  — 엔트리 포인트 (RoomLogApp, ContentView)
+├── App/                  — 엔트리 포인트 (RoomLogApp)
 ├── Core/
 │   ├── AppLifecycle/     — ScenePhaseGate (scenePhase 기반 파킹/웨이크 게이트)
 │   ├── Config/           — Config.swift, Config.xcconfig (BASE_URL, KAKAO_NATIVE_APP_KEY)
-│   ├── Common/Extensions/— DateFormatter 등 공통 확장
-│   ├── DIContainer/      — DIContainer, UsecaseProvider
-│   ├── Error/            — RepositoryError
-│   ├── Navigation/       — NavigationDestination, PathStore, NavigationRoutingView
-│   ├── ScanProcessing/   — ScanProcessingManager, ScanProcessingState (스캔 파이프라인 앱 전역 서비스)
+│   ├── Common/           — Extensions, UIComponents
+│   ├── DIContainer/      — DIContainer
+│   ├── Error/            — RepositoryError, NetworkError, ServerErrorCode
+│   ├── Navigation/       — AppRouter, NavigationDestination, PathStore, NavigationRoutingView
+│   ├── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState (스캔 파이프라인 앱 전역 서비스)
 │   └── NetworkAdapter/
 │       ├── Base/         — BaseTargetType, APIResponse, EmptyResult
 │       ├── NetworkClient/— NetworkClient(actor), TokenStore, TokenPair, DefaultAuthenticationPolicy
 │       ├── TokenRefreshService/ — TokenRefreshServiceImpl, MoyaNetworkAdapter
 │       └── Authdependencies.swift — AuthSystemFactory (NetworkClient 조립 팩토리)
 ├── Features/
-│   ├── Auth/             — 인증 (카카오 로그인)
+│   ├── Auth/             — 인증 (이메일 로그인)
+│   ├── Chatbot/          — 앱 사용법 안내 챗봇
+│   ├── Comparison/       — 방 비교
 │   ├── Home/             — 홈 (집/방 관리)
 │   ├── Defect/           — 하자 관리
 │   ├── Estimate/         — 견적 (수리업체 추천)
+│   ├── MyPage/           — 마이페이지
 │   ├── Scan/             — 3D 스캔
 │   ├── Splash/           — 스플래시 화면
 │   ├── Tab/              — 탭 루트 뷰 (RoomLogTab)
@@ -70,7 +73,7 @@ RoomLog/RoomLog/
 │   ├── EnvironmentKey/   — DIEnvironmentKey.swift
 │   └── Fonts/            — 커스텀 폰트
 └── Utilities/
-    ├── FileCache/        — 파일 캐시
+    ├── FileCache/        — PLYFileCache (actor), PLYFileCacheProtocol (ViewModel 주입용)
     ├── Keychain/         — KeychainTokenStore (actor)
     └── PreviewMocks/     — Preview용 Mock 데이터
 ```
@@ -87,7 +90,7 @@ SwiftUI 환경 변수 `\.di`를 통해 전달됩니다 (`Resources/EnvironmentKe
 뷰에서는 `@Environment(\.di) var di`로 접근합니다.
 
 새로운 의존성 등록은 `DIContainer.configured()`에 추가합니다.
-`UsecaseProvider` 프로토콜과 `UseCaseProvider` 클래스는 모든 유즈케이스 팩토리를 그룹화합니다.
+유즈케이스 팩토리는 기능별 `*UseCaseProvider` 프로토콜(`HomeUseCaseProvider`, `DefectUseCaseProvider` 등)로 그룹화하며, 각 Feature의 `Presentation/Provider/`에 정의합니다.
 
 ### Navigation
 
@@ -111,7 +114,7 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 - **NetworkClient**: `async actor`로 구현. 401 발생 시 토큰 자동 갱신 후 재시도. 동시에 여러 요청이 갱신을 요청해도 하나의 `Task`로 직렬화.
 - **AuthSystemFactory**: `NetworkClient` 조립 팩토리. 기본 토큰 저장소로 `KeychainTokenStore` 사용.
 - **KeychainTokenStore**: `actor` 기반. `accessToken`, `refreshToken`을 Keychain에 저장 (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`).
-- **MoyaNetworkAdapter**: Moya `Provider`를 `async/await`으로 래핑하는 어댑터.
+- **MoyaNetworkAdapter**: Moya `TargetType`을 `URLRequest`로 바꿔 `NetworkClient`로 보내는 어댑터(`MoyaProvider` 미사용). Scan 경로는 `requestDecoded`(typed throws)가 진입점.
 
 #### 새로운 API 엔드포인트 추가 방법
 
@@ -128,7 +131,7 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 ### Error Handling
 
 `RepositoryError` (`Core/Error/RepositoryError.swift`): `serverError(code:message:errorCode:)`, `decodingError(detail:)`, `transportError(code:)` 세 케이스.
-임의 에러의 도메인 정규화는 `RepositoryError.normalize(_:)` 단일 지점에서 수행하고, 유저 노출 문구는 `userMessage`, 로그용 상세는 `errorDescription`으로 분리.
+임의 에러의 도메인 정규화는 `RepositoryError.normalize(_:)` 단일 지점에서 수행하고(현재 Scan 경로만 적용, 다른 Repository는 미이관), 유저 노출 문구는 `userMessage`, 로그용 상세는 `errorDescription`으로 분리.
 `isRetryable`은 전송 실패·5xx만 true (비즈니스 거부·디코딩 실패는 재시도 불가).
 
 ### CI
