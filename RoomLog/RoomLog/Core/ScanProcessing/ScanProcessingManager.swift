@@ -287,7 +287,7 @@ final class ScanProcessingManager {
             attempts += 1
             if attempts > pollConfig.maxAttempts {
                 // 서버 스캔은 파괴하지 않는다 — cancelScan은 유저의 명시적 취소에서만.
-                // pending을 유지해 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
+                // 진행 기록을 유지해 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
                 throw ScanFailure(userMessage: "처리 시간이 초과되었습니다", retrySource: .polling(scanId: scanId))
             }
 
@@ -319,8 +319,8 @@ final class ScanProcessingManager {
                 print("[ScanProcessing] scanId=\(scanId) 상태 조회 실패(\(consecutiveErrors)/\(pollConfig.maxConsecutiveErrors)): \(error)")
                 #endif
                 if consecutiveErrors >= pollConfig.maxConsecutiveErrors {
-                    // 일시적 네트워크 문제일 수 있는 비확정 실패 — pending을 유지해
-                    // 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
+                    // 일시적 네트워크 문제일 수 있는 비확정 실패 — 재시도 가능하면 진행 기록을 유지해
+                    // 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다. 재시도 불가(4xx 등)면 디스패처가 기록을 폐기한다
                     throw ScanFailure(
                         userMessage: "상태 조회 실패: \(error.userMessage)",
                         retrySource: error.isRetryable ? .polling(scanId: scanId) : nil

@@ -177,7 +177,7 @@ final class ScanViewModel: NSObject {
     private func startIMU() {
         guard motionManager.isAccelerometerAvailable, motionManager.isGyroAvailable else { return }
         guard let encoder else { return }
-        // 100Hz는 iOS CMMotionManager의 하드웨어 상한. 더 높게 요청해도 클램프되며,
+        // 실질 상한은 기기 의존이며 보통 100Hz 근처다. 더 높게 요청해도 클램프되며,
         // 프로퍼티를 다시 읽어도 반영되지 않으므로 실제 주기는 데이터 timestamp로만 확인 가능.
         motionManager.accelerometerUpdateInterval = 1.0 / 100.0
         motionManager.gyroUpdateInterval = 1.0 / 100.0

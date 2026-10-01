@@ -9,7 +9,7 @@ import Foundation
 
 /// 진행 단계를 Codable enum **단일 레코드**로 저장하므로 업로드 성공 시
 /// uploadReady → polling 전환이 원자적이다 — 어중간한 조합이 존재할 수 없다.
-/// 기록에는 파일명만 저장한다: 앱 컨테이너 UUID가 업데이트마다 바뀌므로 절대경로는 금물.
+/// 기록에는 파일명만 저장한다: 앱 컨테이너 경로는 업데이트·복원 시 바뀔 수 있으므로 절대경로는 금물.
 ///
 /// init 기본 인자로 쓰이므로 nonisolated — UserDefaults·FileManager는 스레드 안전하다.
 nonisolated struct ScanArtifactStore {

@@ -24,9 +24,4 @@ extension BaseTargetType {
     var headers: [String : String]? {
         ["Content-Type": "application/json"]
     }
-    
-    /// 200번대 응답만 성공으로 처리
-    var validationType: ValidationType {
-        .successCodes
-    }
 }

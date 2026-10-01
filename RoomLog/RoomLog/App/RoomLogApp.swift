@@ -11,7 +11,7 @@ import KakaoMapsSDK
 @main
 struct RoomLogApp: App {
 
-    //MARK: - Properties
+    // MARK: - Properties
     @State private var container: DIContainer
     @State private var router: AppRouter
     /// App 계층에서 읽으면 모든 씬을 합친 상태가 된다.

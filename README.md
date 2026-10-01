@@ -84,12 +84,13 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 
 `ScanProcessingManager`는 `압축 → 업로드 → 상태 폴링 → 프리뷰 다운로드`의 4단계를 단일 `Task`로 오케스트레이션하며, 다음 시나리오까지 모두 다룹니다.
 
-- **앱 재시작 시 폴링 재개** — `UserDefaults`에 진행 중인 `scanId`/`houseId`를 저장하고, `configure()` 시점에 자동으로 재개합니다.
-- **백그라운드 인지 폴링** — `ScenePhase` 변화를 감지하여 백그라운드 진입 시 API 호출을 건너뛰고 대기만 합니다.
-- **재시도 가능한 zip 보존** — 업로드 실패 시 dataset 디렉터리는 정리하되 zip은 보존해 사용자가 재시도할 수 있게 합니다.
-- **Cross-house 격리** — 재시도 zip을 `houseId`와 함께 묶어 다른 집의 새 스캔이 시작돼도 잘못된 업로드가 일어나지 않도록 합니다.
-- **지수 백오프 없는 신뢰성 폴링** — 7초 간격 최대 60회, 연속 에러 3회 누적 시 실패로 전이.
-- **취소 안전성** — 모든 단계에서 `Task.isCancelled`를 검사하고 임시 파일을 정리합니다.
+- **앱 재시작 복구** — 진행 단계를 `ScanArtifactStore`가 Codable 단일 레코드(`uploadReady` / `polling`)로 기록해 업로드 성공 시 전환이 원자적입니다. 폴링 기록은 재폴링으로, 업로드 미완 기록은 재시도 가능한 실패 상태로 복원됩니다.
+- **zip 영속화** — zip은 Application Support의 영속 디렉터리에 두고(백업 제외) 기록에는 파일명만 저장해 컨테이너 경로가 바뀌어도 복원됩니다. 기록에 없는 zip·데이터셋은 재실행 시 고아 청소로 정리합니다.
+- **백그라운드 파킹** — `ScenePhaseGate`가 비활성 상태에서 폴링 루프를 `CheckedContinuation`으로 파킹하고 복귀 즉시 깨웁니다. 전환 중에 끊긴 요청 실패는 타임아웃 횟수에서 제외합니다.
+- **실패 지점별 재시도** — `RetrySource`(upload / polling / download)를 실패 페이로드에 담아 실패한 단계부터 재시도합니다. `.failed` 기록과 재시도 불가 시 폐기를 디스패처 한 곳에서 처리해 재시도 가능성과 재시작 복구 가능성이 항상 일치합니다.
+- **Cross-house 격리** — 기록과 활성 스캔이 `houseId`를 함께 들고 있어 다른 집의 스캔과 섞이지 않습니다.
+- **고정 간격 폴링** — 7초 간격 최대 60회(생명주기 전환으로 끊긴 요청은 횟수 제외), 연속 에러 3회면 실패로 전이. 폴링 타임아웃은 서버 스캔을 지우지 않고 재폴링 가능한 실패로 남깁니다.
+- **취소 안전성** — 단계마다 `checkCancellation`으로 늦게 도착한 응답을 무시하고, 파킹 중이면 게이트를 깨워 취소를 전달합니다.
 
 ### 3. ARKit 멀티 채널 스캔 데이터 인코딩
 
@@ -115,7 +116,7 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 
 ### 5. PLY 파일 캐시 & 비교 결과 영속화
 
-- `PLYFileCache` (actor) — `roomId`별 PLY 파일을 캐시 디렉터리에 저장하여 재진입 시 즉시 표시
+- `PLYFileCache` (actor) — `roomId`별 PLY 파일을 캐시 디렉터리에 저장하여 재진입 시 즉시 표시. 원격 URL을 사이드카로 기록해 같은 URL이면 캐시 히트 시 네트워크 요청 없이 반환하고, URL이 바뀌면 다시 받습니다(테스트로 고정). `PLYFileCacheProtocol`로 ViewModel에 주입되어 테스트에서는 Mock으로 대체됩니다.
 - `ComparisonResultViewModel` — `UserDefaults`에 `(moveInRoomId, moveOutRoomId)` 쌍의 `analysisId`를 영속화하여 폴링 중단 후 재진입에도 결과를 즉시 복원
 
 ## 🛠 기술 스택
@@ -143,22 +144,30 @@ Feature/
 
 ```text
 RoomLog/RoomLog/
-├── App/                  — 엔트리 포인트 (RoomLogApp, AppFlow)
+├── App/                  — 엔트리 포인트 (RoomLogApp)
 ├── Core/
+│   ├── AppLifecycle/     — ScenePhaseGate
 │   ├── Config/           — 환경 설정 (BASE_URL, KAKAO_NATIVE_APP_KEY)
 │   ├── Common/           — Extensions, UIComponents
 │   ├── DIContainer/      — 의존성 컨테이너
-│   ├── Error/            — RepositoryError
-│   ├── Navigation/       — PathStore, NavigationDestination
-│   └── NetworkAdapter/   — NetworkClient(actor), TokenStore, MoyaAdapter
-├── Features/             — Auth · Home · Scan · Viewer · Defect · Comparison · Estimate · MyPage · Splash · Tab
+│   ├── Error/            — RepositoryError, NetworkError, ServerErrorCode
+│   ├── Navigation/       — AppRouter, PathStore, NavigationDestination
+│   ├── NetworkAdapter/   — NetworkClient(actor), TokenStore, MoyaAdapter
+│   └── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState
+├── Features/             — Auth · Home · Scan · Viewer · Defect · Comparison · Estimate · Chatbot · MyPage · Splash · Tab
 ├── Resources/            — Assets, Fonts, EnvironmentKey
-└── Utilities/            — FileCache(PLY), Keychain, PreviewMocks
+└── Utilities/            — FileCache(PLYFileCache, PLYFileCacheProtocol), Keychain, PreviewMocks
 ```
+
+## 🧪 테스트
+
+- **101개** — Swift Testing 69 + XCTest 32 (`RoomLogTests/`). Xcode ⌘U 또는 `xcodebuild test`로 실행하며, CI에서도 실행됩니다.
+- 스캔 파이프라인 37개(`ScanProcessingManagerTests` 23 · `ScanArtifactStoreTests` 14) — 재시작 복구, 파킹 중 취소, 이중 resume, 전환 중 끊긴 실패, 재시도 불가 시 폐기 등 실패 경로를 위주로 검증합니다.
+- ViewModel 테스트는 Mock Repository·Mock PLY 캐시를 주입해 상태 전이와 호출 횟수를 단언하며, 실행 중 네트워크 요청과 실제 캐시 디렉터리 접근이 없습니다.
 
 ## 🤖 CI
 
-- `develop` 브랜치 push / PR 시 GitHub Actions(`.github/workflows/ci.yml`)가 자동 빌드 검증을 수행합니다.
+- `develop` 브랜치 push / PR 시 GitHub Actions(`.github/workflows/ci.yml`)가 자동 빌드·테스트 검증을 수행합니다. 테스트 실패 시 `.xcresult`를 아티팩트로 남깁니다.
 - CI 환경에서는 `Config.xcconfig` placeholder를 자동 생성합니다.
 - 실행 환경: `macos-26`, `iPhone 17 Pro` 시뮬레이터
 

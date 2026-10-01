@@ -85,7 +85,7 @@ struct ScanStatusSheet: View {
             case .completed:
                 Text("스캔 완료")
                     .font(.semibold, 20)
-                Text("3D 모델이 준비되었습니다\n스캔 화면에서 미리보기할 수 있습니다")
+                Text("3D 모델이 준비되었습니다\n아래 미리보기 버튼으로 확인할 수 있습니다")
                     .font(.medium, 14)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
