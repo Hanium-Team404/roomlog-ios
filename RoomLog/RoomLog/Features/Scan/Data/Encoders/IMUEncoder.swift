@@ -12,7 +12,7 @@ import Foundation
 import simd
 
 /// IMU 샘플을 CSV로 기록하는 인코더.
-/// DatasetEncoder의 IMU 경로(main 큐 한정 CMMotionManager 콜백)에서만 접근된다.
+/// DatasetEncoder의 IMU 경로에서만 접근된다 — 콜백은 ScanViewModel.imuQueue(직렬)로 들어오고 imuLock 아래에서 호출된다.
 nonisolated final class IMUEncoder {
     private let path: URL
     private let fileHandle: FileHandle

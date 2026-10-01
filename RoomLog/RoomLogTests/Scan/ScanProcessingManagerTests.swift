@@ -405,7 +405,7 @@ final class ScanProcessingManagerTests {
         #expect(!sut.canRetry)
         sut.retry()
 
-        // 거부된 retry는 startStage에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
+        // 거부된 retry는 start에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
         #expect(sut.currentTask == nil)
         #expect(mockRepo.uploadScanCallCount == 0)
         #expect(sut.activeScan?.phase == .failed(failure))
@@ -419,7 +419,7 @@ final class ScanProcessingManagerTests {
         #expect(!sut.canRetry)
         sut.retry()
 
-        // 거부된 retry는 startStage에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
+        // 거부된 retry는 start에 도달하지 않아 Task 자체가 안 생긴다 — sleep 없이 동기적으로 확정
         #expect(sut.currentTask == nil)
         #expect(mockRepo.uploadScanCallCount == 0)
     }

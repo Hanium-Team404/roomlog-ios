@@ -20,7 +20,7 @@ final class ScenePhaseGate {
     /// 문이 닫힌 동안 파킹된 대기자. 단일 processingTask 관례상 항상 1개 이하.
     private var waiter: CheckedContinuation<Void, Never>?
 
-    /// 생명주기 전환 횟수. 요청 전후로 값이 다르면 전환에 물려 끊긴 실패다
+    /// 생명주기 전환 횟수. 요청 전후로 값이 다르면 전환에 물려 끊긴 실패다.
     /// 에러가 도착한 시점엔 이미 포그라운드일 수 있어 불리언으로는 판별할 수 없다.
     private(set) var transitionCount = 0
 

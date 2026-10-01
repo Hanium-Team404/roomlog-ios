@@ -11,13 +11,13 @@ import Moya
 /// 인증 관련 의존성을 조립해주는 팩토리
 enum AuthSystemFactory {
     
-    /// 실제 앱에서 사용할 NetworkClient를 생성합니다.
+    /// 실제 앱에서 사용할 NetworkClient를 생성한다.
     static func makeNetworkClient(
         baseURL: URL,
         session: URLSession = .shared,
         tokenStore: TokenStore? = nil
     ) -> NetworkClient {
-        // 1. 토큰 갱신 서비스 생성
+        // 1. 토큰 저장소·갱신 서비스 준비
         let store = tokenStore ?? KeychainTokenStore()
         
         let refreshService = TokenRefreshServiceImpl(baseURL: baseURL, session: session)

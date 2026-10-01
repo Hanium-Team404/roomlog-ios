@@ -28,11 +28,14 @@ private nonisolated struct FramePayload: @unchecked Sendable {
 /// 스캔 데이터셋 인코딩 진입점.
 ///
 /// 동시성 구조:
-/// - 모든 메서드는 main thread에서 호출된다 (ARSession delegate와 CMMotionManager 콜백 모두 main 큐).
-///   mutable 상태(currentFrame, savedFrames, lastTask, isFinalizing 등)도 main에서만 접근한다.
+/// - `add(frame:)`·`wrapUp()`은 main에서 호출된다 (ARSession delegate 큐 = main).
+///   프레임 경로의 mutable 상태(currentFrame, savedFrames, lastTask 등)는 main에서만 접근한다.
+/// - IMU 콜백(`addRawAccelerometer`·`addRawGyroscope`)은 `ScanViewModel.imuQueue`(전용 직렬 큐)에서 들어온다.
+///   IMU 상태와 `isFinalizing` 검사는 `imuLock`으로 보호한다.
+/// - `pendingFrames`·`pendingKeyframes`는 main(증가)과 인코딩 체인(감소)이 함께 만지므로 `Mutex`로 보호한다.
 /// - 실제 인코딩은 detached Task 직렬 체인에서 백그라운드로 수행된다. 각 Task가 이전 Task의
 ///   완료를 await하므로 프레임 순서가 보장되고, 하위 인코더들은 이 체인 안에서만 접근된다.
-///   이 두 불변식이 @unchecked Sendable의 근거다.
+///   이 불변식들이 @unchecked Sendable의 근거다.
 nonisolated final class DatasetEncoder: @unchecked Sendable {
     enum Status {
         case allGood

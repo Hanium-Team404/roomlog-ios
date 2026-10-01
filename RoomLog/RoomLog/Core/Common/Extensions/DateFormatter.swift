@@ -28,7 +28,7 @@ extension Date {
         return f
     }()
 
-    // MARK: - Date → String (UI 표시용, FormatStyle)
+    // MARK: - Date → String
 
     /// 서버 전송용 날짜 문자열로 변환 (yyyy-MM-dd)
     func toServerDateString() -> String {
