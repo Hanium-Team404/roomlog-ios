@@ -1,6 +1,6 @@
 //
 //  PathStore.swift
-//  Projects
+//  RoomLog
 //
 //  Created by 김도연 on 3/26/26.
 //

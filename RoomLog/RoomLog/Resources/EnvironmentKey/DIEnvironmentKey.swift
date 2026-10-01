@@ -1,6 +1,6 @@
 //
 //  DIEnvironmentKey.swift
-//  Projects
+//  RoomLog
 //
 //  Created by 김도연 on 3/31/26.
 //

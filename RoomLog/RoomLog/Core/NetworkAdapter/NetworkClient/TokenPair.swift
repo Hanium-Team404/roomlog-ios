@@ -9,7 +9,7 @@ import Foundation
 
 struct TokenPair: Sendable, Codable, Equatable {
     
-    /// actor의 Isolation 규칙 무시 -> 불변 값이므로 동시에 여러 곳에서 참조 가능
+    /// 기본 MainActor 격리에서 제외 — 불변 값이라 어느 격리 도메인에서 읽어도 안전하다
     nonisolated let accessToken: String
     
     nonisolated let refreshToken: String

@@ -21,8 +21,8 @@ struct DefaultAuthenticationPolicy: AuthenticationPolicy, Sendable {
         return !path.hasPrefix("/auth")
     }
     
-    /// 401 Unautherized 응답을 인증 실패로 판단
-    /// `true` 반환 시 NerworkClient가 자동으로 토큰 갱신
+    /// 401 Unauthorized 응답을 인증 실패로 판단
+    /// `true` 반환 시 NetworkClient가 자동으로 토큰 갱신
     ///
     /// - Parameter response: 판단할 HTTPURLResponse
     ///

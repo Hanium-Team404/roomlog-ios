@@ -7,6 +7,7 @@
 
 import Foundation
 
+/// C01~C04는 팀 API 명세의 엔드포인트 번호.
 protocol ChatRepositoryProtocol {
     /// C01 대화 시작
     func startSession() async throws -> ChatSession

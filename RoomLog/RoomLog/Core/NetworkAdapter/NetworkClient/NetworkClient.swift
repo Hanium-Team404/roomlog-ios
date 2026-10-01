@@ -15,7 +15,7 @@ actor NetworkClient {
     private let tokenStore: TokenStore
     /// 토큰 갱신 서비스
     private let refreshService: TokenRefreshService
-    /// 인증 정책 (요청 별로 인증이 필요한 지 판단
+    /// 인증 정책 (요청별로 인증이 필요한지 판단)
     private let authPolicy: AuthenticationPolicy
     /// 401발생 시 최대 재시도 횟수
     private let maxRetryCount: Int
@@ -45,7 +45,7 @@ actor NetworkClient {
         try await performRequest(urlRequest, retryCount: 0)
     }
     
-    /// 강제로 토큰을 갱신
+    /// 토큰 갱신을 요청한다. 진행 중인 갱신이 있으면 그 결과에 합류한다
     func forceRefreshToken() async throws -> TokenPair {
         try await refreshToken(force: true)
     }
@@ -112,7 +112,7 @@ extension NetworkClient {
     private func refreshToken(force: Bool = false) async throws -> TokenPair {
         // 토큰 갱신 중인지 Task 확인
         if let existTask = refreshTask {
-            // 기존 Task의 결과를 대기하여 변환
+            // 기존 Task의 결과를 대기하여 반환
             return try await existTask.value
         }
         

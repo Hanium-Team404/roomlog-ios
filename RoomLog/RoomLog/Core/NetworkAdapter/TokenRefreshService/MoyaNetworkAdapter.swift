@@ -22,7 +22,7 @@ struct MoyaNetworkAdapter {
         self.baseURL = baseURL
     }
     
-    /// Moya API를 요청하고 Response를 반환합니다.
+    /// Moya API를 요청하고 Response를 반환한다.
     func request<T: TargetType>(_ target: T) async throws -> Moya.Response {
         // Moya TargetType을 URLRequest로 변환
         let urlRequest = try buildURLRequest(target)
