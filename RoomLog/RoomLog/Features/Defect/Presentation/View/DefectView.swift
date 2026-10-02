@@ -270,6 +270,7 @@ private struct SummaryStatView: View {
     }
 }
 
+#if DEBUG
 #Preview("로딩 상태") {
     let di = DIContainer.configured()
     NavigationStack {
@@ -316,3 +317,4 @@ private struct SummaryStatView: View {
     }
     .environment(\.di, di)
 }
+#endif
