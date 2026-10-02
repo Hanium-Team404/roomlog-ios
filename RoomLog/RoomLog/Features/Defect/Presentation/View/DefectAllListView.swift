@@ -93,6 +93,7 @@ struct DefectAllListView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         DefectAllListView(
@@ -103,3 +104,4 @@ struct DefectAllListView: View {
     }
     .environment(\.di, DIContainer.configured())
 }
+#endif

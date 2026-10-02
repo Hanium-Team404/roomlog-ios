@@ -82,7 +82,9 @@ struct DefectReportRow: View {
     }
 }
 
+#if DEBUG
 #Preview {
     DefectReportRow(defect: PreviewSampleData.defects[0])
         .padding(16)
 }
+#endif

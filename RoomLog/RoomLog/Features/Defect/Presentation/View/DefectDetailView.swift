@@ -218,6 +218,7 @@ private extension DefectDetailView {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         DefectDetailView(
@@ -229,4 +230,5 @@ private extension DefectDetailView {
     }
     .environment(\.di, DIContainer.configured())
 }
+#endif
 
