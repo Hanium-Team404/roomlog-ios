@@ -175,6 +175,11 @@ private extension MyPageView {
             VStack(spacing: 0) {
                 infoRow(icon: "info.circle", title: "앱 버전", value: appVersion)
 
+                Divider().padding(.horizontal, 16)
+                menuRow(icon: "hand.raised", title: "개인정보 처리방침") {
+                    openPrivacyPolicy()
+                }
+
                 if let user = viewModel.user {
                     Divider().padding(.horizontal, 16)
                     infoRow(
@@ -250,6 +255,11 @@ private extension MyPageView {
 private extension MyPageView {
     func openAppSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    func openPrivacyPolicy() {
+        guard let url = URL(string: "https://ddodle.notion.site/roomlog") else { return }
         UIApplication.shared.open(url)
     }
 
