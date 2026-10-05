@@ -105,13 +105,6 @@ private extension SelfRepairCard {
                         purchaseItemsSection(guide.items)
                     }
                 }
-
-                sectionRow(label: "전체 예상 비용 (최저가 기준)") {
-                    Text(formattedCost(guide.totalCost))
-                        .font(.semibold, 20)
-                        .foregroundStyle(Color("neutral700"))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
             }
         }
     }
@@ -203,24 +196,24 @@ private extension SelfRepairCard {
                 HStack(alignment: .top, spacing: 10) {
                     itemThumbnail(item)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    // 상품명은 썸네일 위쪽, 링크는 아래쪽 끝에 맞춘다. 이름이 길면 행이 늘어난다.
+                    VStack(alignment: .leading, spacing: 0) {
                         Text(item.name)
                             .font(.medium, 14)
                             .foregroundStyle(Color("neutral700"))
                             .multilineTextAlignment(.leading)
-                        Text(formattedCost(item.price))
-                            .font(.regular, 12)
-                            .foregroundStyle(Color("blueGray500"))
+                        Spacer(minLength: 6)
                         storeLinkButton(item)
-                            .padding(.top, 2)
                     }
+                    .padding(.vertical, 2)
+                    .frame(maxHeight: .infinity, alignment: .leading)
                     Spacer(minLength: 0)
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    /// image_url이 항상 null로 내려와 자리만 잡아 둔다. 에셋이 준비되면 여기서 교체한다.
     func itemThumbnail(_ item: SelfRepairItem) -> some View {
         Group {
             if let urlString = item.imageURLString, let url = URL(string: urlString) {
@@ -244,33 +237,22 @@ private extension SelfRepairCard {
             guard let url = URL(string: item.urlString) else { return }
             openURL(url)
         } label: {
-            Text(storeName(for: item.urlString))
-                .font(.medium, 12)
-                .foregroundStyle(Color("dustyBlue"))
-                .underline()
+            HStack(spacing: 2) {
+                Text("쿠팡에서 찾아보기")
+                    .font(.medium, 12)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(Color("dustyBlue"))
         }
         .buttonStyle(.plain)
-    }
-
-    /// 링크 도메인으로 쇼핑몰을 판별한다. 모르는 도메인이면 중립 문구로 떨어진다.
-    func storeName(for urlString: String) -> String {
-        let host = URL(string: urlString)?.host?.lowercased() ?? ""
-        if host.contains("coupang") { return "쿠팡 링크" }
-        if host.contains("gmarket") { return "G마켓 링크" }
-        return "구매하러 가기"
     }
 }
 
 // MARK: - Helpers
 
 private extension SelfRepairCard {
-    func formattedCost(_ value: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        let formatted = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
-        return "₩ \(formatted)"
-    }
-
     var cardBackground: some View {
         RoundedRectangle(cornerRadius: 20)
             .fill(.white)
@@ -299,8 +281,7 @@ private extension SelfRepairCard {
             isPossible: false,
             description: "해당 하자는 구조체를 관통하는 균열로, 안전상 위험이 있어 스스로 수리 불가",
             videos: [],
-            items: [],
-            totalCost: 0
+            items: []
         ),
         isLoading: false,
         loadFailed: false,
@@ -326,10 +307,9 @@ private extension SelfRepairCard {
                     )
                 ],
                 items: [
-                    SelfRepairItem(name: "곰팡이 제거제", price: 8_900, urlString: "https://www.coupang.com", imageURLString: nil),
-                    SelfRepairItem(name: "욕실용 실리콘", price: 11_100, urlString: "https://www.gmarket.co.kr", imageURLString: nil)
-                ],
-                totalCost: 20_000
+                    SelfRepairItem(name: "곰팡이 제거제", urlString: "https://www.coupang.com", imageURLString: nil),
+                    SelfRepairItem(name: "욕실용 실리콘", urlString: "https://www.coupang.com/np/search?q=욕실용%20실리콘", imageURLString: nil)
+                ]
             ),
             isLoading: false,
             loadFailed: false,

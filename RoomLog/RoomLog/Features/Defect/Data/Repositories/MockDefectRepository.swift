@@ -79,8 +79,7 @@ final class MockDefectRepository: DefectRepositoryProtocol {
                 isPossible: false,
                 description: "해당 하자는 구조체 균열로, 안전상 위험이 있어 스스로 수리 불가",
                 videos: [],
-                items: [],
-                totalCost: 0
+                items: []
             )
         }
         return SelfRepairGuide(
@@ -96,10 +95,9 @@ final class MockDefectRepository: DefectRepositoryProtocol {
                 )
             ],
             items: [
-                SelfRepairItem(name: "곰팡이 제거제", price: 8900, urlString: "https://www.coupang.com", imageURLString: nil),
-                SelfRepairItem(name: "욕실용 실리콘", price: 11100, urlString: "https://www.gmarket.co.kr", imageURLString: nil)
-            ],
-            totalCost: 20000
+                SelfRepairItem(name: "곰팡이 제거제", urlString: "https://www.coupang.com", imageURLString: nil),
+                SelfRepairItem(name: "욕실용 실리콘", urlString: "https://www.coupang.com/np/search?q=욕실용%20실리콘", imageURLString: nil)
+            ]
         )
     }
 }

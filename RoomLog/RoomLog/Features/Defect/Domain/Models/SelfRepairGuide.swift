@@ -13,7 +13,6 @@ struct SelfRepairGuide: Hashable {
     let description: String
     let videos: [SelfRepairVideo]
     let items: [SelfRepairItem]
-    let totalCost: Int
 }
 
 struct SelfRepairVideo: Hashable {
@@ -25,7 +24,6 @@ struct SelfRepairVideo: Hashable {
 
 struct SelfRepairItem: Hashable {
     let name: String
-    let price: Int
     let urlString: String
     let imageURLString: String?
 }
