@@ -53,6 +53,11 @@ final class ScanViewModel: NSObject {
         return config
     }()
 
+    /// 스캔 데이터에 LiDAR 깊이 정보가 필수라, 미지원 기기(LiDAR 없는 iPad 등)에서는 스캔 진입을 막는다
+    static var isDeviceSupported: Bool {
+        ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth)
+    }
+
     private let motionManager = CMMotionManager()
     private var encoder: DatasetEncoder?
 
