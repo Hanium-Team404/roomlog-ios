@@ -23,7 +23,8 @@ struct MoyaNetworkAdapter {
     }
     
     /// Moya API를 요청하고 Response를 반환한다.
-    func request<T: TargetType>(_ target: T) async throws -> Moya.Response {
+    /// - Parameter uploadProgress: 전달하면 요청 바디 전송량을 반영한다
+    func request<T: TargetType>(_ target: T, uploadProgress: Progress? = nil) async throws -> Moya.Response {
         // Moya TargetType을 URLRequest로 변환
         let urlRequest = try buildURLRequest(target)
 
@@ -33,7 +34,8 @@ struct MoyaNetworkAdapter {
 
         do {
             // NetworkClient(토큰 자동 갱신 지원)를 통해 요청
-            let (data, httpResponse) = try await networkClient.request(urlRequest)
+            let delegate = uploadProgress.map { UploadProgressDelegate(progress: $0) }
+            let (data, httpResponse) = try await networkClient.request(urlRequest, delegate: delegate)
 
             #if DEBUG
             logResponse(httpResponse, data: data, request: urlRequest)
@@ -66,10 +68,11 @@ extension MoyaNetworkAdapter {
     func requestDecoded<DTO: Codable>(
         _ target: some TargetType,
         as type: DTO.Type = DTO.self,
-        decoder: JSONDecoder = JSONDecoder()
+        decoder: JSONDecoder = JSONDecoder(),
+        uploadProgress: Progress? = nil
     ) async throws(RepositoryError) -> DTO {
         do {
-            let response = try await request(target)
+            let response = try await request(target, uploadProgress: uploadProgress)
             let dto = try decoder.decode(APIResponse<DTO>.self, from: response.data)
             return try dto.unwrap()
         } catch {
@@ -271,6 +274,28 @@ private struct APIErrorResponse: Codable {
 enum MoyaAdapterError: Error {
     case unsupportedTask(Moya.Task)
     case streamReadFailed
+}
+
+// MARK: - UploadProgressDelegate
+
+/// 요청 바디 전송량을 Progress에 반영한다. 세션의 델리게이트 큐에서 호출되므로 격리에서 제외한다
+private nonisolated final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate {
+    private let progress: Progress
+
+    init(progress: Progress) {
+        self.progress = progress
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend: Int64
+    ) {
+        progress.totalUnitCount = totalBytesExpectedToSend
+        progress.completedUnitCount = totalBytesSent
+    }
 }
 
 // MARK: - AnyEncodable

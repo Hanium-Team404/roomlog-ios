@@ -59,44 +59,23 @@ struct ScanStatusSheet: View {
 
     // MARK: - Description
 
-    @ViewBuilder
     private var description: some View {
         VStack(spacing: 8) {
-            switch phase {
-            case .zipping:
-                Text("압축 중")
-                    .font(.semibold, 20)
-                Text("스캔 데이터를 압축하고 있습니다")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-            case .uploading:
-                Text("업로드 중")
-                    .font(.semibold, 20)
-                Text("스캔 데이터를 서버에 전송하고 있습니다")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-            case .polling:
-                Text("서버 처리 중")
-                    .font(.semibold, 20)
-                Text("3D 모델을 생성하고 있습니다\n잠시만 기다려주세요")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            case .completed:
-                Text("스캔 완료")
-                    .font(.semibold, 20)
-                Text("3D 모델이 준비되었습니다\n아래 미리보기 버튼으로 확인할 수 있습니다")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            case .failed(let failure):
-                Text("스캔 실패")
-                    .font(.semibold, 20)
-                Text(failure.userMessage)
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+            Text(phase.title)
+                .font(.semibold, 20)
+            Text(detail)
+                .font(.medium, 14)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    /// 단계 설명에 시트에서만 덧붙이는 안내 줄을 더한다 (Live Activity는 첫 줄만 쓴다)
+    private var detail: String {
+        switch phase {
+        case .polling: "\(phase.message)\n잠시만 기다려주세요"
+        case .completed: "\(phase.message)\n아래 미리보기 버튼으로 확인할 수 있습니다"
+        case .zipping, .uploading, .failed: phase.message
         }
     }
 

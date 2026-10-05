@@ -41,8 +41,9 @@ actor NetworkClient {
     // MARK: - Public API Request
     
     /// API 요청을 실행하고 데이터와 HTTP 응답을 반환
-    func request(_ urlRequest: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        try await performRequest(urlRequest, retryCount: 0)
+    /// - Parameter delegate: 요청별 태스크 이벤트(업로드 진행률 등)를 받을 델리게이트
+    func request(_ urlRequest: URLRequest, delegate: URLSessionTaskDelegate? = nil) async throws -> (Data, HTTPURLResponse) {
+        try await performRequest(urlRequest, retryCount: 0, delegate: delegate)
     }
     
     /// 토큰 갱신을 요청한다. 진행 중인 갱신이 있으면 그 결과에 합류한다
@@ -71,7 +72,11 @@ extension NetworkClient {
     /// 실제 네트워크 요청 수행
     ///
     /// Authentication 필요 여부에 따라 Header 조절
-    private func performRequest(_ urlRequest: URLRequest, retryCount: Int) async throws -> (Data, HTTPURLResponse) {
+    private func performRequest(
+        _ urlRequest: URLRequest,
+        retryCount: Int,
+        delegate: URLSessionTaskDelegate?
+    ) async throws -> (Data, HTTPURLResponse) {
         var authenticatedRequest = urlRequest
         
         // 인증 필요 여부 확인
@@ -82,7 +87,7 @@ extension NetworkClient {
         }
         
         // 네트워크 요청 실행
-        let (data, response) = try await session.data(for: authenticatedRequest)
+        let (data, response) = try await session.data(for: authenticatedRequest, delegate: delegate)
         
         // HTTPURLResponse로 변환
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -97,7 +102,7 @@ extension NetworkClient {
 
             _ = try await refreshToken()
 
-            return try await performRequest(urlRequest, retryCount: retryCount + 1)
+            return try await performRequest(urlRequest, retryCount: retryCount + 1, delegate: delegate)
         }
 
         // 성공 응답 확인
