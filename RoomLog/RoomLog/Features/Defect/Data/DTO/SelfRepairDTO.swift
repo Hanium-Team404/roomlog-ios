@@ -13,13 +13,11 @@ struct SelfRepairResponseDTO: Codable {
     let items: [SelfRepairItemDTO]
     let defectId: Int
     let selfRepairPossible: Bool
-    let totalCost: Int
 
     enum CodingKeys: String, CodingKey {
         case description, videos, items
         case defectId = "defect_id"
         case selfRepairPossible = "self_repair_possible"
-        case totalCost = "total_cost"
     }
 
     init(from decoder: Decoder) throws {
@@ -29,7 +27,6 @@ struct SelfRepairResponseDTO: Codable {
         items = try container.decodeIfPresent([SelfRepairItemDTO].self, forKey: .items) ?? []
         defectId = try container.decodeIfPresent(Int.self, forKey: .defectId) ?? 0
         selfRepairPossible = try container.decodeIfPresent(Bool.self, forKey: .selfRepairPossible) ?? false
-        totalCost = try container.decodeIfPresent(Int.self, forKey: .totalCost) ?? 0
     }
 
     func toDomain() -> SelfRepairGuide {
@@ -38,8 +35,7 @@ struct SelfRepairResponseDTO: Codable {
             isPossible: selfRepairPossible,
             description: description,
             videos: videos.map { $0.toDomain() },
-            items: items.map { $0.toDomain() },
-            totalCost: totalCost
+            items: items.map { $0.toDomain() }
         )
     }
 }
@@ -67,19 +63,17 @@ struct SelfRepairVideoDTO: Codable {
 
 struct SelfRepairItemDTO: Codable {
     let name: String
-    let price: Int
     let url: String
     let imageURL: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, price, url
+        case name, url
         case imageURL = "image_url"
     }
 
     func toDomain() -> SelfRepairItem {
         SelfRepairItem(
             name: name,
-            price: price,
             urlString: url,
             imageURLString: imageURL
         )
