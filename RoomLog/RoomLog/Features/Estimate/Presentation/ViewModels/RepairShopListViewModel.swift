@@ -24,8 +24,6 @@ final class RepairShopListViewModel {
     var showConfirmation = false
     var showSMSComposer = false
     private(set) var composedMessage = ""
-    private(set) var preview: EstimatePreview?
-    private(set) var isLoadingPreview = false
 
     // MARK: - Context
     let roomId: Int
@@ -76,24 +74,10 @@ final class RepairShopListViewModel {
         selectedShop = selectedShop?.id == shop.id ? nil : shop
     }
 
-    func requestInquiry() async {
-        guard let shop = selectedShop else { return }
-        let analysisID = defect.analysisID
-        isLoadingPreview = true
-        defer { isLoadingPreview = false }
-        do {
-            let message = "\(messageTitle)\n\n\(messageBody)"
-            let result = try await provider.makePreviewEstimateUseCase().execute(
-                message: message,
-                analysisId: analysisID,
-                providerExternalId: shop.externalId
-            )
-            preview = result
-            composedMessage = result.messagePreview
-            showConfirmation = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+    func requestInquiry() {
+        guard selectedShop != nil else { return }
+        composedMessage = messageBody
+        showConfirmation = true
     }
 
     func confirmSend() async {
