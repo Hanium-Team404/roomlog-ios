@@ -60,6 +60,11 @@ struct RoomLogTab: View {
         .task {
             // 메인 진입 시 매니저를 생성해 중단된 스캔 복구(configure → resumeRestoredWork)를 시작한다
             _ = di.resolve(ScanProcessingManager.self)
+            // 앱이 꺼진 상태에서 알림으로 열렸다면 복구를 시작한 뒤 요청된 화면으로 이동한다
+            openRequestedScanStatus(pathStore: pathStore)
+        }
+        .onChange(of: pathStore.scanStatusRequest) {
+            openRequestedScanStatus(pathStore: pathStore)
         }
         .onChange(of: selectedTab) { _, newValue in
             if newValue == .viewer && !homeState.hasHouses {
@@ -94,6 +99,17 @@ struct RoomLogTab: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showViewerLockedToast)
+    }
+
+    /// 완료 알림으로 요청된 집의 방 목록으로 이동한다. 상태 시트는 방 목록이 요청을 확인하고 연다
+    private func openRequestedScanStatus(pathStore: PathStore) {
+        guard let houseId = pathStore.scanStatusRequest else { return }
+        selectedTab = .home
+        if case .home(.roomList(let shownHouseId, _)) = pathStore.homePath.last, shownHouseId == houseId {
+            return
+        }
+        // 집 이름은 방 목록 조회 응답이 채운다
+        pathStore.homePath = [.home(.roomList(houseId: houseId, houseName: ""))]
     }
 }
 

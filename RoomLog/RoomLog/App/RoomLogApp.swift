@@ -7,6 +7,7 @@
 
 import SwiftUI
 import KakaoMapsSDK
+import UserNotifications
 
 @main
 struct RoomLogApp: App {
@@ -14,16 +15,21 @@ struct RoomLogApp: App {
     // MARK: - Properties
     @State private var container: DIContainer
     @State private var router: AppRouter
-    /// App 계층에서 읽으면 모든 씬을 합친 상태가 된다.
-    /// `ScanProcessingManager`는 DI 싱글톤(앱당 1개)이므로 신호도 앱 전역이어야 맞다 —
-    /// 하위 View에서 읽으면 그 View가 속한 씬 하나의 상태만 반영한다.
-    @Environment(\.scenePhase) private var scenePhase
+    /// 알림 센터가 delegate를 약하게 잡으므로 앱이 소유한다
+    @State private var notificationDelegate: AppNotificationDelegate
 
     init() {
         SDKInitializer.InitSDK(appKey: Config.kakaoNativeAppKey)
         let container = DIContainer.configured()
         _container = State(initialValue: container)
         _router = State(initialValue: AppRouter(container: container))
+
+        // 로그아웃 시 DI 캐시가 비워지므로 PathStore는 탭 시점에 꺼낸다
+        let notificationDelegate = AppNotificationDelegate { houseId in
+            container.resolve(PathStore.self).scanStatusRequest = houseId
+        }
+        UNUserNotificationCenter.current().delegate = notificationDelegate
+        _notificationDelegate = State(initialValue: notificationDelegate)
     }
 
 
@@ -32,9 +38,6 @@ struct RoomLogApp: App {
             rootView
                 .environment(\.di, container)
                 .environment(router)
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            container.resolve(ScanProcessingManager.self).handleScenePhase(newPhase)
         }
     }
 

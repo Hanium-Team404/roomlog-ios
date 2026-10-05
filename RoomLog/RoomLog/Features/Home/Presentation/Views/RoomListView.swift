@@ -57,6 +57,21 @@ struct RoomListView: View {
             .tint(.accent)
             .navigationBarTitleDisplayMode(.inline)
             .task { await viewModel.fetchRooms() }
+            .onAppear { openRequestedScanStatus() }
+            .onChange(of: pathStore.scanStatusRequest) { openRequestedScanStatus() }
+    }
+
+    /// 완료 알림으로 이 집의 스캔 상태 시트가 요청됐으면 연다
+    /// 스택 중간에 같은 집의 방 목록이 남아 있을 수 있으므로 맨 위 화면일 때만 처리한다 —
+    /// 아니면 탭 루트가 스택을 교체하는 동안 사라질 뷰가 요청을 먼저 소비해 버린다
+    private func openRequestedScanStatus() {
+        guard pathStore.scanStatusRequest == viewModel.houseId,
+              case .home(.roomList(let shownHouseId, _)) = pathStore.homePath.last,
+              shownHouseId == viewModel.houseId else { return }
+        pathStore.scanStatusRequest = nil
+        // 알림 이후 스캔을 이미 저장·취소했다면 열 시트가 없다
+        guard processingManager.activeScan?.houseId == viewModel.houseId else { return }
+        showProcessingStatus = true
     }
 
     // MARK: - Content

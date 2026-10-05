@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 /// 앱 루트 화면(splash/login/main) 전환을 담당하는 라우터.
 /// 환경에 클로저를 저장하던 기존 `AppFlow`를 대체하며, `@Observable`의
@@ -43,6 +44,7 @@ final class AppRouter {
             await scanCancellation?.value
             try? await container.resolve(NetworkClient.self).logout()
         }
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         container.resetCache()
         transition(to: .login)
     }
