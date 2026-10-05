@@ -13,6 +13,7 @@ final class ViewerViewModel {
     private(set) var rooms: [RoomSummary] = []
     private(set) var houses: [House] = []
     private(set) var isLoading = false
+    private(set) var errorMessage: String?
 
     private let homeProvider: HomeUseCaseProvider
     private let homeState: HomeState
@@ -37,8 +38,9 @@ final class ViewerViewModel {
             } else {
                 selectedHouse = houseList.mainHouse ?? houseList.houses.first
             }
+            errorMessage = nil
         } catch {
-            // TODO: 에러 처리
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -52,8 +54,9 @@ final class ViewerViewModel {
         do {
             let houseRooms = try await homeProvider.makeGetHouseRoomsUseCase().execute(houseId: houseId)
             rooms = houseRooms.rooms
+            errorMessage = nil
         } catch {
-            // TODO: 에러 처리
+            errorMessage = error.localizedDescription
         }
     }
 

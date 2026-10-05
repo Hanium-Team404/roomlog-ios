@@ -215,6 +215,23 @@ private extension ViewerView {
             ProgressView()
                 .frame(maxWidth: .infinity)
                 .padding()
+        } else if let errorMessage = viewModel?.errorMessage {
+            VStack(spacing: 12) {
+                Text(errorMessage)
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.blueGray500)
+                    .multilineTextAlignment(.center)
+                Button("다시 시도") {
+                    Task {
+                        await viewModel?.fetchHouses()
+                        await viewModel?.fetchRooms()
+                    }
+                }
+                .font(.semibold, 14)
+                .foregroundStyle(Color.mutedBlue)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(24)
         }
     }
 }
