@@ -32,13 +32,9 @@ struct LoginView: View {
                 Spacer()
             }
         }
-        .onChange(of: viewModel.loginState) { _, newValue in
-            switch newValue {
-            case true:
-                router.showMain()
-            case false:
-                router.showLogin()
-            }
+        .onChange(of: viewModel.loggedInUserId) { _, userId in
+            guard let userId else { return }
+            router.completeLogin(userId: userId)
         }
         .ignoresSafeArea()
     }
