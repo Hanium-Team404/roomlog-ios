@@ -24,6 +24,7 @@ struct RoomListView: View {
         static let emptyTitle = "아직 스캔한 방이 없어요"
         static let emptyBody = "3D 스캔하기 버튼을 눌러\n방을 추가해보세요!"
         static let scanButton = "3D 스캔하기"
+        static let unsupportedDevice = "LiDAR 탑재 기기에서만 스캔할 수 있어요"
         static let deleteTitle = "방 삭제"
         static let deleteMessage = "이 방을 삭제하시겠어요?\n관련된 스캔 데이터도 함께 삭제됩니다."
         static let deleteConfirm = "삭제"
@@ -269,6 +270,15 @@ struct RoomListView: View {
                 HStack(spacing: 8) {
                     Image(.scan)
                     Text("다른 집에서 스캔 진행 중")
+                        .font(.semibold, 16)
+                }
+            }
+            .disabled(true)
+        } else if !ScanViewModel.isDeviceSupported {
+            BottomCTAButton { } label: {
+                HStack(spacing: 8) {
+                    Image(.scan)
+                    Text(Strings.unsupportedDevice)
                         .font(.semibold, 16)
                 }
             }
