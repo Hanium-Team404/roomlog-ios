@@ -8,6 +8,8 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).scan-upload.*</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>KAKAO_NATIVE_APP_KEY</key>
 	<string>${KAKAO_NATIVE_APP_KEY}</string>
 	<key>UIAppFonts</key>
