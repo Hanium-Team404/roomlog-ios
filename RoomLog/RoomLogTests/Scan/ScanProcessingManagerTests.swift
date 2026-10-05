@@ -8,13 +8,14 @@
 import Testing
 import Foundation
 @testable import RoomLog
-internal import SwiftUI
 
 @MainActor
 final class ScanProcessingManagerTests {
 
     private let mockRepo: MockScanRepository
     private let mockCache: MockPLYFileCache
+    private let mockContinuation: MockScanBackgroundContinuation
+    private let mockNotifier: MockScanCompletionNotifier
     /// 테스트마다 고유한 suite·디렉토리를 사용해 호스트 앱 오염과 병렬 실행 간 간섭을 차단
     private let suiteName: String
     private let defaults: UserDefaults
@@ -29,6 +30,8 @@ final class ScanProcessingManagerTests {
             .appendingPathComponent(suiteName, isDirectory: true)
         mockRepo = MockScanRepository()
         mockCache = MockPLYFileCache()
+        mockContinuation = MockScanBackgroundContinuation()
+        mockNotifier = MockScanCompletionNotifier()
         store = ScanArtifactStore(
             userDefaults: defaults,
             baseDirectory: tempDirectory,
@@ -37,7 +40,9 @@ final class ScanProcessingManagerTests {
         sut = ScanProcessingManager(
             pollConfig: .init(interval: .milliseconds(50)),
             artifactStore: store,
-            fileCache: mockCache
+            fileCache: mockCache,
+            backgroundContinuation: mockContinuation,
+            completionNotifier: mockNotifier
         )
         sut.configure(scanRepository: mockRepo)
     }
@@ -125,135 +130,7 @@ final class ScanProcessingManagerTests {
         #expect(store.restore() == nil, "소비된 스캔의 기록이 남으면 재시작 시 되살아난다")
     }
 
-    // MARK: - handleScenePhase
-
-    @Test func handleScenePhase_background시_폴링이_일시정지된다() async throws {
-        mockRepo.getScanStatusResult = .success("PROCESSING")
-
-        sut.handleScenePhase(.background)
-        sut.resumePolling(scanId: 1, houseId: 1)
-
-        // 파킹을 직접 관측 — 고정 sleep은 루프가 돌기 전의 0회를 '정지'로 오판(false-pass)할 수 있다
-        try await waitUntil { sut.isParked }
-
-        #expect(mockRepo.getScanStatusCallCount == 0)
-        // 파킹된 폴링 루프를 깨워서 정리 (안 하면 continuation에 매달린 Task가 남는다)
-        sut.clear()
-    }
-
-    @Test func handleScenePhase_active시_대기중인_폴링이_재개된다() async throws {
-        mockRepo.getScanStatusResult = .success("PROCESSING")
-
-        sut.handleScenePhase(.background)
-        sut.resumePolling(scanId: 1, houseId: 1)
-
-        // 백그라운드 상태에서 루프가 파킹됐음을 먼저 관측
-        try await waitUntil { sut.isParked }
-        #expect(mockRepo.getScanStatusCallCount == 0, "백그라운드에서는 폴링하지 않아야 합니다")
-
-        sut.handleScenePhase(.active)
-
-        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
-        #expect(mockRepo.getScanStatusCallCount > 0, "포그라운드 복귀 후 폴링이 재개되어야 합니다")
-        sut.clear()
-    }
-
-    /// Task 완료를 관측하기 위한 플래그 박스 — 클로저 안에서 지역 var를 바꿀 수 없어 참조 타입으로 둔다
-    @MainActor
-    private final class TaskCompletion {
-        var isDone = false
-    }
-
-    @Test func 파킹중_취소하면_폴링없이_Task가_종료된다() async throws {
-        mockRepo.getScanStatusResult = .success("PROCESSING")
-
-        sut.handleScenePhase(.background)
-        sut.resumePolling(scanId: 1, houseId: 1)
-        try await waitUntil { sut.isParked }
-        let task = try #require(sut.currentTask)
-
-        sut.cancel()
-
-        // `await task.value`를 직접 기다리면 취소가 파킹을 깨우지 못하는 회귀(좀비 Task)에서 테스트가 영원히 멈춘다.
-        // (.timeLimit은 테스트 Task만 취소하고 이 대기를 끊지 못한다) — 완료를 플래그로 관측해 waitUntil의 제한 시간 안에 실패시킨다
-        let completion = TaskCompletion()
-        let observer = Task { @MainActor in
-            await task.value
-            completion.isDone = true
-        }
-        try await waitUntil { completion.isDone }
-        #expect(completion.isDone, "취소가 파킹을 깨우지 못해 Task가 끝나지 않았습니다")
-        observer.cancel()
-        #expect(mockRepo.getScanStatusCallCount == 0, "취소된 Task는 폴링 없이 종료되어야 합니다")
-    }
-
-    @Test func active가_연속으로_와도_크래시없이_재개된다() async throws {
-        mockRepo.getScanStatusResult = .success("PROCESSING")
-
-        sut.handleScenePhase(.background)
-        sut.resumePolling(scanId: 1, houseId: 1)
-        try await waitUntil { sut.isParked }
-
-        // wake가 멱등하지 않으면(이중 resume) 프로세스가 죽는다
-        sut.handleScenePhase(.active)
-        sut.handleScenePhase(.active)
-
-        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
-        #expect(mockRepo.getScanStatusCallCount > 0, "복귀 이벤트가 중복돼도 폴링이 재개되어야 합니다")
-        sut.clear()
-    }
-
-    /// 처음 10회 실패를 생명주기 전환과 겹치게 만들고, 이후에는 전환을 멈춰 정상 종료시킨다 (무한 대기 방지).
-    /// 전환으로 끊긴 실패가 어느 예산도 깎지 않았다면 총 호출 수는 10 + (예산 소진에 필요한 횟수)가 된다.
-    private func failStatusWithTransitions(on sut: ScanProcessingManager) {
-        mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
-        mockRepo.onGetScanStatus = { [weak sut] callCount in
-            guard let sut, callCount <= 10 else { return }
-            sut.handleScenePhase(.inactive)
-            sut.handleScenePhase(.active)
-        }
-    }
-
-    @Test func 생명주기_전환으로_끊긴_실패는_연속실패_예산을_소모하지_않는다() async throws {
-        // 시도 예산은 넉넉히 두고 연속 실패 예산(3)만 소진되게 한다
-        let sut = ScanProcessingManager(
-            pollConfig: .init(maxAttempts: 100, interval: .milliseconds(10), maxConsecutiveErrors: 3),
-            artifactStore: store,
-            fileCache: mockCache
-        )
-        sut.configure(scanRepository: mockRepo)
-        failStatusWithTransitions(on: sut)
-
-        sut.resumePolling(scanId: 1, houseId: 1)
-        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
-
-        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        #expect(failure.userMessage.hasPrefix("상태 조회 실패"), "연속 실패로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
-        // 전환 10회가 연속 실패로 세어졌다면 3회에서 끝나 총 3회가 된다
-        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 연속 실패 3회 = 13회여야 합니다")
-        #expect(store.restore() == .polling(scanId: 1, houseId: 1), "기록이 유지되어야 재시도·재시작 복구가 가능합니다")
-        mockRepo.onGetScanStatus = nil
-    }
-
-    @Test func 생명주기_전환으로_끊긴_실패는_시도_횟수를_소모하지_않는다() async throws {
-        // 연속 실패 예산은 넉넉히 두고 시도 예산(3)만 소진되게 한다
-        let sut = ScanProcessingManager(
-            pollConfig: .init(maxAttempts: 3, interval: .milliseconds(10), maxConsecutiveErrors: 100),
-            artifactStore: store,
-            fileCache: mockCache
-        )
-        sut.configure(scanRepository: mockRepo)
-        failStatusWithTransitions(on: sut)
-
-        sut.resumePolling(scanId: 1, houseId: 1)
-        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
-
-        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
-        #expect(failure.userMessage == "처리 시간이 초과되었습니다", "시도 횟수 초과로 끝나야 하는데 실제 실패 메시지: \(failure.userMessage)")
-        // 전환은 실제 대기 시간을 만들지 않으므로 attempts를 되돌려야 한다 — 되돌리지 않으면 3회에서 끝난다
-        #expect(mockRepo.getScanStatusCallCount == 13, "전환으로 끊긴 10회 + 정상 시도 3회 = 13회여야 합니다")
-        mockRepo.onGetScanStatus = nil
-    }
+    // MARK: - 폴링 타임아웃
 
     @Test func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
         let sut = ScanProcessingManager(
@@ -498,6 +375,121 @@ final class ScanProcessingManagerTests {
         #expect(sut.activeScan?.phase == .polling)
         try await waitUntil { mockRepo.getScanStatusCallCount > callCountBeforeRetry }
         #expect(mockRepo.getScanStatusCallCount > callCountBeforeRetry, "재시도 시 재폴링부터 수행해야 합니다")
+        sut.clear()
+    }
+
+    // MARK: - 백그라운드 연장
+
+    private typealias Display = MockScanBackgroundContinuation.Display
+
+    /// 업로드 실패 후 재시도 대기 상태를 만든다 (zip·기록·실패 상태)
+    private func prepareUploadRetry() throws {
+        let zipURL = store.zipDestinationURL()
+        try Data("zip".utf8).write(to: zipURL)
+        store.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: 1))
+        sut.setActiveScan(
+            ScanProcessingManager.ActiveScan(
+                scanId: 0, houseId: 1,
+                phase: .failed(.init(userMessage: "업로드 실패", retrySource: .upload(zipURL: zipURL)))
+            )
+        )
+    }
+
+    @Test func 생성_대기중에도_연장을_유지하고_폴링할수록_진행률이_오른다() async throws {
+        mockRepo.uploadScanResult = .success(ScanResult(scanId: 10, status: "PROCESSING"))
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+        try prepareUploadRetry()
+
+        sut.retry()
+        try await waitUntil { mockRepo.getScanStatusCallCount >= 1 }
+
+        // 목 저장소는 전송량을 보고하지 않으므로 업로드가 끝까지 전송된 상황을 직접 만든다
+        let uploadProgress = try #require(mockRepo.lastUploadProgress)
+        uploadProgress.totalUnitCount = 100
+        uploadProgress.completedUnitCount = 100
+        let tracked = try #require(mockContinuation.trackedProgresses.first)
+        let early = tracked.fractionCompleted
+        let callCount = mockRepo.getScanStatusCallCount
+        try await waitUntil { mockRepo.getScanStatusCallCount >= callCount + 2 }
+
+        #expect(early > 0.4, "업로드가 끝난 뒤 첫 폴링부터 업로드 완료 지점(40%)을 넘어야 합니다")
+        #expect(tracked.fractionCompleted > early, "생성 대기 중에도 폴링할수록 진행률이 올라야 합니다")
+        #expect(tracked.fractionCompleted < 0.95, "완료 전에는 폴링 몫의 끝(95%)을 넘지 않아야 합니다")
+        #expect(mockContinuation.endResults.isEmpty, "생성 대기 중에도 연장이 유지돼야 합니다")
+        #expect(mockContinuation.displays.last == Display(title: "서버 처리 중", subtitle: "3D 모델을 생성하고 있습니다"))
+        sut.clear()
+    }
+
+    @Test func 프리뷰_다운로드까지_끝나면_완료_문구로_바꾸고_성공으로_끝낸다() async throws {
+        mockRepo.uploadScanResult = .success(ScanResult(scanId: 10, status: "PROCESSING"))
+        mockRepo.getScanStatusResult = .success("COMPLETED")
+        try prepareUploadRetry()
+
+        sut.retry()
+        try await waitUntil { if case .completed = sut.activeScan?.phase { true } else { false } }
+
+        #expect(mockContinuation.displays.last == Display(title: "스캔 완료", subtitle: "3D 모델이 준비되었습니다"))
+        #expect(mockContinuation.endResults == [true])
+    }
+
+    @Test func 업로드_실패시_실패_문구로_바꾸고_실패로_끝낸다() async throws {
+        let error = RepositoryError.transportError(code: .networkConnectionLost)
+        mockRepo.uploadScanResult = .failure(error)
+        try prepareUploadRetry()
+
+        sut.retry()
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        #expect(mockContinuation.displays.last == Display(title: "스캔 실패", subtitle: "업로드 실패: \(error.userMessage)"))
+        #expect(mockContinuation.endResults == [false])
+    }
+
+    // MARK: - 완료 알림
+
+    @Test func 프리뷰까지_끝나면_집_정보를_담아_완료_알림을_보낸다() async throws {
+        mockRepo.getScanStatusResult = .success("COMPLETED")
+
+        sut.resumePolling(scanId: 7, houseId: 3)
+        try await waitUntil { if case .completed = sut.activeScan?.phase { true } else { false } }
+
+        // 알림을 누르면 이 집의 상태 시트로 이동한다
+        #expect(mockNotifier.notifications == [.init(title: "스캔 완료", body: "3D 모델이 준비되었습니다", houseId: 3)])
+    }
+
+    @Test func 실패로_끝나면_완료_알림을_보내지_않는다() async throws {
+        mockRepo.getScanStatusResult = .success("FAILED")
+
+        sut.resumePolling(scanId: 7, houseId: 1)
+        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+
+        #expect(mockNotifier.notifications.isEmpty)
+    }
+
+    @Test func 업로드중_취소하면_성공으로_끝내지_않는다() async throws {
+        // 취소를 무시하고 진행하면 끝까지 성공하도록 모든 단계를 성공으로 둔다
+        mockRepo.uploadScanResult = .success(ScanResult(scanId: 10, status: "PROCESSING"))
+        mockRepo.getScanStatusResult = .success("COMPLETED")
+        try prepareUploadRetry()
+
+        sut.retry()
+        let task = try #require(sut.currentTask)
+        sut.cancel()
+        await task.value
+
+        // 취소 후 늦게 도착한 업로드 응답이 처리를 이어가 연장을 성공으로 덮어쓰면 안 된다.
+        // endResults는 연장이 끝난 뒤의 호출을 무시하므로 모든 호출 기록으로 검증한다
+        #expect(mockContinuation.endResults == [false])
+        #expect(mockContinuation.allEndCalls.contains(true) == false, "취소된 처리가 연장을 성공으로 끝냈습니다")
+        #expect(mockNotifier.notifications.isEmpty, "취소된 처리가 완료 알림을 보냈습니다")
+    }
+
+    @Test func 폴링_재개는_백그라운드_연장을_요청하지_않는다() async throws {
+        mockRepo.getScanStatusResult = .success("PROCESSING")
+
+        sut.resumePolling(scanId: 1, houseId: 1)
+        try await waitUntil { mockRepo.getScanStatusCallCount > 0 }
+
+        #expect(mockContinuation.trackedProgresses.isEmpty)
         sut.clear()
     }
 }
