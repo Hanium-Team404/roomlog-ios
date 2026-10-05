@@ -4,6 +4,10 @@
 <dict>
 	<key>BASE_URL</key>
 	<string>${BASE_URL}</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).scan-upload.*</string>
+	</array>
 	<key>KAKAO_NATIVE_APP_KEY</key>
 	<string>${KAKAO_NATIVE_APP_KEY}</string>
 	<key>UIAppFonts</key>

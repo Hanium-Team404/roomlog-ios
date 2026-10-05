@@ -23,19 +23,28 @@ final class ScanProcessingManager {
     private let fileCache: PLYFileCacheProtocol
     private let pollConfig: PollConfig
     private let artifactStore: ScanArtifactStore
-    private let gate = ScenePhaseGate()
+    private let backgroundContinuation: ScanBackgroundContinuing
+    private let completionNotifier: ScanCompletionNotifying
     private var processingTask: Task<Void, Never>?
 
     // MARK: - Setup
 
+    /// - Parameters:
+    ///   - backgroundContinuation: nil이면 앱 공용 인스턴스.
+    ///   - completionNotifier: nil이면 기본 구현.
+    ///   MainActor 격리 타입은 기본 인자로 둘 수 없어 본문에서 채운다
     init(
         pollConfig: PollConfig = PollConfig(),
         artifactStore: ScanArtifactStore = ScanArtifactStore(),
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+        fileCache: PLYFileCacheProtocol = PLYFileCache.shared,
+        backgroundContinuation: ScanBackgroundContinuing? = nil,
+        completionNotifier: ScanCompletionNotifying? = nil
     ) {
         self.pollConfig = pollConfig
         self.artifactStore = artifactStore
         self.fileCache = fileCache
+        self.backgroundContinuation = backgroundContinuation ?? ScanBackgroundContinuation.shared
+        self.completionNotifier = completionNotifier ?? ScanCompletionNotifier()
     }
 
     func configure(scanRepository: ScanRepositoryProtocol) {
@@ -60,6 +69,8 @@ final class ScanProcessingManager {
         // 이전 스캔의 기록·zip이 남아 있으면 압축·업로드 중 앱 종료 시
         // 재시작 복구가 다른 집의 예전 스캔을 되살린다
         artifactStore.clear()
+        // 처리가 끝나면 완료 알림을 보내므로, 유저가 처리를 시작하는 시점에 권한을 묻는다
+        completionNotifier.requestAuthorization()
         start(.full(encoder: encoder), houseId: houseId)
     }
 
@@ -84,7 +95,7 @@ final class ScanProcessingManager {
         artifactStore.discardDataset(url)
     }
 
-    // MARK: - 종료·신호
+    // MARK: - 종료
 
     /// 진행 중인 스캔 취소. 서버 스캔이 있으면 취소 요청 Task를 돌려준다 —
     /// 로그아웃처럼 요청 완료 후에 이어갈 작업(토큰 삭제)이 있으면 await해서 순서를 보장한다.
@@ -105,11 +116,6 @@ final class ScanProcessingManager {
         reset()
     }
 
-    /// 앱 lifecycle 전환 시 호출
-    func handleScenePhase(_ phase: ScenePhase) {
-        gate.update(phase)
-    }
-
     #if DEBUG
     /// 폴링 기록을 남기고 폴링 단계부터 시작 (재시작 복구 시뮬레이션)
     func resumePolling(scanId: Int, houseId: Int) {
@@ -121,8 +127,6 @@ final class ScanProcessingManager {
         activeScan = scan
     }
 
-    /// 테스트에서 폴링 루프가 실제로 파킹됐는지 관측하기 위한 노출
-    var isParked: Bool { gate.isParked }
     var currentTask: Task<Void, Never>? { processingTask }
     #endif
 
@@ -135,21 +139,44 @@ final class ScanProcessingManager {
     private func start(_ entry: PipelineEntry, houseId: Int) {
         cancelProcessingTask()
         activeScan = ActiveScan(scanId: entry.scanId, houseId: houseId, phase: entry.initialPhase)
+
+        // 백그라운드 연장은 유저가 시작한 처리(촬영 완료·업로드 재시도)에 요청해 프리뷰 완료까지 유지한다.
+        // 폴링·다운로드 진입점은 재시작 복원과 공유해 유저 동작인지 구분할 수 없으므로 대상에서 뺀다
+        let progress: Progress?
+        switch entry {
+        case .full:
+            progress = Progress.discreteProgress(totalUnitCount: 100)
+        case .upload:
+            // 압축이 이미 끝난 재시도라 그 몫을 채운 채 시작한다
+            let tracked = Progress.discreteProgress(totalUnitCount: 100)
+            tracked.completedUnitCount = ProgressShare.zip
+            progress = tracked
+        case .polling, .download:
+            progress = nil
+        }
+        if let progress {
+            let phase = entry.initialPhase
+            backgroundContinuation.begin(tracking: progress, title: phase.title, subtitle: phase.message)
+        }
+
         processingTask = Task { [weak self] in
             do {
                 switch entry {
                 case .full(let encoder):
-                    try await self?.fullProcess(encoder: encoder, houseId: houseId)
+                    try await self?.fullProcess(encoder: encoder, houseId: houseId, progress: progress)
                 case .upload(let zipURL):
-                    try await self?.uploadThenPoll(zipURL: zipURL, houseId: houseId)
+                    try await self?.uploadThenPoll(zipURL: zipURL, houseId: houseId, progress: progress)
                 case .polling(let scanId):
-                    try await self?.pollAndDownload(scanId: scanId)
+                    try await self?.pollAndDownload(scanId: scanId, progress: nil)
                 case .download(let scanId):
                     try await self?.downloadPreview(scanId: scanId)
                 }
             } catch let failure as ScanFailure {
                 // 취소된 Task의 늦은 실패가 정리·교체된 상태를 되살리지 않도록 한다
                 guard let self, !Task.isCancelled else { return }
+                let failedPhase = ProcessingPhase.failed(failure)
+                self.backgroundContinuation.update(title: failedPhase.title, subtitle: failedPhase.message)
+                self.backgroundContinuation.end(success: false)
                 if failure.retrySource == nil {
                     self.artifactStore.clear()
                 }
@@ -157,7 +184,7 @@ final class ScanProcessingManager {
                 self.activeScan = ActiveScan(
                     scanId: self.activeScan?.scanId ?? entry.scanId,
                     houseId: houseId,
-                    phase: .failed(failure)
+                    phase: failedPhase
                 )
             } catch {
                 // CancellationError — 취소·교체로 죽는 Task는 상태를 건드리지 않고 조용히 끝난다
@@ -165,10 +192,10 @@ final class ScanProcessingManager {
         }
     }
 
-    /// 진행 중인 Task를 취소하고, 게이트에 파킹돼 있으면 깨워서 취소를 인지시킨다
+    /// 진행 중인 Task를 취소하고 백그라운드 연장도 함께 끝낸다
     private func cancelProcessingTask() {
         processingTask?.cancel()
-        gate.wake()
+        backgroundContinuation.end(success: false)
     }
 
     /// 취소·소비 공통 정리: Task 취소, 상태 제거, 기록·zip 폐기
@@ -183,6 +210,15 @@ final class ScanProcessingManager {
     private func advance(to phase: ProcessingPhase, scanId: Int? = nil) {
         guard let current = activeScan else { return }
         activeScan = ActiveScan(scanId: scanId ?? current.scanId, houseId: current.houseId, phase: phase)
+        backgroundContinuation.update(title: phase.title, subtitle: phase.message)
+    }
+
+    /// 백그라운드 연장 진행률 배분(전체 100). 남은 5는 프리뷰까지 받으면 채운다.
+    /// 서버 처리는 진행률을 알 수 없어 폴링 시도 예산을 쓴 만큼 채운다 — 진행이 멈춘 연장은 시스템이 먼저 끊는다
+    private enum ProgressShare {
+        static let zip: Int64 = 15
+        static let upload: Int64 = 25
+        static let polling: Int64 = 55
     }
 
     // MARK: - Restore
@@ -208,11 +244,12 @@ final class ScanProcessingManager {
     // MARK: - Pipeline (실행 순서: fullProcess → uploadThenPoll → pollAndDownload → downloadPreview)
     // 실패는 ScanFailure를 던져 디스패처가 기록하고, 취소는 CancellationError로 조용히 끝난다.
 
-    private func fullProcess(encoder: DatasetEncoder, houseId: Int) async throws {
+    private func fullProcess(encoder: DatasetEncoder, houseId: Int, progress: Progress?) async throws {
         // zip 완성 전에는 어떤 이유로 떠나든 데이터셋을 지워야 한다(재시도 경로가 없다) —
         // 탈출 경로마다 개별 정리하지 않고 catch 한 곳이 불변식을 지킨다
         let datasetDir = encoder.datasetDirectoryURL
         let zipURL = artifactStore.zipDestinationURL()
+        let zipProgress = progress.map { Progress(totalUnitCount: 0, parent: $0, pendingUnitCount: ProgressShare.zip) }
         do {
             _ = try repository()
 
@@ -223,7 +260,7 @@ final class ScanProcessingManager {
             // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.
             // 생성 위치는 영속 디렉토리 — tmp는 앱 종료 시 OS가 청소할 수 있어 재시작 복구가 불가능하다
             try await Task.detached(priority: .userInitiated) {
-                try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false)
+                try FileManager.default.zipItem(at: datasetDir, to: zipURL, shouldKeepParent: false, progress: zipProgress)
             }.value
             try Task.checkCancellation()
         } catch {
@@ -244,15 +281,16 @@ final class ScanProcessingManager {
 
         // 3. 업로드부터는 재시도 경로와 공유한다
         advance(to: .uploading)
-        try await uploadThenPoll(zipURL: zipURL, houseId: houseId)
+        try await uploadThenPoll(zipURL: zipURL, houseId: houseId, progress: progress)
     }
 
     /// zip 업로드 후 폴링 단계로 이어간다. 최초 업로드와 재시도 공용 경로.
-    private func uploadThenPoll(zipURL: URL, houseId: Int) async throws {
+    private func uploadThenPoll(zipURL: URL, houseId: Int, progress: Progress?) async throws {
         let scanRepository = try repository()
+        let uploadProgress = progress.map { Progress(totalUnitCount: 0, parent: $0, pendingUnitCount: ProgressShare.upload) }
         let scanResult: ScanResult
         do {
-            scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL)
+            scanResult = try await scanRepository.uploadScan(houseId: houseId, fileURL: zipURL, progress: uploadProgress)
         } catch {
             // 기록된 zip은 취소 주체(reset·startFullProcess)가 스토어로 폐기한다
             if Task.isCancelled { throw CancellationError() }
@@ -270,18 +308,19 @@ final class ScanProcessingManager {
         let scanId = scanResult.scanId
         artifactStore.markUploaded(scanId: scanId, houseId: houseId)
         advance(to: .polling, scanId: scanId)
-        try await pollAndDownload(scanId: scanId)
+        try await pollAndDownload(scanId: scanId, progress: progress)
     }
 
-    private func pollAndDownload(scanId: Int) async throws {
+    private func pollAndDownload(scanId: Int, progress: Progress?) async throws {
         let scanRepository = try repository()
+        let pollProgress = progress.map {
+            Progress(totalUnitCount: Int64(pollConfig.maxAttempts), parent: $0, pendingUnitCount: ProgressShare.polling)
+        }
 
         // COMPLETED가 나올 때까지 폴링
         var attempts = 0
         var consecutiveErrors = 0
         while true {
-            // 백그라운드면 문이 열릴 때까지 파킹, 포그라운드면 즉시 통과
-            await gate.waitUntilOpen()
             try Task.checkCancellation()
 
             attempts += 1
@@ -290,9 +329,8 @@ final class ScanProcessingManager {
                 // 진행 기록을 유지해 재시도(재폴링)와 앱 재시작 복구가 가능하게 한다
                 throw ScanFailure(userMessage: "처리 시간이 초과되었습니다", retrySource: .polling(scanId: scanId))
             }
+            pollProgress?.completedUnitCount = Int64(attempts)
 
-            // 요청이 나가 있는 동안 생명주기 전환이 있었는지 판별하기 위해 기록
-            let transitionMark = gate.transitionCount
             do {
                 let status = try await scanRepository.getScanStatus(scanId: scanId).uppercased()
                 // 취소 후 늦게 도착한 응답이 다운로드로 진행하지 않도록 한다
@@ -307,13 +345,6 @@ final class ScanProcessingManager {
                 }
             } catch let error as RepositoryError {
                 try Task.checkCancellation()
-                // 요청 도중 생명주기 전환이 있었다면 전환으로 끊긴 실패일 수 있으므로
-                // 횟수에 세지 않고 즉시 재시도한다 (백그라운드면 루프 상단에서 파킹).
-                // continue는 sleep을 건너뛰어 시간이 흐르지 않으므로 attempts도 되돌린다
-                if transitionMark != gate.transitionCount {
-                    attempts -= 1
-                    continue
-                }
                 consecutiveErrors += 1
                 #if DEBUG
                 print("[ScanProcessing] scanId=\(scanId) 상태 조회 실패(\(consecutiveErrors)/\(pollConfig.maxConsecutiveErrors)): \(error)")
@@ -347,7 +378,12 @@ final class ScanProcessingManager {
             let localURL = try await fileCache.download(from: remoteURL, roomId: scanId)
             // 취소 후 완료된 다운로드(캐시 히트 등)가 취소된 스캔을 .completed로 되살리지 않도록 한다
             try Task.checkCancellation()
-            advance(to: .completed(fileURL: localURL))
+            let completed = ProcessingPhase.completed(fileURL: localURL)
+            advance(to: completed)
+            backgroundContinuation.end(success: true)
+            if let houseId = activeScan?.houseId {
+                completionNotifier.notify(title: completed.title, body: completed.message, houseId: houseId)
+            }
         } catch let failure as ScanFailure {
             throw failure
         } catch {

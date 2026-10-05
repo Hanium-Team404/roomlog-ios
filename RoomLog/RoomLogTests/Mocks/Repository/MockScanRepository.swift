@@ -16,6 +16,7 @@ final class MockScanRepository: ScanRepositoryProtocol {
     var getScanStatusCallCount = 0
     var getScanPreviewCallCount = 0
     var cancelScanCallCount = 0
+    var lastUploadProgress: Progress?
 
     // MARK: - Stub Results
 
@@ -24,22 +25,16 @@ final class MockScanRepository: ScanRepositoryProtocol {
     var getScanPreviewResult: Result<String, RepositoryError> = .success("https://example.com/preview.ply")
     var cancelScanResult: Result<Void, RepositoryError> = .success(())
 
-    // MARK: - Hooks
-
-    /// 상태 조회가 진행되는 도중에 테스트가 개입하기 위한 훅. 호출 횟수를 인자로 받는다.
-    /// (예: 요청과 생명주기 전환을 겹치게 만들기)
-    var onGetScanStatus: ((Int) -> Void)?
-
     // MARK: - ScanRepositoryProtocol
 
-    func uploadScan(houseId: Int, fileURL: URL) async throws(RepositoryError) -> ScanResult {
+    func uploadScan(houseId: Int, fileURL: URL, progress: Progress?) async throws(RepositoryError) -> ScanResult {
         uploadScanCallCount += 1
+        lastUploadProgress = progress
         return try uploadScanResult.get()
     }
 
     func getScanStatus(scanId: Int) async throws(RepositoryError) -> String {
         getScanStatusCallCount += 1
-        onGetScanStatus?(getScanStatusCallCount)
         return try getScanStatusResult.get()
     }
 

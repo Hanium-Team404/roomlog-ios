@@ -20,11 +20,12 @@ final class ScanRepository: ScanRepositoryProtocol {
     }
 
     // MARK: - Function
-    func uploadScan(houseId: Int, fileURL: URL) async throws(RepositoryError) -> ScanResult {
+    func uploadScan(houseId: Int, fileURL: URL, progress: Progress?) async throws(RepositoryError) -> ScanResult {
         try await adapter.requestDecoded(
             ScanTarget.uploadScan(houseId: houseId, fileURL: fileURL),
             as: ScanResultResponseDTO.self,
-            decoder: decoder
+            decoder: decoder,
+            uploadProgress: progress
         ).toDomain()
     }
 

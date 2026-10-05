@@ -78,6 +78,32 @@ extension ScanProcessingManager {
     }
 }
 
+// MARK: - 단계 문구
+
+/// 상태 시트와 Live Activity가 같은 문구를 쓰도록 한 곳에 둔다
+extension ScanProcessingManager.ProcessingPhase {
+    var title: String {
+        switch self {
+        case .zipping: "압축 중"
+        case .uploading: "업로드 중"
+        case .polling: "서버 처리 중"
+        case .completed: "스캔 완료"
+        case .failed: "스캔 실패"
+        }
+    }
+
+    /// 단계 설명 첫 줄. 실패는 원인별 문구를 그대로 쓴다
+    var message: String {
+        switch self {
+        case .zipping: "스캔 데이터를 압축하고 있습니다"
+        case .uploading: "스캔 데이터를 서버에 전송하고 있습니다"
+        case .polling: "3D 모델을 생성하고 있습니다"
+        case .completed: "3D 모델이 준비되었습니다"
+        case .failed(let failure): failure.userMessage
+        }
+    }
+}
+
 extension ScanProcessingManager.RetrySource {
     /// 재시도 소스를 파이프라인 진입점으로 변환
     var entry: ScanProcessingManager.PipelineEntry {
