@@ -16,7 +16,8 @@ final class LoginViewModel {
     // MARK: - State
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
-    private(set) var loginState: Bool = false
+    /// 로그인 성공한 계정. 값이 생기면 뷰가 메인으로 전환한다
+    private(set) var loggedInUserId: Int?
 
     private let loginUseCase: LoginUseCaseProtocol
 
@@ -47,7 +48,7 @@ final class LoginViewModel {
             print("✅ [Login] accessToken: \(user.tokenPair.accessToken.prefix(20))...")
             print("✅ [Login] refreshToken: \(user.tokenPair.refreshToken.prefix(20))...")
             #endif
-            loginState = true
+            loggedInUserId = user.userId
         } catch {
             #if DEBUG
             print("❌ [Login] error: \(error)")
