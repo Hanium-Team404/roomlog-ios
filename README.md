@@ -86,11 +86,11 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 
 - **앱 재시작 복구** — 진행 단계를 `ScanArtifactStore`가 Codable 단일 레코드(`uploadReady` / `polling`)로 기록해 업로드 성공 시 전환이 원자적입니다. 폴링 기록은 재폴링으로, 업로드 미완 기록은 재시도 가능한 실패 상태로 복원됩니다.
 - **zip 영속화** — zip은 Application Support의 영속 디렉터리에 두고(백업 제외) 기록에는 파일명만 저장해 컨테이너 경로가 바뀌어도 복원됩니다. 기록에 없는 zip·데이터셋은 재실행 시 고아 청소로 정리합니다.
-- **백그라운드 파킹** — `ScenePhaseGate`가 비활성 상태에서 폴링 루프를 `CheckedContinuation`으로 파킹하고 복귀 즉시 깨웁니다. 전환 중에 끊긴 요청 실패는 타임아웃 횟수에서 제외합니다.
+- **백그라운드 연장** — 촬영 완료·업로드 재시도로 시작한 처리는 `BGContinuedProcessingTask`로 프리뷰 완료까지 앱이 suspend되지 않게 하고, 진행률과 단계 문구를 Live Activity에 표시합니다(서버 처리 중에는 진행률을 알 수 없어 폴링 시도 예산을 쓴 만큼 40~95%로 표시). 단계 문구는 상태 시트와 같은 정의를 공유합니다. 유저가 중지하거나 시스템이 연장을 끝내도 스캔은 취소하지 않고 "스캔 일시 중지"로 표시하며, suspend로 멈춘 처리는 복귀 시 이어집니다. 처리가 끝나면 앱 사용 중이든 내려가 있든 로컬 알림으로 완료를 알리고, 알림을 누르면 해당 집의 방 목록으로 이동해 스캔 상태 시트를 엽니다.
 - **실패 지점별 재시도** — `RetrySource`(upload / polling / download)를 실패 페이로드에 담아 실패한 단계부터 재시도합니다. `.failed` 기록과 재시도 불가 시 폐기를 디스패처 한 곳에서 처리해 재시도 가능성과 재시작 복구 가능성이 항상 일치합니다.
 - **Cross-house 격리** — 기록과 활성 스캔이 `houseId`를 함께 들고 있어 다른 집의 스캔과 섞이지 않습니다.
-- **고정 간격 폴링** — 7초 간격 최대 60회(생명주기 전환으로 끊긴 요청은 횟수 제외), 연속 에러 3회면 실패로 전이. 폴링 타임아웃은 서버 스캔을 지우지 않고 재폴링 가능한 실패로 남깁니다.
-- **취소 안전성** — 단계마다 `checkCancellation`으로 늦게 도착한 응답을 무시하고, 파킹 중이면 게이트를 깨워 취소를 전달합니다.
+- **고정 간격 폴링** — 7초 간격 최대 60회, 연속 에러 3회면 실패로 전이. 폴링 타임아웃은 서버 스캔을 지우지 않고 재폴링 가능한 실패로 남깁니다.
+- **취소 안전성** — 단계마다 `checkCancellation`으로 늦게 도착한 응답을 무시합니다.
 
 ### 3. ARKit 멀티 채널 스캔 데이터 인코딩
 
@@ -144,16 +144,15 @@ Feature/
 
 ```text
 RoomLog/RoomLog/
-├── App/                  — 엔트리 포인트 (RoomLogApp)
+├── App/                  — 엔트리 포인트 (RoomLogApp), 알림 처리 (AppNotificationDelegate — 포그라운드 배너, 탭 시 화면 이동)
 ├── Core/
-│   ├── AppLifecycle/     — ScenePhaseGate
 │   ├── Config/           — 환경 설정 (BASE_URL, KAKAO_NATIVE_APP_KEY)
 │   ├── Common/           — Extensions, UIComponents
 │   ├── DIContainer/      — 의존성 컨테이너
 │   ├── Error/            — RepositoryError, NetworkError, ServerErrorCode
 │   ├── Navigation/       — AppRouter, PathStore, NavigationDestination
 │   ├── NetworkAdapter/   — NetworkClient(actor), TokenStore, MoyaAdapter
-│   └── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState
+│   └── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState, ScanBackgroundContinuation, ScanCompletionNotifier
 ├── Features/             — Auth · Home · Scan · Viewer · Defect · Comparison · Estimate · Chatbot · MyPage · Splash · Tab
 ├── Resources/            — Assets, Fonts, EnvironmentKey
 └── Utilities/            — FileCache(PLYFileCache, PLYFileCacheProtocol), Keychain, PreviewMocks
@@ -161,8 +160,8 @@ RoomLog/RoomLog/
 
 ## 🧪 테스트
 
-- **101개** — Swift Testing 69 + XCTest 32 (`RoomLogTests/`). Xcode ⌘U 또는 `xcodebuild test`로 실행하며, CI에서도 실행됩니다.
-- 스캔 파이프라인 37개(`ScanProcessingManagerTests` 23 · `ScanArtifactStoreTests` 14) — 재시작 복구, 파킹 중 취소, 이중 resume, 전환 중 끊긴 실패, 재시도 불가 시 폐기 등 실패 경로를 위주로 검증합니다.
+- **102개** — Swift Testing 70 + XCTest 32 (`RoomLogTests/`). Xcode ⌘U 또는 `xcodebuild test`로 실행하며, CI에서도 실행됩니다.
+- 스캔 파이프라인 38개(`ScanProcessingManagerTests` 24 · `ScanArtifactStoreTests` 14) — 재시작 복구, 백그라운드 연장 시작·종료, 완료 알림, 재시도 불가 시 폐기 등 실패 경로를 위주로 검증합니다.
 - ViewModel 테스트는 Mock Repository·Mock PLY 캐시를 주입해 상태 전이와 호출 횟수를 단언하며, 실행 중 네트워크 요청과 실제 캐시 디렉터리 접근이 없습니다.
 
 ## 🤖 CI

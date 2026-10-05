@@ -42,15 +42,14 @@ Xcode를 통해 빌드 및 실행하며, `RoomLog/RoomLog.xcodeproj` 파일을 �
 
 ```text
 RoomLog/RoomLog/
-├── App/                  — 엔트리 포인트 (RoomLogApp)
+├── App/                  — 엔트리 포인트 (RoomLogApp), 알림 처리 (AppNotificationDelegate — 포그라운드 배너, 탭 시 화면 이동)
 ├── Core/
-│   ├── AppLifecycle/     — ScenePhaseGate (scenePhase 기반 파킹/웨이크 게이트)
 │   ├── Config/           — Config.swift, Config.xcconfig (BASE_URL, KAKAO_NATIVE_APP_KEY)
 │   ├── Common/           — Extensions, UIComponents
 │   ├── DIContainer/      — DIContainer
 │   ├── Error/            — RepositoryError, NetworkError, ServerErrorCode
 │   ├── Navigation/       — AppRouter, NavigationDestination, PathStore, NavigationRoutingView
-│   ├── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState (스캔 파이프라인 앱 전역 서비스)
+│   ├── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState, ScanBackgroundContinuation, ScanCompletionNotifier (스캔 파이프라인 앱 전역 서비스, 백그라운드 연장, 완료 알림)
 │   └── NetworkAdapter/
 │       ├── Base/         — BaseTargetType, APIResponse, EmptyResult
 │       ├── NetworkClient/— NetworkClient(actor), TokenStore, TokenPair, DefaultAuthenticationPolicy
