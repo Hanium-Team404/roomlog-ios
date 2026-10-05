@@ -47,8 +47,7 @@ struct ViewerView: View {
                 )
             }
             Task {
-                await viewModel?.fetchHouses()
-                await viewModel?.fetchRooms()
+                await viewModel?.refresh()
             }
         }
     }
@@ -61,8 +60,7 @@ private extension ViewerView {
         Menu {
             ForEach(viewModel?.houses ?? []) { house in
                 Button {
-                    viewModel?.selectedHouse = house
-                    Task { await viewModel?.fetchRooms() }
+                    Task { await viewModel?.selectHouse(house) }
                 } label: {
                     HStack {
                         Text(house.name)
@@ -195,6 +193,11 @@ private extension ViewerView {
 
     @ViewBuilder
     func recentListCard(pathStore: PathStore) -> some View {
+        // 기존 목록이 있어도 조회 실패를 알 수 있도록 목록과 별개로 표시한다
+        if let viewModel, !viewModel.isLoading, let errorMessage = viewModel.errorMessage {
+            errorView(message: errorMessage)
+        }
+
         if let viewModel, !viewModel.rooms.isEmpty {
             VStack(spacing: 16) {
                 ForEach(Array(viewModel.rooms.prefix(3).enumerated()), id: \.element.id) { index, room in
@@ -215,24 +218,23 @@ private extension ViewerView {
             ProgressView()
                 .frame(maxWidth: .infinity)
                 .padding()
-        } else if let errorMessage = viewModel?.errorMessage {
-            VStack(spacing: 12) {
-                Text(errorMessage)
-                    .font(.medium, 14)
-                    .foregroundStyle(Color.blueGray500)
-                    .multilineTextAlignment(.center)
-                Button("다시 시도") {
-                    Task {
-                        await viewModel?.fetchHouses()
-                        await viewModel?.fetchRooms()
-                    }
-                }
-                .font(.semibold, 14)
-                .foregroundStyle(Color.mutedBlue)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(24)
         }
+    }
+
+    func errorView(message: String) -> some View {
+        VStack(spacing: 12) {
+            Text(message)
+                .font(.medium, 14)
+                .foregroundStyle(Color.blueGray500)
+                .multilineTextAlignment(.center)
+            Button("다시 시도") {
+                Task { await viewModel?.refresh() }
+            }
+            .font(.semibold, 14)
+            .foregroundStyle(Color.mutedBlue)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
     }
 }
 
