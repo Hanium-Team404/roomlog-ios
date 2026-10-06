@@ -71,16 +71,23 @@ final class AppRouter {
 
     /// `task`가 끝나거나 `timeout`이 지나면 반환한다. 시간이 지나도 `task` 자체는 취소하지 않는다.
     /// `withTaskGroup`은 자식이 전부 끝나야 반환하는데 `task.value` 대기는 취소돼도 깨어나지 못해 상한이 지켜지지 않으므로,
-    /// 먼저 끝나는 쪽이 스트림을 닫는 방식으로 경쟁시킨다. 늦은 쪽은 그대로 돌다가 알아서 끝난다
-    static func wait(for task: Task<Void, Never>, upTo timeout: Duration) async {
+    /// 먼저 끝나는 쪽이 스트림을 닫는다. 대기가 끝나면 타이머만 취소하고 원래 작업은 유지한다
+    static func wait(
+        for task: Task<Void, Never>,
+        upTo timeout: Duration,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) async {
         let firstFinished = AsyncStream<Void> { continuation in
             Task {
                 await task.value
                 continuation.finish()
             }
-            Task {
-                try? await Task.sleep(for: timeout)
+            let timeoutTask = Task {
+                try? await sleep(timeout)
                 continuation.finish()
+            }
+            continuation.onTermination = { @Sendable _ in
+                timeoutTask.cancel()
             }
         }
         for await _ in firstFinished {}
