@@ -26,7 +26,13 @@ struct MoyaNetworkAdapter {
     /// - Parameter uploadProgress: 전달하면 요청 바디 전송량을 반영한다
     func request<T: TargetType>(_ target: T, uploadProgress: Progress? = nil) async throws -> Moya.Response {
         // Moya TargetType을 URLRequest로 변환
-        let urlRequest = try buildURLRequest(target)
+        let (urlRequest, body) = try buildURLRequest(target)
+        // 어댑터가 만든 임시 바디 파일은 요청(401 재시도 포함)이 끝난 뒤 지운다
+        defer {
+            if case .file(let url, isTemporary: true) = body {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
 
         #if DEBUG
         logRequest(urlRequest)
@@ -35,7 +41,12 @@ struct MoyaNetworkAdapter {
         do {
             // NetworkClient(토큰 자동 갱신 지원)를 통해 요청
             let delegate = uploadProgress.map { UploadProgressDelegate(progress: $0) }
-            let (data, httpResponse) = try await networkClient.request(urlRequest, delegate: delegate)
+            let (data, httpResponse) = switch body {
+            case .inline:
+                try await networkClient.request(urlRequest, delegate: delegate)
+            case .file(let url, _):
+                try await networkClient.upload(urlRequest, fromFile: url, delegate: delegate)
+            }
 
             #if DEBUG
             logResponse(httpResponse, data: data, request: urlRequest)
@@ -132,13 +143,22 @@ extension MoyaNetworkAdapter {
     /// 대용량 zip 업로드가 기본 60초 요청 타임아웃을 초과할 수 있어 업로드 요청만 상향한다
     private static let uploadTimeoutInterval: TimeInterval = 300
 
-    private func buildURLRequest<T: TargetType>(_ target: T) throws -> URLRequest {
+    /// 요청 바디의 위치. 업로드는 수십~수백 MB zip을 메모리에 올리지 않도록 파일에서 바로 전송한다
+    private enum RequestBody {
+        /// `request.httpBody`에 실려 있다
+        case inline
+        /// 파일에서 전송한다. `isTemporary`면 어댑터가 만든 것이므로 전송 후 삭제한다
+        case file(URL, isTemporary: Bool)
+    }
+
+    private func buildURLRequest<T: TargetType>(_ target: T) throws -> (URLRequest, RequestBody) {
         // 1. URL 구성 (baseURL + path)
         let url = target.baseURL.appending(path: target.path)
 
         // 2. URLRequest 생성
         var request = URLRequest(url: url)
         request.httpMethod = target.method.rawValue
+        var body: RequestBody = .inline
 
         // 3. Headers 설정
         target.headers?.forEach {
@@ -171,18 +191,18 @@ extension MoyaNetworkAdapter {
             request = try encodeURLParameters(request, parameters: urlParameters)
 
         case .uploadFile(let fileURL):
-            request.httpBody = try Data(contentsOf: fileURL)
+            body = .file(fileURL, isTemporary: false)
             request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadMultipart(let multipartData):
-            let (body, boundary) = try buildMultipartBody(multipartData)
-            request.httpBody = body
+            let (bodyURL, boundary) = try writeMultipartBody(multipartData)
+            body = .file(bodyURL, isTemporary: true)
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .uploadCompositeMultipart(let multipartData, let urlParameters):
-            let (body, boundary) = try buildMultipartBody(multipartData)
-            request.httpBody = body
+            let (bodyURL, boundary) = try writeMultipartBody(multipartData)
+            body = .file(bodyURL, isTemporary: true)
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request = try encodeURLParameters(request, parameters: urlParameters)
             request.timeoutInterval = Self.uploadTimeoutInterval
@@ -191,55 +211,74 @@ extension MoyaNetworkAdapter {
             throw MoyaAdapterError.unsupportedTask(target.task)
         }
 
-        return request
+        return (request, body)
     }
-    
-    private func buildMultipartBody(_ parts: [Moya.MultipartFormData]) throws -> (Data, String) {
+
+    /// 파일 파트를 복사할 때 한 번에 읽는 크기
+    private static let multipartChunkSize = 1 << 20
+
+    /// multipart 바디를 임시 파일로 쓴다. 파일 파트는 청크 단위로 복사하므로 메모리 사용량이 zip 크기와 무관하다.
+    /// 쓰다가 실패하면 임시 파일을 지우고 던진다
+    private func writeMultipartBody(_ parts: [Moya.MultipartFormData]) throws -> (URL, String) {
         let boundary = "Boundary-\(UUID().uuidString)"
-        var body = Data()
-        let crlf = "\r\n"
-
-        for part in parts {
-            body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
-
-            var disposition = "Content-Disposition: form-data; name=\"\(part.name)\""
-            if let fileName = part.fileName {
-                disposition += "; filename=\"\(fileName)\""
-            }
-            body.append("\(disposition)\(crlf)".data(using: .utf8)!)
-
-            if let mimeType = part.mimeType {
-                body.append("Content-Type: \(mimeType)\(crlf)".data(using: .utf8)!)
-            }
-
-            body.append(crlf.data(using: .utf8)!)
-
-            switch part.provider {
-            case .data(let data):
-                body.append(data)
-            case .file(let fileURL):
-                body.append(try Data(contentsOf: fileURL))
-            case .stream(let stream, let length):
-                let bufferSize = 65536
-                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-                defer { buffer.deallocate() }
-                var streamData = Data(capacity: Int(length))
-                stream.open()
-                defer { stream.close() }
-                while stream.hasBytesAvailable {
-                    let read = stream.read(buffer, maxLength: bufferSize)
-                    if read < 0 { throw MoyaAdapterError.streamReadFailed }
-                    if read == 0 { break }
-                    streamData.append(buffer, count: read)
-                }
-                body.append(streamData)
-            }
-
-            body.append(crlf.data(using: .utf8)!)
+        let bodyURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).multipart")
+        guard FileManager.default.createFile(atPath: bodyURL.path, contents: nil) else {
+            throw MoyaAdapterError.multipartBodyWriteFailed
         }
 
-        body.append("--\(boundary)--\(crlf)".data(using: .utf8)!)
-        return (body, boundary)
+        do {
+            let handle = try FileHandle(forWritingTo: bodyURL)
+            defer { try? handle.close() }
+            let crlf = "\r\n"
+
+            for part in parts {
+                try handle.write(contentsOf: Data("--\(boundary)\(crlf)".utf8))
+
+                var disposition = "Content-Disposition: form-data; name=\"\(part.name)\""
+                if let fileName = part.fileName {
+                    disposition += "; filename=\"\(fileName)\""
+                }
+                try handle.write(contentsOf: Data("\(disposition)\(crlf)".utf8))
+
+                if let mimeType = part.mimeType {
+                    try handle.write(contentsOf: Data("Content-Type: \(mimeType)\(crlf)".utf8))
+                }
+
+                try handle.write(contentsOf: Data(crlf.utf8))
+
+                switch part.provider {
+                case .data(let data):
+                    try handle.write(contentsOf: data)
+                case .file(let fileURL):
+                    let source = try FileHandle(forReadingFrom: fileURL)
+                    defer { try? source.close() }
+                    while let chunk = try source.read(upToCount: Self.multipartChunkSize), !chunk.isEmpty {
+                        try handle.write(contentsOf: chunk)
+                    }
+                case .stream(let stream, _):
+                    let bufferSize = 65536
+                    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+                    defer { buffer.deallocate() }
+                    stream.open()
+                    defer { stream.close() }
+                    while stream.hasBytesAvailable {
+                        let read = stream.read(buffer, maxLength: bufferSize)
+                        if read < 0 { throw MoyaAdapterError.streamReadFailed }
+                        if read == 0 { break }
+                        try handle.write(contentsOf: Data(bytes: buffer, count: read))
+                    }
+                }
+
+                try handle.write(contentsOf: Data(crlf.utf8))
+            }
+
+            try handle.write(contentsOf: Data("--\(boundary)--\(crlf)".utf8))
+        } catch {
+            try? FileManager.default.removeItem(at: bodyURL)
+            throw error
+        }
+
+        return (bodyURL, boundary)
     }
 
     private func encodeParameters(
@@ -274,6 +313,7 @@ private struct APIErrorResponse: Codable {
 enum MoyaAdapterError: Error {
     case unsupportedTask(Moya.Task)
     case streamReadFailed
+    case multipartBodyWriteFailed
 }
 
 // MARK: - UploadProgressDelegate

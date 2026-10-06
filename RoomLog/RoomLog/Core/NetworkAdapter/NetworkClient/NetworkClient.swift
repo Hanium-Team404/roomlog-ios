@@ -43,7 +43,13 @@ actor NetworkClient {
     /// API 요청을 실행하고 데이터와 HTTP 응답을 반환
     /// - Parameter delegate: 요청별 태스크 이벤트(업로드 진행률 등)를 받을 델리게이트
     func request(_ urlRequest: URLRequest, delegate: URLSessionTaskDelegate? = nil) async throws -> (Data, HTTPURLResponse) {
-        try await performRequest(urlRequest, retryCount: 0, delegate: delegate)
+        try await performRequest(urlRequest, bodyFile: nil, retryCount: 0, delegate: delegate)
+    }
+
+    /// 요청 바디를 파일에서 바로 전송한다. 대용량 업로드를 메모리에 올리지 않기 위한 경로이며
+    /// 401 재시도 시에도 같은 파일을 다시 보내므로 호출자는 요청이 끝날 때까지 파일을 유지해야 한다
+    func upload(_ urlRequest: URLRequest, fromFile fileURL: URL, delegate: URLSessionTaskDelegate? = nil) async throws -> (Data, HTTPURLResponse) {
+        try await performRequest(urlRequest, bodyFile: fileURL, retryCount: 0, delegate: delegate)
     }
     
     /// 토큰 갱신을 요청한다. 진행 중인 갱신이 있으면 그 결과에 합류한다
@@ -74,20 +80,25 @@ extension NetworkClient {
     /// Authentication 필요 여부에 따라 Header 조절
     private func performRequest(
         _ urlRequest: URLRequest,
+        bodyFile: URL?,
         retryCount: Int,
         delegate: URLSessionTaskDelegate?
     ) async throws -> (Data, HTTPURLResponse) {
         var authenticatedRequest = urlRequest
-        
+
         // 인증 필요 여부 확인
         if authPolicy.requireAuthentication(urlRequest) {
             if let token = await tokenStore.getAccessToken() {
                 authenticatedRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
         }
-        
-        // 네트워크 요청 실행
-        let (data, response) = try await session.data(for: authenticatedRequest, delegate: delegate)
+
+        // 네트워크 요청 실행 (바디 파일이 있으면 파일에서 스트리밍 전송)
+        let (data, response) = if let bodyFile {
+            try await session.upload(for: authenticatedRequest, fromFile: bodyFile, delegate: delegate)
+        } else {
+            try await session.data(for: authenticatedRequest, delegate: delegate)
+        }
         
         // HTTPURLResponse로 변환
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -102,7 +113,7 @@ extension NetworkClient {
 
             _ = try await refreshToken()
 
-            return try await performRequest(urlRequest, retryCount: retryCount + 1, delegate: delegate)
+            return try await performRequest(urlRequest, bodyFile: bodyFile, retryCount: retryCount + 1, delegate: delegate)
         }
 
         // 성공 응답 확인
@@ -133,6 +144,8 @@ extension NetworkClient {
 
             // Token 갱신 요청
             let tokenPair = try await refreshService.refresh(refreshToken)
+            // 응답 대기 중 logout()으로 취소됐으면 저장하지 않는다 — 지운 토큰이 되살아나지 않도록
+            try Task.checkCancellation()
             // 새 TokenPair 저장
             try await tokenStore.save(
                 accessToken: tokenPair.accessToken,

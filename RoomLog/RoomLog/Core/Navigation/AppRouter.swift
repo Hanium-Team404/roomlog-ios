@@ -48,17 +48,49 @@ final class AppRouter {
         showMain()
     }
 
+    /// 취소 요청 응답을 기다리는 상한. 서버가 늦어도 토큰 삭제가 이 이상 밀리지 않는다
+    private static let scanCancellationTimeout: Duration = .seconds(5)
+
     func logout() {
         // 재로그인 후엔 진행 중이던 스캔을 이어받을 경로가 없으므로 서버 스캔까지 취소한다.
         // 인증된 취소 요청이 나가도록 토큰 삭제는 취소 요청이 끝난 뒤에 한다
         let scanCancellation = container.resolve(ScanProcessingManager.self).cancel()
+        // 캐시 초기화 전에 확보해야 진행 중인 토큰 갱신 Task를 가진 바로 그 인스턴스에 logout()이 간다.
+        // Task 안에서 resolve하면 새 인스턴스가 만들어져 기존 갱신이 취소되지 않는다
+        let networkClient = container.resolve(NetworkClient.self)
         Task {
-            await scanCancellation?.value
-            try? await container.resolve(NetworkClient.self).logout()
+            if let scanCancellation {
+                await Self.wait(for: scanCancellation, upTo: Self.scanCancellationTimeout)
+            }
+            try? await networkClient.logout()
         }
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         container.resetCache()
         transition(to: .login)
+    }
+
+    /// `task`가 끝나거나 `timeout`이 지나면 반환한다. 시간이 지나도 `task` 자체는 취소하지 않는다.
+    /// `withTaskGroup`은 자식이 전부 끝나야 반환하는데 `task.value` 대기는 취소돼도 깨어나지 못해 상한이 지켜지지 않으므로,
+    /// 먼저 끝나는 쪽이 스트림을 닫는다. 대기가 끝나면 타이머만 취소하고 원래 작업은 유지한다
+    static func wait(
+        for task: Task<Void, Never>,
+        upTo timeout: Duration,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) async {
+        let firstFinished = AsyncStream<Void> { continuation in
+            Task {
+                await task.value
+                continuation.finish()
+            }
+            let timeoutTask = Task {
+                try? await sleep(timeout)
+                continuation.finish()
+            }
+            continuation.onTermination = { @Sendable _ in
+                timeoutTask.cancel()
+            }
+        }
+        for await _ in firstFinished {}
     }
 
     /// 이전 계정의 스캔 기록·zip, 완료 알림, 알림 탭으로 남은 스캔 상태 시트 요청을 지운다.

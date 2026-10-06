@@ -52,8 +52,8 @@ final class ScanProcessingManagerTests {
         try? FileManager.default.removeItem(at: tempDirectory)
     }
 
-    /// 조건이 충족될 때까지 폴링 대기. 충족 즉시 반환하므로 고정 sleep과 달리
-    /// CI 부하에 따른 flakiness 없이 빠르게 끝난다. 타임아웃 시 Issue를 기록한다.
+    /// 조건이 충족되면 반환하고, 제한 시간 안에 충족되지 않으면 Issue를 기록한다.
+    /// 유한 작업의 최종 상태를 검사할 때는 이 헬퍼 대신 currentTask의 완료를 기다린다.
     private func waitUntil(
         timeout: Duration = .seconds(5),
         _ condition: () -> Bool
@@ -132,7 +132,8 @@ final class ScanProcessingManagerTests {
 
     // MARK: - 폴링 타임아웃
 
-    @Test func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
+    @Test(.timeLimit(.minutes(3)))
+    func 폴링_타임아웃시_서버스캔을_파괴하지_않고_재시도할_수_있다() async throws {
         let sut = ScanProcessingManager(
             pollConfig: .init(maxAttempts: 2, interval: .milliseconds(10)),
             artifactStore: store,
@@ -142,9 +143,13 @@ final class ScanProcessingManagerTests {
         mockRepo.getScanStatusResult = .success("PROCESSING")
 
         sut.resumePolling(scanId: 3, houseId: 1)
-        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+        let task = try #require(sut.currentTask)
+        await task.value
 
-        guard case .failed(let failure) = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        guard case .failed(let failure) = sut.activeScan?.phase else {
+            Issue.record("폴링 시도를 소진하면 실패 상태로 끝나야 합니다")
+            return
+        }
         #expect(failure.userMessage == "처리 시간이 초과되었습니다")
         #expect(mockRepo.cancelScanCallCount == 0, "타임아웃이 서버 스캔을 취소하면 안 됩니다")
         #expect(sut.canRetry, "타임아웃은 재폴링으로 재시도할 수 있어야 합니다")
@@ -358,13 +363,18 @@ final class ScanProcessingManagerTests {
         #expect(store.restore() == nil, "재시도 불가 실패는 재시작 시에도 되살아나면 안 됩니다")
     }
 
-    @Test func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {
+    @Test(.timeLimit(.minutes(3)))
+    func 상태조회_연속실패시_pending이_유지되고_재시도할_수_있다() async throws {
         mockRepo.getScanStatusResult = .failure(.transportError(code: .networkConnectionLost))
 
         sut.resumePolling(scanId: 9, houseId: 1)
-        try await waitUntil { if case .failed = sut.activeScan?.phase { true } else { false } }
+        let task = try #require(sut.currentTask)
+        await task.value
 
-        guard case .failed = sut.activeScan?.phase else { return } // 타임아웃 Issue는 waitUntil이 기록
+        guard case .failed = sut.activeScan?.phase else {
+            Issue.record("상태 조회가 연속 실패하면 실패 상태로 끝나야 합니다")
+            return
+        }
         // 일시적 네트워크 문제일 수 있으므로 기록을 유지해 재시도·재시작 복구가 가능해야 한다
         #expect(store.restore() == .polling(scanId: 9, houseId: 1))
         #expect(sut.canRetry)
@@ -373,7 +383,8 @@ final class ScanProcessingManagerTests {
         sut.retry()
 
         #expect(sut.activeScan?.phase == .polling)
-        try await waitUntil { mockRepo.getScanStatusCallCount > callCountBeforeRetry }
+        let retryTask = try #require(sut.currentTask)
+        await retryTask.value
         #expect(mockRepo.getScanStatusCallCount > callCountBeforeRetry, "재시도 시 재폴링부터 수행해야 합니다")
         sut.clear()
     }

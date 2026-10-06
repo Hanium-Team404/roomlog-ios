@@ -76,17 +76,28 @@ enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 
-    /// 재시도 가능 여부. 전송 실패·서버 장애(5xx)만 재시도 가능하고,
-    /// 비즈니스 거부(4xx)·디코딩 실패는 다시 시도해도 결과가 같으므로 불가.
+    /// 재시도 가능 여부. 전송 실패·서버 장애(5xx)·일시적 4xx(408 타임아웃, 429 레이트 리밋)만 재시도 가능하고,
+    /// 그 외 비즈니스 거부(4xx)·디코딩 실패는 다시 시도해도 결과가 같으므로 불가.
     var isRetryable: Bool {
         switch self {
         case .transportError:
             return true
         case .serverError(let code, _, _):
-            return (code ?? 0) >= 500
+            guard let code else { return false }
+            return HTTPStatus.isRetryable(code)
         case .decodingError:
             return false
         }
+    }
+}
+
+// MARK: - HTTP 상태 코드 재시도 규칙
+
+/// `RepositoryError`·`NetworkError`가 공유하는 단일 규칙
+enum HTTPStatus {
+    /// 잠시 뒤 같은 요청을 다시 보내면 성공할 수 있는 상태 코드
+    static func isRetryable(_ code: Int) -> Bool {
+        code >= 500 || code == 408 || code == 429
     }
 }
 

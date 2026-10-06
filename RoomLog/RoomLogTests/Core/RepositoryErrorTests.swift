@@ -18,11 +18,28 @@ struct RepositoryErrorTests {
         #expect(RepositoryError.transportError(code: .timedOut).isRetryable)
     }
 
-    @Test func 서버장애_5xx만_재시도_가능하다() {
+    @Test func 서버장애_5xx는_재시도_가능하다() {
         #expect(RepositoryError.serverError(code: 500, message: nil, errorCode: nil).isRetryable)
         #expect(RepositoryError.serverError(code: 503, message: nil, errorCode: nil).isRetryable)
-        #expect(!RepositoryError.serverError(code: 400, message: nil, errorCode: nil).isRetryable)
         #expect(!RepositoryError.serverError(code: nil, message: nil, errorCode: nil).isRetryable)
+    }
+
+    /// 408(요청 타임아웃)·429(레이트 리밋)는 잠시 뒤 다시 보내면 성공할 수 있다. 그 외 4xx는 결과가 같으므로 불가
+    @Test(arguments: [408, 429])
+    func 일시적_4xx는_재시도_가능하다(code: Int) {
+        #expect(RepositoryError.serverError(code: code, message: nil, errorCode: nil).isRetryable)
+    }
+
+    @Test(arguments: [400, 401, 403, 404, 409, 422])
+    func 비즈니스_거부_4xx는_재시도_불가하다(code: Int) {
+        #expect(!RepositoryError.serverError(code: code, message: nil, errorCode: nil).isRetryable)
+    }
+
+    @Test func NetworkError_httpError도_같은_재시도_규칙을_따른다() {
+        #expect(NetworkError.httpError(statusCode: 503, data: Data()).isRetryable)
+        #expect(NetworkError.httpError(statusCode: 429, data: Data()).isRetryable)
+        #expect(!NetworkError.httpError(statusCode: 404, data: Data()).isRetryable)
+        #expect(!NetworkError.unauthorized.isRetryable)
     }
 
     @Test func 디코딩실패는_재시도_불가하다() {

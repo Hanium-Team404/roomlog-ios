@@ -39,7 +39,7 @@ enum NetworkError: Error, LocalizedError, Sendable {
     var isRetryable: Bool {
         switch self {
         case .httpError(let code, _):
-            return code >= 500
+            return HTTPStatus.isRetryable(code)
         default:
             return false
         }

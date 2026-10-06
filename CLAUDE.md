@@ -131,7 +131,7 @@ Moya + 커스텀 `NetworkClient(actor)` 조합으로 구성됩니다.
 
 `RepositoryError` (`Core/Error/RepositoryError.swift`): `serverError(code:message:errorCode:)`, `decodingError(detail:)`, `transportError(code:)` 세 케이스.
 임의 에러의 도메인 정규화는 `RepositoryError.normalize(_:)` 단일 지점에서 수행하고(현재 Scan 경로만 적용, 다른 Repository는 미이관), 유저 노출 문구는 `userMessage`, 로그용 상세는 `errorDescription`으로 분리.
-`isRetryable`은 전송 실패·5xx만 true (비즈니스 거부·디코딩 실패는 재시도 불가).
+`isRetryable`은 전송 실패·5xx·일시적 4xx(408, 429)만 true (그 외 비즈니스 거부·디코딩 실패는 재시도 불가). 상태 코드 규칙은 `HTTPStatus.isRetryable`에 단일화.
 
 ### CI
 
