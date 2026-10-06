@@ -13,6 +13,8 @@ struct ComparisonHistory: Identifiable, Hashable {
     let moveInRoomName: String
     let moveOutRoomName: String
     let defectCount: Int
+    /// 출장비(원). totalCost에 이미 포함되어 있다.
+    let visitFee: Int
     let totalCost: Int
     let createdAt: Date?
     let moveInRoomId: Int
