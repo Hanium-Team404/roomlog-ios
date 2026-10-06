@@ -483,14 +483,14 @@ struct PLYSceneView: UIViewRepresentable {
     /// - Parameters:
     ///   - position: World-space position where the marker will be placed.
     ///   - title: Title text displayed on the label.
-    ///   - area: Area in square meters; rendered as a string formatted to two decimal places (e.g. "12.34 m²").
+    ///   - area: Area in square centimeters; rendered as a string formatted to two decimal places (e.g. "12.34 ㎠").
     /// - Returns: An `SCNNode` positioned at `position` containing a textured plane that faces the camera and displays the title and area.
 
     private func createMarkerNode(at position: SCNVector3, title: String, area: Double) -> SCNNode {
         let node = SCNNode()
         node.position = position
 
-        let areaText = String(format: "%.2f m²", area)
+        let areaText = String(format: "%.2f ㎠", area)
         let labelImage = renderLabel(title: title, subtitle: areaText)
         let aspect = labelImage.size.width / labelImage.size.height
         let planeHeight: CGFloat = 0.8

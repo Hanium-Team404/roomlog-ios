@@ -45,7 +45,7 @@ final class RepairShopListViewModel {
     var messageBody: String {
         let cost = Self.costFormatter.string(from: NSNumber(value: defect.repairCost)) ?? "\(defect.repairCost)"
         let area = String(format: "%.2f", defect.defectArea)
-        return "\(defect.location) \(defect.type.displayName) (\(area)m²) 으로 인해 예상 비용인 \(cost)원 정도로 수리가 가능할지 문의 남깁니다."
+        return "\(defect.location) \(defect.type.displayName) (\(area)㎠) 으로 인해 예상 비용인 \(cost)원 정도로 수리가 가능할지 문의 남깁니다."
     }
 
     private static let costFormatter: NumberFormatter = {
