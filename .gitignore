@@ -67,3 +67,8 @@ fastlane/test_output
 
 # CI에서 xcodebuild -clonedSourcePackagesDirPath로 쓰는 SPM 체크아웃 경로
 .spm-cache/
+
+# Codex CLI 로컬 설정 (CLAUDE.md·.claude/skills 복제본, 개인용)
+/.codex/
+/.agents/
+/AGENTS.md
