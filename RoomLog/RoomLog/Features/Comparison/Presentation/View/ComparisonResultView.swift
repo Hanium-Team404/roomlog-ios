@@ -194,7 +194,27 @@ private extension ComparisonResultView {
                         )))
                     }
             }
+
+            // 총액은 서버 total_cost(출장비 포함)를 그대로 쓴다.
+            VStack(spacing: 8) {
+                if result.visitFee > 0 {
+                    costRow(label: "출장비", amount: result.visitFee)
+                }
+                costRow(label: "총 예상 수리비", amount: result.totalCost, isTotal: true)
+            }
+            .padding(.horizontal, 4)
+            .padding(.top, 4)
         }
+    }
+
+    func costRow(label: String, amount: Int, isTotal: Bool = false) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text("\(amount.formatted())원")
+        }
+        .font(isTotal ? .semibold : .medium, isTotal ? 16 : 15)
+        .foregroundStyle(Color.neutral800)
     }
 }
 
