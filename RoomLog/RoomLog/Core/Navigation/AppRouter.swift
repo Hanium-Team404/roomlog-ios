@@ -69,14 +69,21 @@ final class AppRouter {
         transition(to: .login)
     }
 
-    /// `task`가 끝나거나 `timeout`이 지나면 반환한다. 시간이 지나도 `task` 자체는 취소하지 않는다
-    private static func wait(for task: Task<Void, Never>, upTo timeout: Duration) async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await task.value }
-            group.addTask { try? await Task.sleep(for: timeout) }
-            await group.next()
-            group.cancelAll()
+    /// `task`가 끝나거나 `timeout`이 지나면 반환한다. 시간이 지나도 `task` 자체는 취소하지 않는다.
+    /// `withTaskGroup`은 자식이 전부 끝나야 반환하는데 `task.value` 대기는 취소돼도 깨어나지 못해 상한이 지켜지지 않으므로,
+    /// 먼저 끝나는 쪽이 스트림을 닫는 방식으로 경쟁시킨다. 늦은 쪽은 그대로 돌다가 알아서 끝난다
+    static func wait(for task: Task<Void, Never>, upTo timeout: Duration) async {
+        let firstFinished = AsyncStream<Void> { continuation in
+            Task {
+                await task.value
+                continuation.finish()
+            }
+            Task {
+                try? await Task.sleep(for: timeout)
+                continuation.finish()
+            }
         }
+        for await _ in firstFinished {}
     }
 
     /// 이전 계정의 스캔 기록·zip, 완료 알림, 알림 탭으로 남은 스캔 상태 시트 요청을 지운다.
