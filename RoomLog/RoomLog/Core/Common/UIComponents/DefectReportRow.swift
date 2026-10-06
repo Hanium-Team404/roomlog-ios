@@ -78,7 +78,7 @@ struct DefectReportRow: View {
     }
 
     private var formattedArea: String {
-        String(format: "%.2f m²", defect.defectArea)
+        String(format: "%.2f ㎠", defect.defectArea)
     }
 }
 
