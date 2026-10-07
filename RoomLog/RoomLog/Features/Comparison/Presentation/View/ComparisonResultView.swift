@@ -143,7 +143,7 @@ private extension ComparisonResultView {
             HStack(spacing: 0) {
                 SummaryStatView(value: "\(result.defectCount)", label: "하자")
                 SummaryStatView(value: result.totalCost.formattedCost, label: "예상 수리비")
-                SummaryStatView(value: String(format: "%.1f㎠", result.totalArea), label: "면적")
+                SummaryStatView(value: String(format: "%.1fcm²", result.totalArea), label: "면적")
             }
 
             Spacer().frame(height: 16)

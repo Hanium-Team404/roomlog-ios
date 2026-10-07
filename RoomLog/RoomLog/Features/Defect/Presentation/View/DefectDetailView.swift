@@ -166,7 +166,7 @@ private extension DefectDetailView {
                 .foregroundStyle(.primary)
                 .frame(width: 52, alignment: .leading)
             Spacer()
-            Text(String(format: "%.2f ㎠", defect.defectArea))
+            Text(String(format: "%.2f cm²", defect.defectArea))
                 .font(.medium, 16)
                 .foregroundStyle(Color("blueGray500"))
         }
