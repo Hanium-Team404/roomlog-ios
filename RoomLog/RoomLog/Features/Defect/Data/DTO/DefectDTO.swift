@@ -164,7 +164,6 @@ struct AnalysisResultResponseDTO: Codable {
             roomId: roomId,
             status: status,
             defectCount: summary.defectCount,
-            visitFee: summary.visitFee ?? 0,
             totalCost: summary.totalCost,
             totalArea: totalArea,
             defects: domainDefects,
@@ -176,12 +175,10 @@ struct AnalysisResultResponseDTO: Codable {
 
 struct AnalysisSummaryDTO: Codable {
     let defectCount: Int
-    let visitFee: Int?
     let totalCost: Int
 
     enum CodingKeys: String, CodingKey {
         case defectCount = "defect_count"
-        case visitFee = "visit_fee"
         case totalCost = "total_cost"
     }
 }

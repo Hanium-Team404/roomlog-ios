@@ -195,15 +195,9 @@ private extension ComparisonResultView {
                     }
             }
 
-            // 총액은 서버 total_cost(출장비 포함)를 그대로 쓴다.
-            VStack(spacing: 8) {
-                if result.visitFee > 0 {
-                    costRow(label: "출장비", amount: result.visitFee)
-                }
-                costRow(label: "총 예상 수리비", amount: result.totalCost, isTotal: true)
-            }
-            .padding(.horizontal, 4)
-            .padding(.top, 4)
+            costRow(label: "총 예상 수리비", amount: result.totalCost, isTotal: true)
+                .padding(.horizontal, 4)
+                .padding(.top, 4)
         }
     }
 
