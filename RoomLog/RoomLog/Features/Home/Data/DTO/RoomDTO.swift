@@ -38,6 +38,8 @@ struct RoomSummaryDTO: Codable {
     let name: String
     let fileURL: String?
     let latestScan: LatestScanDTO?
+    let moveInDate: String?
+    /// 최근 스캔 시각 (yyyy-MM-dd'T'HH:mm:ss). 내방비교에서 같은 날 스캔의 선후 판단에 쓴다.
     let recentScanDate: String?
     let latestScanStatus: String?
 
@@ -46,7 +48,8 @@ struct RoomSummaryDTO: Codable {
         case name
         case fileURL = "thumbnail_url"
         case latestScan = "latest_scan"
-        case recentScanDate = "move_in_date"
+        case moveInDate = "move_in_date"
+        case recentScanDate = "recent_scan_date"
         case latestScanStatus = "latest_scan_status"
     }
 
@@ -56,7 +59,7 @@ struct RoomSummaryDTO: Codable {
             name: name,
             thumbnailURL: fileURL,
             latestScan: latestScan?.toDomain(),
-            recentScanDate: recentScanDate.flatMap { Date.fromServerDate($0) },
+            recentScanDate: moveInDate.flatMap { Date.fromServerDate($0) },
             latestScanStatus: latestScanStatus
         )
     }

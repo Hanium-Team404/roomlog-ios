@@ -143,7 +143,7 @@ private extension ComparisonResultView {
             HStack(spacing: 0) {
                 SummaryStatView(value: "\(result.defectCount)", label: "하자")
                 SummaryStatView(value: result.totalCost.formattedCost, label: "예상 수리비")
-                SummaryStatView(value: String(format: "%.1f㎠", result.totalArea), label: "면적")
+                SummaryStatView(value: String(format: "%.1fcm²", result.totalArea), label: "면적")
             }
 
             Spacer().frame(height: 16)
@@ -195,15 +195,9 @@ private extension ComparisonResultView {
                     }
             }
 
-            // 총액은 서버 total_cost(출장비 포함)를 그대로 쓴다.
-            VStack(spacing: 8) {
-                if result.visitFee > 0 {
-                    costRow(label: "출장비", amount: result.visitFee)
-                }
-                costRow(label: "총 예상 수리비", amount: result.totalCost, isTotal: true)
-            }
-            .padding(.horizontal, 4)
-            .padding(.top, 4)
+            costRow(label: "총 예상 수리비", amount: result.totalCost, isTotal: true)
+                .padding(.horizontal, 4)
+                .padding(.top, 4)
         }
     }
 

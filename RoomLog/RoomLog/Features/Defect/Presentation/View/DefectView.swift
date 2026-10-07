@@ -203,7 +203,7 @@ private extension DefectView {
             HStack(spacing: 0) {
                 SummaryStatView(value: "\(report.defectCount)", label: "하자")
                 SummaryStatView(value: report.minRepairCost.formattedCost, label: "예상 수리비")
-                SummaryStatView(value: String(format: "%.1f㎠", report.repairArea), label: "면적")
+                SummaryStatView(value: String(format: "%.1fcm²", report.repairArea), label: "면적")
             }
 
             Spacer().frame(height: 16)

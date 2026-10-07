@@ -60,8 +60,7 @@ final class MockDefectRepository: DefectRepositoryProtocol {
             roomId: 1,
             status: "COMPLETED",
             defectCount: 2,
-            visitFee: 115000,
-            totalCost: 215000,
+            totalCost: 100000,
             totalArea: 0.5,
             defects: [
                 DefectReportDetail(id: 1, analysisID: 1, imageURL: nil, type: .crack, severity: .high, description: "벽면 균열", repairCost: 60000, defectArea: 0.3, location: "거실 벽", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),

@@ -40,7 +40,7 @@ final class ComparisonRepository: ComparisonRepositoryProtocol {
             ComparisonScan(
                 id: dto.roomId,
                 roomName: dto.name,
-                scanDate: dto.recentScanDate.flatMap { Date.fromServerDate($0) },
+                scanDate: dto.recentScanDate.flatMap { Date.fromServerDateTime($0) },
                 thumbnailURL: dto.fileURL
             )
         }

@@ -30,7 +30,6 @@ struct ComparisonHistoryDTO: Codable {
             moveInRoomName: inRoom.name,
             moveOutRoomName: outRoom.name,
             defectCount: summary.defectCount,
-            visitFee: summary.visitFee ?? 0,
             totalCost: summary.totalCost,
             createdAt: createdAt.flatMap { Date.fromServerDateTime($0) },
             moveInRoomId: inRoom.roomID,
@@ -41,12 +40,10 @@ struct ComparisonHistoryDTO: Codable {
 
 struct ComparisonSummaryDTO: Codable {
     let defectCount: Int
-    let visitFee: Int?
     let totalCost: Int
 
     enum CodingKeys: String, CodingKey {
         case defectCount = "defect_count"
-        case visitFee = "visit_fee"
         case totalCost = "total_cost"
     }
 }

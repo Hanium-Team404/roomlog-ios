@@ -25,8 +25,8 @@ final class MockComparisonRepository: ComparisonRepositoryProtocol {
 
     func getComparisonHistories(houseId: Int) async throws -> [ComparisonHistory] {
         [
-            ComparisonHistory(id: 101, status: .completed, moveInRoomName: "거실", moveOutRoomName: "거실", defectCount: 3, visitFee: 115000, totalCost: 265000, createdAt: Date(timeIntervalSinceNow: -86400 * 2), moveInRoomId: 1, moveOutRoomId: 4),
-            ComparisonHistory(id: 102, status: .pending, moveInRoomName: "안방", moveOutRoomName: "안방", defectCount: 0, visitFee: 0, totalCost: 0, createdAt: Date(timeIntervalSinceNow: -86400 * 1), moveInRoomId: 2, moveOutRoomId: 5)
+            ComparisonHistory(id: 101, status: .completed, moveInRoomName: "거실", moveOutRoomName: "거실", defectCount: 3, totalCost: 150000, createdAt: Date(timeIntervalSinceNow: -86400 * 2), moveInRoomId: 1, moveOutRoomId: 4),
+            ComparisonHistory(id: 102, status: .pending, moveInRoomName: "안방", moveOutRoomName: "안방", defectCount: 0, totalCost: 0, createdAt: Date(timeIntervalSinceNow: -86400 * 1), moveInRoomId: 2, moveOutRoomId: 5)
         ]
     }
 }

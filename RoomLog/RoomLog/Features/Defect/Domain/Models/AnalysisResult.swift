@@ -12,8 +12,6 @@ struct AnalysisResult {
     let roomId: Int
     let status: String
     let defectCount: Int
-    /// 출장비(원). totalCost에 이미 포함되어 있다.
-    let visitFee: Int
     let totalCost: Int
     let totalArea: Float
     let defects: [DefectReportDetail]
