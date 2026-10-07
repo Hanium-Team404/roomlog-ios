@@ -238,7 +238,7 @@ private extension SelfRepairCard {
             openURL(url)
         } label: {
             HStack(spacing: 2) {
-                Text("쿠팡에서 찾아보기")
+                Text("\(item.name) 바로가기")
                     .font(.medium, 12)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
