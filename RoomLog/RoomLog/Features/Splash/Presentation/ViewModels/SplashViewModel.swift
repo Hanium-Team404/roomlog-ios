@@ -17,6 +17,8 @@ final class SplashViewModel {
 
     private(set) var isChecked: Bool = false
     private(set) var isLoggedin: Bool = false
+    /// 자동 로그인에 성공한 계정. 마지막 로그인 계정 기록에 쓴다
+    private(set) var userId: Int?
 
     init(
         networkClient: NetworkClient,
@@ -34,7 +36,8 @@ final class SplashViewModel {
 
         let loggedIn: Bool
         do {
-            _ = try await getUserUseCase.execute()
+            let user = try await getUserUseCase.execute()
+            userId = user.id
             loggedIn = true
         } catch {
             loggedIn = false

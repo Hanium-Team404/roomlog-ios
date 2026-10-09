@@ -253,8 +253,11 @@ final class ScanProcessingManager {
         do {
             _ = try repository()
 
-            // 1. WrapUp
+            // 1. WrapUp — 인코딩 실패한 데이터셋은 서버에서도 처리에 실패하므로 압축 전에 끝낸다
             await encoder.wrapUp()
+            guard encoder.status == .allGood else {
+                throw ScanFailure(userMessage: "스캔 데이터 저장에 실패했습니다. 다시 촬영해 주세요", retrySource: nil)
+            }
             try Task.checkCancellation()
 
             // 2. Zip — 대용량 데이터셋의 동기 압축이라 메인 스레드에서 수행하면 UI가 멈춘다.

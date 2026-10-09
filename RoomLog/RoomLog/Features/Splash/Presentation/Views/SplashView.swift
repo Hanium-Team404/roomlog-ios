@@ -33,8 +33,8 @@ struct SplashView: View {
             }
             .onChange(of: viewModel.isChecked) { _, newValue in
                 guard newValue else { return }
-                if viewModel.isLoggedin {
-                    router.showMain()
+                if viewModel.isLoggedin, let userId = viewModel.userId {
+                    router.completeAutoLogin(userId: userId)
                 } else {
                     router.showLogin()
                 }
