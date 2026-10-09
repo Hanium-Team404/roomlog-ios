@@ -9,11 +9,30 @@ import Testing
 import Foundation
 @testable import RoomLog
 
-/// 로그아웃 시 스캔 취소 요청 대기 상한 테스트.
-/// 상한이 지켜지지 않으면 서버가 늦을 때 토큰 삭제가 무한정 밀린다 (#204).
+/// 루트 전환 라우터 테스트.
+/// 로그아웃 시 스캔 취소 요청 대기 상한이 지켜지지 않으면 서버가 늦을 때 토큰 삭제가 무한정 밀린다 (#204).
+/// 자동 로그인이 계정을 기록하지 않으면 같은 계정의 수동 로그인이 자기 스캔 기록을 지운다 (#209).
 @MainActor
 @Suite(.timeLimit(.minutes(3)))
 struct AppRouterTests {
+
+    /// 자동 로그인은 마지막 계정을 기록만 하고 남은 스캔 상태는 정리하지 않는다
+    @Test
+    func 자동_로그인은_같은_계정으로_기록을_남긴다() throws {
+        let suiteName = "AppRouterTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let lastLoginStore = LastLoginStore(userDefaults: defaults)
+        let sut = AppRouter(container: DIContainer(), lastLoginStore: lastLoginStore)
+
+        sut.completeAutoLogin(userId: 1)
+
+        #expect(sut.state == .main)
+        #expect(
+            lastLoginStore.recordLogin(userId: 1) == false,
+            "자동 로그인 뒤 같은 계정의 수동 로그인이 다른 계정으로 판정되면 안 됩니다"
+        )
+    }
 
     /// 타이머가 끝나면 원래 작업을 끝내거나 취소하지 않고 반환한다
     @Test

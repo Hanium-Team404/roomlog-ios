@@ -46,10 +46,9 @@ struct RoomLogApp: App {
         VStack {
             switch router.state {
             case .splash:
+                let getUserUseCase = container.resolve(MyPageUseCaseProvider.self).makeGetUserUseCase()
                 SplashView(
-                    networkClient: container.resolve(NetworkClient.self),
-                    getUserUseCase: container.resolve(MyPageUseCaseProvider.self).makeGetUserUseCase(),
-                    tokenStore: container.resolve(TokenStore.self)
+                    checkSessionUseCase: CheckSessionUseCase { try await getUserUseCase.execute().id }
                 )
             case .login:
                 LoginView(

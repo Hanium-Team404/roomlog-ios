@@ -48,6 +48,14 @@ final class AppRouter {
         showMain()
     }
 
+    /// 자동 로그인(토큰 유효) 후 메인 진입.
+    /// 남아 있는 스캔 상태는 토큰이 살아 있는 이 계정 것이므로 기록만 남기고 정리하지 않는다 —
+    /// 기록이 없던 사용자가 이후 같은 계정으로 수동 로그인할 때 "다른 계정"으로 오판되지 않게 한다
+    func completeAutoLogin(userId: Int) {
+        _ = lastLoginStore.recordLogin(userId: userId)
+        showMain()
+    }
+
     /// 취소 요청 응답을 기다리는 상한. 서버가 늦어도 토큰 삭제가 이 이상 밀리지 않는다
     private static let scanCancellationTimeout: Duration = .seconds(5)
 

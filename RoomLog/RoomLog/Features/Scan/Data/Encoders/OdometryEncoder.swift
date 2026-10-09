@@ -15,9 +15,12 @@ import Accelerate
 /// 카메라 포즈를 CSV로 기록하는 인코더.
 /// DatasetEncoder의 직렬 인코딩 체인에서만 접근된다 (@unchecked Sendable 근거는 VideoEncoder 참고).
 nonisolated final class OdometryEncoder: @unchecked Sendable {
+    enum Status { case allGood, encodingError }
+
     private let path: URL
     private let fileHandle: FileHandle
     private let q_AC = simd_quatf(ix: 1.0, iy: 0.0, iz: 0.0, r: 0.0)
+    var status: Status = .allGood
 
     init(url: URL) throws {
         self.path = url
@@ -32,7 +35,14 @@ nonisolated final class OdometryEncoder: @unchecked Sendable {
         let q = (simd_quatf(transform) * q_AC).vector
         let frameNumber = String(format: "%06d", currentFrame)
         let line = "\(timestamp), \(frameNumber), \(xyz.x), \(xyz.y), \(xyz.z), \(q.x), \(q.y), \(q.z), \(q.w)\n"
-        try? fileHandle.write(contentsOf: Data(line.utf8))
+        do {
+            try fileHandle.write(contentsOf: Data(line.utf8))
+        } catch {
+            #if DEBUG
+            print("OdometryEncoder: 포즈 기록 실패. \(error.localizedDescription)")
+            #endif
+            status = .encodingError
+        }
     }
 
     func done() {
@@ -42,6 +52,7 @@ nonisolated final class OdometryEncoder: @unchecked Sendable {
             #if DEBUG
             print("OdometryEncoder: 파일 닫기 실패. \(error.localizedDescription)")
             #endif
+            status = .encodingError
         }
     }
 }
