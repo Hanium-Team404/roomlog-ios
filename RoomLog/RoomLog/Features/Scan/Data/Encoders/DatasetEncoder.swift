@@ -263,6 +263,7 @@ nonisolated final class DatasetEncoder: @unchecked Sendable {
         if case .error = rgbEncoder.status { status = .videoEncodingError }
         if case .frameEncodingError = depthEncoder.status { status = .videoEncodingError }
         if case .encodingError = confidenceEncoder.status { status = .videoEncodingError }
+        if case .encodingError = odometryEncoder.status { status = .videoEncodingError }
         if case .encodingError = keyframeEncoder.status { status = .videoEncodingError }
     }
 
