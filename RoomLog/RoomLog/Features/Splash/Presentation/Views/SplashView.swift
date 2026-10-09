@@ -12,17 +12,9 @@ struct SplashView: View {
     @State private var viewModel: SplashViewModel
     @Environment(AppRouter.self) private var router
 
-    init(
-        networkClient: NetworkClient,
-        getUserUseCase: GetUserUseCaseProtocol,
-        tokenStore: TokenStore
-    ) {
+    init(checkSessionUseCase: CheckSessionUseCaseProtocol) {
         self._viewModel = .init(
-            wrappedValue: SplashViewModel(
-                networkClient: networkClient,
-                getUserUseCase: getUserUseCase,
-                tokenStore: tokenStore
-            )
+            wrappedValue: SplashViewModel(checkSessionUseCase: checkSessionUseCase)
         )
     }
 
@@ -31,11 +23,13 @@ struct SplashView: View {
             .task {
                 await viewModel.checkAuth()
             }
-            .onChange(of: viewModel.isChecked) { _, newValue in
-                guard newValue else { return }
-                if viewModel.isLoggedin, let userId = viewModel.userId {
+            .onChange(of: viewModel.sessionState) { _, newState in
+                switch newState {
+                case .checking:
+                    break
+                case .loggedIn(let userId):
                     router.completeAutoLogin(userId: userId)
-                } else {
+                case .loggedOut:
                     router.showLogin()
                 }
             }
