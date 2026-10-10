@@ -18,6 +18,12 @@ final class SignUpViewModel {
     var isLoading: Bool = false
     var errorMessage: String?
     var isSignUpCompleted: Bool = false
+    /// 이메일·비밀번호·닉네임이 모두 입력됐는지. 회원가입 버튼 활성화 기준
+    var canSubmit: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     // MARK: - Dependencies
     private let signUpUseCase: SignUpUseCaseProtocol

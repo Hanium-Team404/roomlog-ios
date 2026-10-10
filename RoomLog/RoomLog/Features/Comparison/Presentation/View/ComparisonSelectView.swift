@@ -203,8 +203,7 @@ private extension ComparisonSelectView {
             Text(step == .moveIn ? "다음" : "방 비교하기")
                 .font(.semibold, 17)
         }
-        .opacity(isEnabled ? 1 : 0.5)
-        .allowsHitTesting(isEnabled)
+        .disabled(!isEnabled)
     }
 }
 

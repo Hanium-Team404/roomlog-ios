@@ -35,7 +35,7 @@ struct ScanStatusSheet: View {
                 Text("진행 중인 스캔을 취소하시겠어요?\n스캔 데이터가 삭제됩니다.")
             }
         }
-        .presentationDetents([.height(320)])
+        .presentationDetents([.height(360)])
     }
 
     // MARK: - Icon
@@ -93,32 +93,22 @@ struct ScanStatusSheet: View {
                     .foregroundStyle(.red)
             }
         case .completed(let fileURL):
-            Button {
+            BottomCTAButton {
                 onPreview?(fileURL)
             } label: {
                 Text("미리보기")
                     .font(.semibold, 16)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
             }
-            .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
-            .padding(.horizontal, 32)
         case .failed:
             // 스와이프로 시트를 내리면 상태가 유지되므로, 포기는 명시적 취소 버튼으로만 가능하다
             VStack(spacing: 12) {
                 if let onRetry {
-                    Button {
+                    BottomCTAButton {
                         onRetry()
                     } label: {
                         Text("다시 시도")
                             .font(.semibold, 16)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
                     }
-                    .glassEffect(.regular.interactive().tint(.accent), in: .capsule)
-                    .padding(.horizontal, 32)
                 }
                 Button {
                     showCancelAlert = true
