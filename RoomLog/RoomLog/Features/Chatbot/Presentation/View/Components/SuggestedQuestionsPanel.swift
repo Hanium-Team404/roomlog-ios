@@ -68,7 +68,7 @@ struct SuggestedQuestionsPanel: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Text("추천 질문")
+                Text("FAQ")
                     .font(.semibold, 13)
                     .foregroundStyle(Color.neutral800)
                 Image(systemName: "chevron.up")
