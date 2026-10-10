@@ -18,6 +18,11 @@ final class LoginViewModel {
     private(set) var errorMessage: String?
     /// 로그인 성공한 계정. 값이 생기면 뷰가 메인으로 전환한다
     private(set) var loggedInUserId: Int?
+    /// 이메일·비밀번호가 모두 입력됐는지. 로그인 버튼 활성화 기준
+    var canSubmit: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     private let loginUseCase: LoginUseCaseProtocol
 
