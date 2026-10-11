@@ -18,6 +18,8 @@ struct ChatMessage: Identifiable, Hashable {
     let content: String
     /// 함께 전송한 하자 (유저 메시지에만 존재, 말풍선에 첨부 표시용)
     var attachedDefect: ChatSelectableDefect? = nil
+    /// 답변이 자가 수리 안내 페이지를 가리킬 때 이동할 하자 (어시스턴트 메시지에만 존재, 상세 화면 링크용)
+    var linkedDefectId: Int? = nil
 }
 
 struct ChatAnswer {

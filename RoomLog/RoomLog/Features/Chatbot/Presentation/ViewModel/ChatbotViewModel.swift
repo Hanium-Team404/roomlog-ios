@@ -28,6 +28,8 @@ final class ChatbotViewModel {
     private(set) var defectListLoadFailed = false
 
     static let maxMessageLength = 300
+    /// 서버 답변이 이 문구를 포함하면 하자 상세의 자가 수리 안내로 이동하는 링크를 붙인다.
+    static let selfRepairGuidePhrase = "자가 수리 안내"
 
     // MARK: - Dependency
     private let provider: ChatbotUseCaseProvider
@@ -169,7 +171,9 @@ final class ChatbotViewModel {
                 guide: guide,
                 defectId: defectId
             )
-            messages.append(ChatMessage(role: .assistant, content: answer.answer))
+            // 하자를 첨부한 질문에 "자가 수리 안내 페이지"를 안내하는 답변이면 그 하자의 상세로 가는 링크를 붙인다.
+            let linkedDefectId = answer.answer.contains(Self.selfRepairGuidePhrase) ? defectId : nil
+            messages.append(ChatMessage(role: .assistant, content: answer.answer, linkedDefectId: linkedDefectId))
             lastFailedRequest = nil
             // FALLBACK 답변일 때만 새 추천 질문이 내려온다 → 패널 내용 갱신
             if answer.source == .fallback, let fresh = answer.suggestedQuestions, !fresh.isEmpty {
