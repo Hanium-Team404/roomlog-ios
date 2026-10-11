@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// 선택한 방의 하자 상세 정보 조회 UseCaseProtocol
+/// 하자 id로 상세 정보를 조회하는 UseCaseProtocol (방 하자 목록을 거치지 않는 진입용)
 protocol GetDefectReportDetailUseCaseProtocol {
-    func execute(roomId: Int) async throws -> DefectReportDetail
+    func execute(defectId: Int) async throws -> DefectDetail
 }

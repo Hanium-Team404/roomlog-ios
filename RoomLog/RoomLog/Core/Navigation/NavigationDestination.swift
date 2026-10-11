@@ -26,8 +26,9 @@ enum NavigationDestination: Hashable {
         /// 하자점검 case
         case defectList(houseId: Int)
         case defectListMain(roomId: Int)
-        case defectAllList(roomId: Int, roomName: String, defects: [DefectReportDetail])
-        case defectListDetail(defect: DefectReportDetail, roomId: Int, roomImageURL: String?)
+        case defectAllList(roomName: String, defects: [DefectReportDetail])
+        /// 하자 상세. id만 싣고 화면이 직접 조회하므로 목록·챗봇·알림 어디서든 같은 목적지로 연다
+        case defectDetail(defectId: Int, scrollsToSelfRepair: Bool = false)
         case repairShopList(roomId: Int, defect: DefectReportDetail)
         case repairHistory(roomId: Int)
         

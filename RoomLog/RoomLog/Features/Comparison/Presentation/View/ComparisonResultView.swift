@@ -169,7 +169,6 @@ private extension ComparisonResultView {
                 Spacer()
                 Button {
                     pathStore.defectPath.append(.defect(.defectAllList(
-                        roomId: result.roomId,
                         roomName: "",
                         defects: result.defects
                     )))
@@ -187,11 +186,7 @@ private extension ComparisonResultView {
             ForEach(result.defects, id: \.id) { defect in
                 DefectReportRow(defect: defect)
                     .onTapGesture {
-                        pathStore.defectPath.append(.defect(.defectListDetail(
-                            defect: defect,
-                            roomId: result.roomId,
-                            roomImageURL: result.plyURL
-                        )))
+                        pathStore.defectPath.append(.defect(.defectDetail(defectId: defect.id)))
                     }
             }
 

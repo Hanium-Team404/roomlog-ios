@@ -26,9 +26,9 @@ final class MockDefectRepository: DefectRepositoryProtocol {
         return DefectReport(room: room, imageURL: nil, defectCount: defects.count, minRepairCost: 150000, repairArea: 0.6, defects: defects)
     }
 
-    func getDefectReportDetail(roomId: Int) async throws -> DefectReportDetail {
-        DefectReportDetail(
-            id: roomId,
+    func getDefectDetail(defectId: Int) async throws -> DefectDetail {
+        let defect = DefectReportDetail(
+            id: defectId,
             analysisID: 1,
             imageURL: nil,
             type: .crack,
@@ -44,6 +44,7 @@ final class MockDefectRepository: DefectRepositoryProtocol {
             z: nil,
             region3d: []
         )
+        return DefectDetail(defect: defect, roomId: 1, roomImageURL: nil)
     }
 
     func requestAnalysis(inRoomId: Int, outRoomId: Int?) async throws -> (analysisId: Int, status: String) {

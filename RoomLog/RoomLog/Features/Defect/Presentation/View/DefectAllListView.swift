@@ -9,7 +9,6 @@ import SwiftUI
 
 struct DefectAllListView: View {
     @Environment(\.di) var di
-    let roomId: Int
     let roomName: String
     let defects: [DefectReportDetail]
 
@@ -49,13 +48,7 @@ struct DefectAllListView: View {
                 ForEach(sortedDefects, id: \.id) { defect in
                     DefectReportRow(defect: defect)
                         .onTapGesture {
-                            pathStore.defectPath.append(
-                                .defect(.defectListDetail(
-                                    defect: defect,
-                                    roomId: roomId,
-                                    roomImageURL: nil
-                                ))
-                            )
+                            pathStore.defectPath.append(.defect(.defectDetail(defectId: defect.id)))
                         }
                 }
             }
@@ -97,7 +90,6 @@ struct DefectAllListView: View {
 #Preview {
     NavigationStack {
         DefectAllListView(
-            roomId: 1,
             roomName: "망고의 방",
             defects: PreviewSampleData.defects
         )

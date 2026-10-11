@@ -46,8 +46,15 @@ final class DefectRepository: DefectRepositoryProtocol {
         return try apiResponse.unwrap().toDomain(roomId: roomId)
     }
 
-    func getDefectReportDetail(roomId: Int) async throws -> DefectReportDetail {
-        throw RepositoryError.decodingError(detail: "개별 하자 조회 API 미지원")
+    func getDefectDetail(defectId: Int) async throws -> DefectDetail {
+        let response = try await adapter.request(DefectTarget.getDefectDetail(defectId: defectId))
+        let apiResponse: APIResponse<DefectDetailResponseDTO>
+        do {
+            apiResponse = try decoder.decode(APIResponse<DefectDetailResponseDTO>.self, from: response.data)
+        } catch {
+            throw RepositoryError.decodingError(detail: error.localizedDescription)
+        }
+        return try apiResponse.unwrap().toDomain()
     }
 
     func requestAnalysis(inRoomId: Int, outRoomId: Int?) async throws -> (analysisId: Int, status: String) {
