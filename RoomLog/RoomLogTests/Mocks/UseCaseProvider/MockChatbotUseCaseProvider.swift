@@ -14,6 +14,7 @@ final class MockChatbotUseCaseProvider: ChatbotUseCaseProvider {
 
     /// 마지막 메시지 전송 요청 인자 (defectId 전달 여부 검증용)
     var lastSendRequest: (message: String, guide: String?, defectId: Int?)?
+    var getSelectableDefectsCallCount = 0
 
     // MARK: - Stub Results
 
@@ -25,6 +26,7 @@ final class MockChatbotUseCaseProvider: ChatbotUseCaseProvider {
     )
     var getMessagesResult: Result<[ChatMessage], Error> = .success([])
     var getSelectableDefectsResult: Result<[ChatSelectableDefect], Error> = .success([])
+    var onGetSelectableDefects: (@MainActor () async -> Void)?
 
     // MARK: - ChatbotUseCaseProvider
 
@@ -38,7 +40,13 @@ final class MockChatbotUseCaseProvider: ChatbotUseCaseProvider {
         StubGetChatMessagesUseCase(result: getMessagesResult)
     }
     func makeGetChatSelectableDefectsUseCase() -> GetChatSelectableDefectsUseCaseProtocol {
-        StubGetChatSelectableDefectsUseCase(result: getSelectableDefectsResult)
+        StubGetChatSelectableDefectsUseCase(
+            result: getSelectableDefectsResult,
+            onExecute: {
+                self.getSelectableDefectsCallCount += 1
+                await self.onGetSelectableDefects?()
+            }
+        )
     }
 }
 
@@ -65,5 +73,9 @@ private struct StubGetChatMessagesUseCase: GetChatMessagesUseCaseProtocol {
 
 private struct StubGetChatSelectableDefectsUseCase: GetChatSelectableDefectsUseCaseProtocol {
     let result: Result<[ChatSelectableDefect], Error>
-    func execute() async throws -> [ChatSelectableDefect] { try result.get() }
+    let onExecute: @MainActor () async -> Void
+    func execute() async throws -> [ChatSelectableDefect] {
+        await onExecute()
+        return try result.get()
+    }
 }

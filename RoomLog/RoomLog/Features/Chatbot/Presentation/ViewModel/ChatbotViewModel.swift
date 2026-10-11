@@ -28,8 +28,6 @@ final class ChatbotViewModel {
     private(set) var defectListLoadFailed = false
 
     static let maxMessageLength = 300
-    /// 서버 답변이 이 문구를 포함하면 하자 상세의 자가 수리 안내로 이동하는 링크를 붙인다.
-    static let selfRepairGuidePhrase = "자가 수리 안내"
 
     // MARK: - Dependency
     private let provider: ChatbotUseCaseProvider
@@ -73,16 +71,16 @@ final class ChatbotViewModel {
         if let stored = storedSessionId {
             do {
                 let history = try await provider.makeGetChatMessagesUseCase().execute(sessionId: stored)
-                sessionId = stored
-                suggestedQuestions = cachedSuggestedQuestions
                 if history.isEmpty {
                     // 서버 내역에는 C01 greeting이 포함되지 않으므로 캐싱해둔 greeting으로 첫 화면 복원
                     messages = [ChatMessage(role: .assistant, content: cachedGreeting)]
                     isPanelExpanded = true
                 } else {
-                    messages = history
+                    messages = await restoringAttachments(in: history)
                     isPanelExpanded = false
                 }
+                sessionId = stored
+                suggestedQuestions = cachedSuggestedQuestions
                 return
             } catch {
                 // CHAT_001(없는 대화)/CHAT_002(권한 없음)일 때만 세션을 버리고 새로 시작.
@@ -96,6 +94,21 @@ final class ChatbotViewModel {
             }
         }
         await startNewSession()
+    }
+
+    /// 내역에는 하자 ID만 있으므로 목록을 한 번 조회해 사용자 메시지의 첨부 정보를 복원한다.
+    private func restoringAttachments(in history: [ChatMessage]) async -> [ChatMessage] {
+        guard history.contains(where: { $0.role == .user && $0.defectId != nil }),
+              let defects = try? await provider.makeGetChatSelectableDefectsUseCase().execute() else {
+            return history
+        }
+        let defectsById = Dictionary(defects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return history.map { message in
+            guard message.role == .user, let defectId = message.defectId else { return message }
+            var restored = message
+            restored.attachedDefect = defectsById[defectId]
+            return restored
+        }
     }
 
     func retryStart() async {
@@ -141,7 +154,7 @@ final class ChatbotViewModel {
         let message = String(trimmed.prefix(Self.maxMessageLength))
         let defect = attachedDefect
         attachedDefect = nil
-        messages.append(ChatMessage(role: .user, content: message, attachedDefect: defect))
+        messages.append(ChatMessage(role: .user, content: message, attachedDefect: defect, defectId: defect?.id))
         isPanelExpanded = false
         await requestAnswer(message: message, guide: nil, defectId: defect?.id)
     }
@@ -171,9 +184,7 @@ final class ChatbotViewModel {
                 guide: guide,
                 defectId: defectId
             )
-            // 하자를 첨부한 질문에 "자가 수리 안내 페이지"를 안내하는 답변이면 그 하자의 상세로 가는 링크를 붙인다.
-            let linkedDefectId = answer.answer.contains(Self.selfRepairGuidePhrase) ? defectId : nil
-            messages.append(ChatMessage(role: .assistant, content: answer.answer, linkedDefectId: linkedDefectId))
+            messages.append(ChatMessage(role: .assistant, content: answer.answer, defectId: defectId))
             lastFailedRequest = nil
             // FALLBACK 답변일 때만 새 추천 질문이 내려온다 → 패널 내용 갱신
             if answer.source == .fallback, let fresh = answer.suggestedQuestions, !fresh.isEmpty {

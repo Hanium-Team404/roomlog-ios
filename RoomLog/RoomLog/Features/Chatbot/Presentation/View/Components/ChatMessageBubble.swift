@@ -28,6 +28,12 @@ struct ChatMessageBubble: View {
             VStack(alignment: .trailing, spacing: 6) {
                 if let defect = message.attachedDefect {
                     DefectAttachmentChip(defect: defect)
+                } else if message.defectId != nil {
+                    Label("첨부한 하자", systemImage: "paperclip")
+                        .font(.medium, 13)
+                        .foregroundStyle(.secondary)
+                        .padding(8)
+                        .background(Color(.systemGray6).opacity(0.8), in: .rect(cornerRadius: 14))
                 }
                 Text(message.content)
                     .font(.medium, 15)
@@ -89,29 +95,29 @@ struct ChatMessageBubble: View {
 #Preview {
     NavigationStack {
         VStack(spacing: 16) {
-        ChatMessageBubble(
-            message: ChatMessage(role: .assistant, content: "안녕하세요! 하자 해결을 도와드리는 RoomLog 챗봇 루미입니다 ☺️")
-        )
-        ChatMessageBubble(
-            message: ChatMessage(role: .user, content: "벽지 찢어짐은 어떻게 보수하나요?")
-        )
-        ChatMessageBubble(
-            message: ChatMessage(
-                role: .user,
-                content: "이 하자는 어떻게 고치나요?",
-                attachedDefect: ChatSelectableDefect(
-                    id: 1, type: .scratch, severity: .low,
-                    location: "복도 바닥 타일", roomName: "거실", imageURL: nil
+            ChatMessageBubble(
+                message: ChatMessage(role: .assistant, content: "안녕하세요! 하자 해결을 도와드리는 RoomLog 챗봇 루미입니다 ☺️")
+            )
+            ChatMessageBubble(
+                message: ChatMessage(role: .user, content: "벽지 찢어짐은 어떻게 보수하나요?")
+            )
+            ChatMessageBubble(
+                message: ChatMessage(
+                    role: .user,
+                    content: "이 하자는 어떻게 고치나요?",
+                    attachedDefect: ChatSelectableDefect(
+                        id: 1, type: .scratch, severity: .low,
+                        location: "복도 바닥 타일", roomName: "거실", imageURL: nil
+                    )
                 )
             )
-        )
-        ChatMessageBubble(
-            message: ChatMessage(
-                role: .assistant,
-                content: "이 하자는 벽지 들뜸으로 보여요. 자세한 방법은 자가 수리 안내 페이지에서 확인해 주세요.",
-                linkedDefectId: 1
+            ChatMessageBubble(
+                message: ChatMessage(
+                    role: .assistant,
+                    content: "이 하자는 벽지 들뜸으로 보여요. 자세한 방법은 자가 수리 안내 페이지에서 확인해 주세요.",
+                    defectId: 1
+                )
             )
-        )
         }
         .padding(16)
     }

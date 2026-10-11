@@ -29,7 +29,12 @@ final class MockDefectUseCaseProvider: DefectUseCaseProvider {
         )
     )
 
-    private let fallback = DefectUseCaseProviderImpl(defectRepository: MockDefectRepository())
+    private let fallback: DefectUseCaseProviderImpl
+
+    @MainActor
+    init() {
+        fallback = DefectUseCaseProviderImpl(defectRepository: MockDefectRepository())
+    }
 
     // MARK: - DefectUseCaseProvider
 
