@@ -137,6 +137,32 @@ struct Region3dDTO: Codable {
     let z: Float
 }
 
+// MARK: - Defect Detail Response DTO
+
+/// 하자 단건 조회 응답. V01 `defects[]` 항목과 같은 필드에 `room_id`, `room_image_url`이 추가된다.
+/// 하자 필드는 `DefectDetailDTO`를 같은 디코더로 한 번 더 읽어 두 명세가 어긋나지 않게 한다
+struct DefectDetailResponseDTO: Codable {
+    let defect: DefectDetailDTO
+    let roomId: Int
+    let roomImageURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case roomId = "room_id"
+        case roomImageURL = "room_image_url"
+    }
+
+    init(from decoder: Decoder) throws {
+        defect = try DefectDetailDTO(from: decoder)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        roomId = try container.decode(Int.self, forKey: .roomId)
+        roomImageURL = try container.decodeIfPresent(String.self, forKey: .roomImageURL)
+    }
+
+    func toDomain() -> DefectDetail {
+        DefectDetail(defect: defect.toDomain(), roomId: roomId, roomImageURL: roomImageURL)
+    }
+}
+
 // MARK: - Analysis Result DTO
 
 struct AnalysisResultResponseDTO: Codable {

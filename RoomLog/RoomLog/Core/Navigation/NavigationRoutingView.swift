@@ -77,13 +77,12 @@ private extension NavigationRoutingView {
             DefectListView(houseId: houseId, homeProvider: di.resolve(HomeUseCaseProvider.self))
         case .defectListMain(let roomId):
             DefectView(roomId: roomId, provider: di.resolve(DefectUseCaseProvider.self))
-        case .defectAllList(let roomId, let roomName, let defects):
-            DefectAllListView(roomId: roomId, roomName: roomName, defects: defects)
-        case .defectListDetail(let defect, let roomId, let roomImageURL):
+        case .defectAllList(let roomName, let defects):
+            DefectAllListView(roomName: roomName, defects: defects)
+        case .defectDetail(let defectId, let scrollsToSelfRepair):
             DefectDetailView(
-                defect: defect,
-                roomId: roomId,
-                roomImageURL: roomImageURL,
+                defectId: defectId,
+                scrollsToSelfRepair: scrollsToSelfRepair,
                 provider: di.resolve(DefectUseCaseProvider.self)
             )
         case .repairShopList(let roomId, let defect):

@@ -14,7 +14,7 @@ final class GetDefectReportDetailUseCase: GetDefectReportDetailUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(roomId: Int) async throws -> DefectReportDetail {
-        try await repository.getDefectReportDetail(roomId: roomId)
+    func execute(defectId: Int) async throws -> DefectDetail {
+        try await repository.getDefectDetail(defectId: defectId)
     }
 }

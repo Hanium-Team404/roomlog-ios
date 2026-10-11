@@ -18,15 +18,40 @@ struct BottomCTAButton<Label: View>: View {
     var body: some View {
         Button(action: action) {
             label()
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
+                .bottomCTALabel()
         }
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.capsule)
-        .tint(.accent)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .bottomCTAContainer()
     }
 }
 
+/// `BottomCTAButton`과 같은 외형의 값 기반 네비게이션 링크.
+/// 가장 가까운 `NavigationStack`에 push되므로 화면이 어느 탭 스택에 올라가 있든 동작한다
+struct BottomCTALink<Label: View>: View {
+
+    let value: NavigationDestination
+    @ViewBuilder let label: () -> Label
+
+    var body: some View {
+        NavigationLink(value: value) {
+            label()
+                .bottomCTALabel()
+        }
+        .bottomCTAContainer()
+    }
+}
+
+private extension View {
+    func bottomCTALabel() -> some View {
+        foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+    }
+
+    func bottomCTAContainer() -> some View {
+        buttonStyle(.glassProminent)
+            .buttonBorderShape(.capsule)
+            .tint(.accent)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+    }
+}

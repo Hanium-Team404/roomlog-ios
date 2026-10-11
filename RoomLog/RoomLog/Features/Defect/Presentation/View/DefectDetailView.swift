@@ -8,57 +8,133 @@
 import SwiftUI
 import NukeUI
 
+/// 하자 상세. 하자 id만 받아 직접 조회하므로 목록·챗봇·알림 등 어떤 진입점에서든 같은 목적지로 연다
 struct DefectDetailView: View {
-    let defect: DefectReportDetail
-    let roomId: Int
-    let roomImageURL: String?
+    @State private var viewModel: DefectDetailViewModel
 
-    @Environment(\.di) var di
-    @State private var selfRepairViewModel: SelfRepairViewModel
+    private let scrollsToSelfRepair: Bool
+    private let provider: DefectUseCaseProvider
 
-    init(defect: DefectReportDetail, roomId: Int, roomImageURL: String?, provider: DefectUseCaseProvider) {
-        self.defect = defect
-        self.roomId = roomId
-        self.roomImageURL = roomImageURL
-        self._selfRepairViewModel = .init(
-            wrappedValue: SelfRepairViewModel(defectId: defect.id, provider: provider)
+    init(defectId: Int, scrollsToSelfRepair: Bool = false, provider: DefectUseCaseProvider) {
+        self.scrollsToSelfRepair = scrollsToSelfRepair
+        self.provider = provider
+        self._viewModel = .init(
+            wrappedValue: DefectDetailViewModel(defectId: defectId, provider: provider)
         )
     }
 
-    private static let displayDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy.MM.dd"
-        f.locale = Locale(identifier: "ko_KR")
-        return f
-    }()
-
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                roomImageView
-                summaryCard
-                detailCard
-                selfRepairCard
+        Group {
+            if let detail = viewModel.detail {
+                Content(detail: detail, scrollsToSelfRepair: scrollsToSelfRepair, provider: provider)
+            } else if let message = viewModel.errorMessage {
+                loadFailedView(message)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
         }
-        .safeAreaInset(edge: .bottom) {
-            bottomButton
-        }
-        .navigationTitle(defect.type.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await selfRepairViewModel.fetch() }
+        .task { await viewModel.fetch() }
+    }
+
+    private func loadFailedView(_ message: String) -> some View {
+        VStack(spacing: 12) {
+            Text(message)
+                .font(.medium, 15)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("다시 시도") {
+                Task { await viewModel.retry() }
+            }
+            .font(.semibold, 15)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Content
+
+private extension DefectDetailView {
+    /// 조회가 끝난 뒤의 본문. 하자·방 정보를 non-optional로 받아 카드 뷰들이 분기 없이 그린다
+    struct Content: View {
+        let detail: DefectDetail
+
+        @State private var selfRepairViewModel: SelfRepairViewModel
+        /// 챗봇에서 "자가 수리 안내" 링크로 들어오면 진입 후 자가 수리 카드로 내려간다
+        @State private var scrollPosition = ScrollPosition()
+        /// 콘텐츠 좌표계 기준 자가 수리 카드 상단 y. 카드가 뷰포트보다 길어도 "카드 상단 − 여백"으로 정확히 멈추기 위해 id 대신 오프셋으로 스크롤한다
+        @State private var selfRepairCardTop: CGFloat = 0
+        private let scrollsToSelfRepair: Bool
+
+        private static let contentCoordinateSpace = "defectDetailContent"
+        /// push 전환이 끝난 뒤 스크롤을 시작해야 이동이 보인다. 전환 중에 움직이면 두 애니메이션이 겹쳐 튀어 보인다
+        private static let scrollDelay: Duration = .milliseconds(450)
+        /// 스크롤 도착 시 자가 수리 카드 위에 남길 여백
+        private static let selfRepairScrollInset: CGFloat = 24
+
+        static let displayDateFormatter: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy.MM.dd"
+            f.locale = Locale(identifier: "ko_KR")
+            return f
+        }()
+
+        init(detail: DefectDetail, scrollsToSelfRepair: Bool, provider: DefectUseCaseProvider) {
+            self.detail = detail
+            self.scrollsToSelfRepair = scrollsToSelfRepair
+            self._selfRepairViewModel = .init(
+                wrappedValue: SelfRepairViewModel(defectId: detail.defect.id, provider: provider)
+            )
+        }
+
+        var defect: DefectReportDetail { detail.defect }
+
+        var body: some View {
+            ScrollView {
+                VStack(spacing: 16) {
+                    roomImageView
+                    summaryCard
+                    detailCard
+                    selfRepairCard
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.frame(in: .named(Self.contentCoordinateSpace)).minY
+                        } action: { top in
+                            selfRepairCardTop = top
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+                .coordinateSpace(.named(Self.contentCoordinateSpace))
+            }
+            .scrollPosition($scrollPosition)
+            .safeAreaInset(edge: .bottom) {
+                bottomButton
+            }
+            .navigationTitle(defect.type.displayName)
+            .task { await selfRepairViewModel.fetch() }
+            .task { await scrollToSelfRepairIfNeeded() }
+        }
+
+        private func scrollToSelfRepairIfNeeded() async {
+            guard scrollsToSelfRepair else { return }
+            try? await Task.sleep(for: Self.scrollDelay)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.5)) {
+                scrollPosition.scrollTo(y: max(0, selfRepairCardTop - Self.selfRepairScrollInset))
+            }
+        }
     }
 }
 
 // MARK: - Room Image
 
-private extension DefectDetailView {
+private extension DefectDetailView.Content {
     var roomImageView: some View {
         Group {
-            if let urlString = defect.imageURL ?? roomImageURL,
+            if let urlString = defect.imageURL ?? detail.roomImageURL,
                let url = URL(string: urlString) {
                 LazyImage(url: url) { state in
                     if let image = state.image {
@@ -90,7 +166,7 @@ private extension DefectDetailView {
 
 // MARK: - Summary Card
 
-private extension DefectDetailView {
+private extension DefectDetailView.Content {
     var summaryCard: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 12) {
@@ -125,7 +201,7 @@ private extension DefectDetailView {
 
 // MARK: - Detail Card
 
-private extension DefectDetailView {
+private extension DefectDetailView.Content {
     var detailCard: some View {
         VStack(alignment: .leading, spacing: 42) {
             Text("하자 상세 정보")
@@ -192,7 +268,7 @@ private extension DefectDetailView {
 
 // MARK: - Self Repair Card
 
-private extension DefectDetailView {
+private extension DefectDetailView.Content {
     var selfRepairCard: some View {
         SelfRepairCard(
             guide: selfRepairViewModel.guide,
@@ -206,12 +282,10 @@ private extension DefectDetailView {
 
 // MARK: - Bottom Button
 
-private extension DefectDetailView {
+private extension DefectDetailView.Content {
+    /// 값 기반 링크라 이 화면이 홈·뷰어 어느 탭 스택에 있든 같은 스택에 쌓인다 (챗봇 경유 진입 대응)
     var bottomButton: some View {
-        BottomCTAButton {
-            let pathStore = di.resolve(PathStore.self)
-            pathStore.defectPath.append(.defect(.repairShopList(roomId: roomId, defect: defect)))
-        } label: {
+        BottomCTALink(value: .defect(.repairShopList(roomId: detail.roomId, defect: defect))) {
             Text("추천 업체 보기")
                 .font(.semibold, 17)
         }
@@ -222,13 +296,11 @@ private extension DefectDetailView {
 #Preview {
     NavigationStack {
         DefectDetailView(
-            defect: PreviewSampleData.defects[0],
-            roomId: 1,
-            roomImageURL: nil,
+            defectId: 2,
+            scrollsToSelfRepair: true,
             provider: DefectUseCaseProviderImpl(defectRepository: MockDefectRepository())
         )
     }
     .environment(\.di, DIContainer.configured())
 }
 #endif
-

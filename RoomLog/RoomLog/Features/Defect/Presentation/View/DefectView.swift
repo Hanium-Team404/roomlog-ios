@@ -66,17 +66,12 @@ struct DefectView: View {
                     defects: report.defects,
                     onViewAll: {
                         pathStore.defectPath.append(.defect(.defectAllList(
-                            roomId: viewModel.roomId,
                             roomName: report.room.title,
                             defects: report.defects
                         )))
                     },
                     onTap: { defect in
-                        pathStore.defectPath.append(.defect(.defectListDetail(
-                            defect: defect,
-                            roomId: viewModel.roomId,
-                            roomImageURL: report.imageURL
-                        )))
+                        pathStore.defectPath.append(.defect(.defectDetail(defectId: defect.id)))
                     }
                 )
             }

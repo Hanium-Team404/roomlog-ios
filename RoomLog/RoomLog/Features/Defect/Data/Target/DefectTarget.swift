@@ -12,7 +12,7 @@ internal import Alamofire
 enum DefectTarget {
     case getDefectRoomData
     case getDefectReport(roomId: Int)
-    case getDefectReportDetail(roomId: Int)
+    case getDefectDetail(defectId: Int)
     case createAnalysis(inRoomId: Int, outRoomId: Int?)
     case getAnalysisStatus(analysisId: Int)
     case getAnalysisResult(analysisId: Int)
@@ -24,8 +24,10 @@ extension DefectTarget: BaseTargetType {
         switch self {
         case .getDefectRoomData:
             return "/rooms"
-        case .getDefectReport(let roomId), .getDefectReportDetail(let roomId):
+        case .getDefectReport(let roomId):
             return "/rooms/\(roomId)/defects"
+        case .getDefectDetail(let defectId):
+            return "/defects/\(defectId)"
         case .createAnalysis:
             return "/analyses"
         case .getAnalysisStatus(let analysisId):
