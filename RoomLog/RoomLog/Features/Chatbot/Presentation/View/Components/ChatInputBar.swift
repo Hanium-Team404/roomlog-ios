@@ -52,6 +52,7 @@ struct ChatInputBar: View {
                 .font(.medium, 15)
                 .lineLimit(1...4)
                 .padding(.vertical, 8)
+                .frame(minHeight: 44)
                 .onChange(of: text) { _, newValue in
                     // 서버 제한 300자 초과 입력 차단
                     if newValue.count > ChatbotViewModel.maxMessageLength {

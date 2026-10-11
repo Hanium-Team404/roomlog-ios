@@ -124,19 +124,22 @@ struct ChatHistoryMessageDTO: Codable {
     let messageId: Int
     let role: String
     let content: String
+    let defectId: Int?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
         case messageId = "message_id"
         case role
         case content
+        case defectId = "defect_id"
         case createdAt = "created_at"
     }
 
     func toDomain() -> ChatMessage {
         ChatMessage(
             role: role.uppercased() == "USER" ? .user : .assistant,
-            content: content
+            content: content,
+            defectId: defectId
         )
     }
 }

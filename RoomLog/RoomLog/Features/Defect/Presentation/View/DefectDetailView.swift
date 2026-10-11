@@ -64,8 +64,11 @@ private extension DefectDetailView {
         @State private var selfRepairViewModel: SelfRepairViewModel
         /// 챗봇에서 "자가 수리 안내" 링크로 들어오면 진입 후 자가 수리 카드로 내려간다
         @State private var scrollPosition = ScrollPosition()
-        /// 콘텐츠 좌표계 기준 자가 수리 카드 상단 y. 카드가 뷰포트보다 길어도 "카드 상단 − 여백"으로 정확히 멈추기 위해 id 대신 오프셋으로 스크롤한다
+        /// 콘텐츠 좌표계 기준 자가 수리 카드 상단 y. 위 카드들은 높이가 고정이라 가이드 로드 전후로 값이 바뀌지 않는다
         @State private var selfRepairCardTop: CGFloat = 0
+        /// 진입 시 한 번만 내려간다. 추천 업체에서 돌아올 때 `.task`가 재실행돼도 읽던 위치를 유지하기 위함
+        @State private var hasScrolledToSelfRepair = false
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         private let scrollsToSelfRepair: Bool
 
         private static let contentCoordinateSpace = "defectDetailContent"
@@ -91,6 +94,11 @@ private extension DefectDetailView {
 
         var defect: DefectReportDetail { detail.defect }
 
+        /// 가이드 결과(또는 실패)가 레이아웃에 반영됐는지. 로딩 카드는 짧아서 그 전에 스크롤하면 콘텐츠 끝에 걸려 카드가 상단에 오지 못한다
+        private var isSelfRepairResolved: Bool {
+            selfRepairViewModel.guide != nil || selfRepairViewModel.loadFailed
+        }
+
         var body: some View {
             ScrollView {
                 VStack(spacing: 16) {
@@ -115,14 +123,15 @@ private extension DefectDetailView {
             }
             .navigationTitle(defect.type.displayName)
             .task { await selfRepairViewModel.fetch() }
-            .task { await scrollToSelfRepairIfNeeded() }
+            .task(id: isSelfRepairResolved) { await scrollToSelfRepairIfNeeded() }
         }
 
         private func scrollToSelfRepairIfNeeded() async {
-            guard scrollsToSelfRepair else { return }
+            guard scrollsToSelfRepair, isSelfRepairResolved, !hasScrolledToSelfRepair else { return }
             try? await Task.sleep(for: Self.scrollDelay)
             guard !Task.isCancelled else { return }
-            withAnimation(.easeInOut(duration: 0.5)) {
+            hasScrolledToSelfRepair = true
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
                 scrollPosition.scrollTo(y: max(0, selfRepairCardTop - Self.selfRepairScrollInset))
             }
         }
