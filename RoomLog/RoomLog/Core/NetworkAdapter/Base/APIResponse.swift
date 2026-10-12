@@ -31,7 +31,7 @@ struct APIResponse<T: Codable>: Codable {
     }
 }
 
-struct APIErrorBody: Codable {
+nonisolated struct APIErrorBody: Codable, Sendable {
     let code: String?
 }
 

@@ -114,12 +114,31 @@ extension RepositoryError {
             return .transportError(code: urlError.code)
         case is CancellationError:
             return .transportError(code: .cancelled)
-        case let networkError as NetworkError:
+        case NetworkError.httpError(let statusCode, let data):
+            let response = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
             return .serverError(
-                code: networkError.statusCode,
-                message: networkError.errorDescription,
-                errorCode: nil
+                code: statusCode,
+                message: response?.message ?? error.localizedDescription,
+                errorCode: response?.error?.code.map { ServerErrorCode(rawValue: $0) }
             )
+        case NetworkError.unauthorized:
+            return .serverError(
+                code: 401,
+                message: error.localizedDescription,
+                errorCode: .commonUnauthorized
+            )
+        case NetworkError.invalidResponse, TokenRefreshError.invalidResponse:
+            return .decodingError(detail: error.localizedDescription)
+        case TokenRefreshError.serverError(let statusCode):
+            let errorCode: ServerErrorCode? = switch statusCode {
+            case 401: .commonUnauthorized
+            case 403: .commonForbidden
+            default: nil
+            }
+            return .serverError(code: statusCode, message: error.localizedDescription, errorCode: errorCode)
+        case TokenRefreshError.refreshFailed:
+            // 성공 응답의 결과 누락도 이 오류에 포함되므로 인증 만료로 단정하지 않는다.
+            return .serverError(code: nil, message: error.localizedDescription, errorCode: nil)
         default:
             return .decodingError(detail: String(describing: error))
         }

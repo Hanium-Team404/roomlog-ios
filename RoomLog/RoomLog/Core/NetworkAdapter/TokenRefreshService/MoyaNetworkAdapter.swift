@@ -297,17 +297,6 @@ extension MoyaNetworkAdapter {
     }
 }
 
-// MARK: - Error Response (로깅용)
-
-private struct APIErrorResponse: Codable {
-    let message: String?
-    let error: ErrorBody?
-
-    struct ErrorBody: Codable {
-        let code: String?
-    }
-}
-
 // MARK: - MoyaAdapterError
 
 enum MoyaAdapterError: Error {
