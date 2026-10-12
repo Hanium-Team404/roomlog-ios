@@ -49,7 +49,7 @@ struct MoyaNetworkAdapter {
             }
 
             #if DEBUG
-            logResponse(httpResponse, data: data, request: urlRequest)
+            logResponse(statusCode: httpResponse.statusCode, data: data, request: urlRequest)
             #endif
 
             // Moya의 Response 형태로 포장해서 반환
@@ -62,8 +62,12 @@ struct MoyaNetworkAdapter {
             return response
         } catch {
             #if DEBUG
-            print("🔴 [Network] ERROR \(urlRequest.httpMethod ?? "") \(urlRequest.url?.absoluteString ?? "")")
-            print("  → \(error.localizedDescription)")
+            if case NetworkError.httpError(let statusCode, let data) = error {
+                logResponse(statusCode: statusCode, data: data, request: urlRequest)
+            } else {
+                print("🔴 [Network] ERROR \(urlRequest.httpMethod ?? "") \(urlRequest.url?.absoluteString ?? "")")
+                print("  → \(error.localizedDescription)")
+            }
             #endif
             throw error
         }
@@ -108,10 +112,10 @@ extension MoyaNetworkAdapter {
         }
     }
 
-    private func logResponse(_ response: HTTPURLResponse, data: Data, request: URLRequest) {
+    private func logResponse(statusCode: Int, data: Data, request: URLRequest) {
         let method = request.httpMethod ?? "?"
         let url = request.url?.absoluteString ?? "?"
-        let status = response.statusCode
+        let status = statusCode
         let icon = (200..<300).contains(status) ? "🟢" : "🔴"
         print("\(icon) [Network] ← \(status) \(method) \(url)")
 
