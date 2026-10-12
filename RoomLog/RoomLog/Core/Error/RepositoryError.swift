@@ -115,7 +115,7 @@ extension RepositoryError {
         case is CancellationError:
             return .transportError(code: .cancelled)
         case NetworkError.httpError(let statusCode, let data):
-            let response = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+            let response = try? JSONDecoder().decode(APIResponse<EmptyResult>.self, from: data)
             return .serverError(
                 code: statusCode,
                 message: response?.message ?? error.localizedDescription,

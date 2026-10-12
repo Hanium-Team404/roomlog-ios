@@ -121,7 +121,7 @@ extension MoyaNetworkAdapter {
 
         // 에러 응답이면 서버 에러 코드 파싱
         if !(200..<300).contains(status) {
-            if let errorInfo = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            if let errorInfo = try? JSONDecoder().decode(APIResponse<EmptyResult>.self, from: data) {
                 let code = errorInfo.error?.code ?? "없음"
                 let message = errorInfo.message ?? ""
                 let serverError = ServerErrorCode(rawValue: code)

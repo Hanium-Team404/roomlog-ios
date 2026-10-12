@@ -89,7 +89,7 @@ struct RepositoryErrorTests {
         statusCode: Int
     ) {
         let body = Data("""
-        {"message":"서버 상세 메시지","error":{"code":"\(rawCode)"}}
+        {"success":false,"code":\(statusCode),"message":"서버 상세 메시지","error":{"code":"\(rawCode)"}}
         """.utf8)
 
         let normalized = RepositoryError.normalize(NetworkError.httpError(statusCode: statusCode, data: body))
@@ -100,7 +100,7 @@ struct RepositoryErrorTests {
 
     @Test func HTTP_상태가_본문의_code보다_우선한다() {
         let body = Data("""
-        {"code":400,"message":"일시적인 서버 장애","error":{"code":"COMMON_500"},"data":[1,2]}
+        {"success":false,"code":400,"message":"일시적인 서버 장애","error":{"code":"COMMON_500"},"data":[1,2]}
         """.utf8)
 
         let normalized = RepositoryError.normalize(NetworkError.httpError(statusCode: 503, data: body))
@@ -121,7 +121,7 @@ struct RepositoryErrorTests {
 
     @Test func 알수없는_서버_코드는_내부_메시지를_사용자에게_노출하지_않는다() {
         let body = Data("""
-        {"message":"internal detail","error":{"code":"FUTURE_001"}}
+        {"success":false,"code":400,"message":"internal detail","error":{"code":"FUTURE_001"}}
         """.utf8)
 
         let normalized = RepositoryError.normalize(NetworkError.httpError(statusCode: 400, data: body))
