@@ -100,6 +100,8 @@ struct USDZSceneView: UIViewRepresentable {
         var loadTask: Task<Void, Never>?
         /// 파일을 읽지 못했을 때 띄운 안내 라벨. 다음 로드가 시작되거나 씬이 적용되면 제거한다
         var failureLabel: UILabel?
+        /// 로드에 실패한 URL. 같은 URL은 뷰가 갱신돼도 다시 시도하지 않는다 (URL이 바뀌거나 뷰가 재생성되면 재시도)
+        var failedFileURL: URL?
 
         /// Handles a tap on the SceneKit view and, if a defect overlay was tapped, animates the camera to that defect's center.
         /// - Parameters:
@@ -368,10 +370,11 @@ struct USDZSceneView: UIViewRepresentable {
             return
         }
 
-        // 같은 URL을 이미 로드 중이면 완료를 기다리고, 다른 URL이면 기존 작업을 취소하고 새로 시작
-        guard coordinator.loadingFileURL != fileURL else { return }
+        // 같은 URL을 이미 로드 중이거나 방금 실패했으면 그대로 두고, 다른 URL이면 기존 작업을 취소하고 새로 시작
+        guard coordinator.loadingFileURL != fileURL, coordinator.failedFileURL != fileURL else { return }
         coordinator.loadTask?.cancel()
         coordinator.loadingFileURL = fileURL
+        coordinator.failedFileURL = nil
         coordinator.failureLabel?.removeFromSuperview()
         coordinator.failureLabel = nil
 
@@ -395,10 +398,14 @@ struct USDZSceneView: UIViewRepresentable {
                 // 로드 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (성공 시 캐시에는 남는다)
                 let isCurrent = coordinator.loadingFileURL == url
                 guard let master = loaded else {
-                    // 손상되었거나 읽을 수 없는 파일: 로딩 상태를 풀고 실패 안내를 표시한다
+                    // 손상되었거나 읽을 수 없는 파일: 로딩 상태를 풀고 실패 안내를 표시한다.
+                    // 이전 URL의 씬이 남아 있으면 다른 방 모델이 현재 결과처럼 보이므로 함께 비운다
                     if isCurrent {
                         coordinator.loadingFileURL = nil
+                        coordinator.failedFileURL = url
+                        coordinator.loadedFileURL = nil
                         if let liveView = coordinator.scnView {
+                            liveView.scene = nil
                             showLoadFailure(in: liveView, coordinator: coordinator)
                         }
                     }
@@ -417,6 +424,7 @@ struct USDZSceneView: UIViewRepresentable {
     private func apply(master: SCNScene, for url: URL, to scnView: SCNView, coordinator: Coordinator) {
         coordinator.failureLabel?.removeFromSuperview()
         coordinator.failureLabel = nil
+        coordinator.failedFileURL = nil
         let scene = SCNScene()
         for child in master.rootNode.childNodes {
             scene.rootNode.addChildNode(child.clone())
