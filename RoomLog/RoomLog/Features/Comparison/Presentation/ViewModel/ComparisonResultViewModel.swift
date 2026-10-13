@@ -36,6 +36,13 @@ final class ComparisonResultViewModel {
         comparisonMode == .moveIn ? moveInModelURL : moveOutModelURL
     }
 
+    /// 모델 다운로드에 실패한 방. 옛 캐시로 대체하지 않고 화면에 실패 안내를 띄우기 위한 상태
+    private(set) var modelDownloadFailedRoomIds: Set<Int> = []
+
+    var isCurrentModelDownloadFailed: Bool {
+        modelDownloadFailedRoomIds.contains(comparisonMode == .moveIn ? moveInRoomId : moveOutRoomId)
+    }
+
     /// 현재 모드에서 표시할 하자 오버레이 (입주 전이면 없음)
     var currentDefects: [DefectReportDetail] {
         comparisonMode == .moveIn ? [] : (result?.defects ?? [])
@@ -87,13 +94,7 @@ final class ComparisonResultViewModel {
     // MARK: - Main Flow
 
     func loadOrAnalyze() async {
-        // 0. USDZ 캐시 먼저 확인 (입주 전 / 퇴거 후 각각)
-        if let cached = await fileCache.cachedFileURL(for: moveInRoomId) {
-            moveInModelURL = cached
-        }
-        if let cached = await fileCache.cachedFileURL(for: moveOutRoomId) {
-            moveOutModelURL = cached
-        }
+        // 모델 파일은 `downloadModelIfNeeded()`가 방별 원격 URL을 받아 캐시 비교 후 내려받는다
 
         // 1. 저장된 analysisId가 있으면 상태 확인
         if let savedId = savedAnalysisId() {
@@ -237,19 +238,21 @@ final class ComparisonResultViewModel {
     }
 
     private func downloadModel(for roomId: Int, assign keyPath: ReferenceWritableKeyPath<ComparisonResultViewModel, URL?>) async {
-        if let cached = await fileCache.cachedFileURL(for: roomId) {
-            self[keyPath: keyPath] = cached
-            return
-        }
-
-        // 해당 방의 ply_url을 defects API에서 가져오기
+        // 해당 방의 모델 URL을 defects API에서 가져온 뒤 download가 캐시의 원본 URL과 비교한다.
+        // 같으면 네트워크 없이 캐시를, 바뀌었으면 새 파일을 돌려준다.
+        modelDownloadFailedRoomIds.remove(roomId)
         guard let report = try? await provider.makeGetDefectReportUseCase().execute(roomId: roomId),
               let urlString = report.imageURL,
-              let remoteURL = URL(string: urlString) else { return }
+              let remoteURL = URL(string: urlString) else {
+            modelDownloadFailedRoomIds.insert(roomId)
+            return
+        }
 
         do {
             self[keyPath: keyPath] = try await fileCache.download(from: remoteURL, roomId: roomId)
         } catch {
+            self[keyPath: keyPath] = nil
+            modelDownloadFailedRoomIds.insert(roomId)
             print("[Comparison] Model download failed for room \(roomId): \(error)")
         }
     }

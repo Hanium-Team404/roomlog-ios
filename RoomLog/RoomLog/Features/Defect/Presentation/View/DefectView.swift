@@ -161,6 +161,8 @@ private extension DefectView {
                     )
                     .padding(.bottom, 10)
                 }
+            } else if viewModel.isModelDownloadFailed {
+                ModelLoadFailurePlaceholder()
             } else if report.imageURL != nil {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

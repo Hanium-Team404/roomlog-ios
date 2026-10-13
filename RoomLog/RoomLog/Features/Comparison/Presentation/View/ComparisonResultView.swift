@@ -113,6 +113,8 @@ private extension ComparisonResultView {
         Group {
             if let localURL = viewModel.currentModelURL {
                 USDZSceneView(fileURL: localURL, defects: defects)
+            } else if viewModel.isCurrentModelDownloadFailed {
+                ModelLoadFailurePlaceholder()
             } else {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

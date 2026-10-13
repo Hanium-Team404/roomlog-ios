@@ -21,6 +21,8 @@ final class DefectViewModel {
     private(set) var report: DefectReport?
     private(set) var phase: AnalysisPhase = .loading
     private(set) var localModelURL: URL?
+    /// 모델 다운로드 실패 여부. 옛 캐시로 대체하지 않고 화면에 실패 안내를 띄우기 위한 상태
+    private(set) var isModelDownloadFailed = false
     var errorMessage: String?
 
     // MARK: - Provider
@@ -67,16 +69,11 @@ final class DefectViewModel {
 
     // MARK: - Function
 
-    /// 0. USDZ 캐시 확인
     /// 1. 기존 하자 결과 조회 → defects 있으면 바로 표시
     /// 2. savedAnalysisId 있으면 상태 확인 → polling 재개 or 결과 표시
     /// 3. 없으면 POST /analyses → 분석 시작
+    /// 모델 파일은 report.imageURL이 정해진 뒤 `downloadModelIfNeeded()`가 캐시 비교 후 받는다.
     func loadOrAnalyze() async {
-        // 0. USDZ 캐시 먼저 확인 (불필요한 다운로드 방지)
-        if let cached = await fileCache.cachedFileURL(for: roomId) {
-            localModelURL = cached
-        }
-
         // 1. 기존 하자 결과 조회 → defects가 있으면 바로 표시
         if let existingReport = try? await provider.makeGetDefectReportUseCase().execute(roomId: roomId),
            !existingReport.defects.isEmpty {
@@ -252,12 +249,13 @@ final class DefectViewModel {
         guard let urlString = report?.imageURL,
               let remoteURL = URL(string: urlString) else { return }
 
+        isModelDownloadFailed = false
         do {
             localModelURL = try await fileCache.download(from: remoteURL, roomId: roomId)
         } catch {
-            if localModelURL == nil {
-                localModelURL = await fileCache.cachedFileURL(for: roomId)
-            }
+            // 바뀐 모델을 못 받았을 때 옛 캐시를 보여주면 새 하자 좌표를 옛 메시 위에 그리게 되므로 실패로 노출한다
+            localModelURL = nil
+            isModelDownloadFailed = true
             print("[Defect] Model download failed: \(error)")
         }
     }

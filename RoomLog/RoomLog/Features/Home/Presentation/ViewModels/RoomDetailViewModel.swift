@@ -67,19 +67,15 @@ final class RoomDetailViewModel {
             let detail = try await provider.makeGetRoomDetailUseCase().execute(roomId: roomId)
             roomDetail = detail
 
-            // 캐시 확인
-            if let cached = await fileCache.cachedFileURL(for: roomId) {
-                localModelURL = cached
-            } else {
-                // fileURL 결정: roomDetail에 있으면 사용, 없으면 scan preview로 조회
-                let fileURLString: String? = try await resolveFileURL(from: detail)
+            // fileURL 결정: roomDetail에 있으면 사용, 없으면 scan preview로 조회
+            let fileURLString: String? = try await resolveFileURL(from: detail)
 
-                if let urlString = fileURLString, let remoteURL = URL(string: urlString) {
-                    isDownloading = true
-                    let localURL = try await fileCache.download(from: remoteURL, roomId: roomId)
-                    localModelURL = localURL
-                    isDownloading = false
-                }
+            if let urlString = fileURLString, let remoteURL = URL(string: urlString) {
+                isDownloading = true
+                // download가 캐시의 원본 URL과 비교해 같으면 네트워크 없이 캐시를, 바뀌었으면 새 파일을 돌려준다.
+                // 실패 시 옛 캐시로 대체하지 않는다 (바뀐 모델 대신 옛 모델을 보여주면 안 되므로 에러로 노출)
+                localModelURL = try await fileCache.download(from: remoteURL, roomId: roomId)
+                isDownloading = false
             }
         } catch {
             errorMessage = error.localizedDescription
