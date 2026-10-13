@@ -135,7 +135,6 @@ struct RoomDetailResponseDTO: Codable {
             name: name,
             moveInDate: moveInDate.flatMap { Date.fromServerDate($0) },
             moveOutDate: moveOutDate.flatMap { Date.fromServerDate($0) },
-            thumbnailURL: fileURL,
             fileURL: fileURL,
             createdAt: parsedCreatedAt,
             latestScan: try latestScan?.toDomain()

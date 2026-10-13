@@ -103,7 +103,6 @@ final class RoomDetailViewModel {
             name: name,
             moveInDate: moveInDate,
             moveOutDate: moveOutDate,
-            thumbnailURL: detail.thumbnailURL,
             fileURL: detail.fileURL,
             createdAt: detail.createdAt,
             latestScan: detail.latestScan

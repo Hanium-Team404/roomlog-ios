@@ -29,7 +29,7 @@ final class MockHomeUseCaseProvider: HomeUseCaseProvider {
     var createRoomResult: Result<Int, Error> = .success(1)
     var getRoomDetailResult: Result<RoomDetail, Error> = .success(
         RoomDetail(id: 1, name: "테스트 방", moveInDate: nil, moveOutDate: nil,
-                   thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil)
+                   fileURL: nil, createdAt: Date(), latestScan: nil)
     )
     var updateRoomResult: Result<Void, Error> = .success(())
     var deleteRoomResult: Result<Void, Error> = .success(())

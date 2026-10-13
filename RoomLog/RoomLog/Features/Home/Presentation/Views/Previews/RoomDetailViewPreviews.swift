@@ -13,7 +13,6 @@ private let sampleRoom = RoomDetail(
     name: "거실",
     moveInDate: nil,
     moveOutDate: nil,
-    thumbnailURL: nil,
     fileURL: nil,
     createdAt: Date(),
     latestScan: ScanDetail(scanId: 1, status: "COMPLETED", createdAt: Date())

@@ -34,7 +34,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_성공시_roomDetail이_설정된다() async {
         let detail = RoomDetail(
             id: 1, name: "거실", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
 
@@ -60,7 +60,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_fileURL이_nil이고_latestScan이_없으면_다운로드하지_않는다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
 
@@ -76,7 +76,7 @@ final class RoomDetailViewModelTests: XCTestCase {
         fileCache.cachedResult = cachedURL
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
@@ -91,7 +91,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_fileURL이_nil이고_latestScan이_있으면_scanPreview를_조회한다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(),
+            fileURL: nil, createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
@@ -108,7 +108,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_fileURL이_있으면_scanPreview를_조회하지_않는다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
@@ -123,7 +123,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_다운로드_실패시_errorMessage가_설정되고_isDownloading이_해제된다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
@@ -142,7 +142,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_updateRoom_성공시_roomDetail이_갱신된다() async throws {
         let detail = RoomDetail(
             id: 1, name: "원래 이름", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
         await sut.load()
@@ -166,7 +166,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_updateRoom_실패시_에러를_던진다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
         await sut.load()
