@@ -7,8 +7,6 @@
 
 import SwiftUI
 import SceneKit
-import ModelIO
-import SceneKit.ModelIO
 
 // MARK: - Camera Direction
 
@@ -84,6 +82,8 @@ struct USDZSceneView: UIViewRepresentable {
         var loadedFileURL: URL?
         var loadingFileURL: URL?
         var loadTask: Task<Void, Never>?
+        /// 파일을 읽지 못했을 때 띄운 안내 라벨. 다음 로드가 시작되거나 씬이 적용되면 제거한다
+        var failureLabel: UILabel?
 
         /// Handles a tap on the SceneKit view and, if a defect overlay was tapped, animates the camera to that defect's center.
         /// - Parameters:
@@ -326,8 +326,8 @@ struct USDZSceneView: UIViewRepresentable {
         }
     }
 
-    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 USDZ를 파싱한 뒤 적용한다.
-    /// USDZ 파싱(MDLAsset → SCNScene)은 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
+    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 USDZ를 로드한 뒤 적용한다.
+    /// USDZ 로드(`SCNScene(url:)`)는 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
     private func applySceneIfNeeded(to scnView: SCNView, coordinator: Coordinator) {
         if let master = USDZSceneCache.shared.scene(for: fileURL) {
             coordinator.loadTask?.cancel()
@@ -336,10 +336,12 @@ struct USDZSceneView: UIViewRepresentable {
             return
         }
 
-        // 같은 URL을 이미 파싱 중이면 완료를 기다리고, 다른 URL이면 기존 작업을 취소하고 새로 시작
+        // 같은 URL을 이미 로드 중이면 완료를 기다리고, 다른 URL이면 기존 작업을 취소하고 새로 시작
         guard coordinator.loadingFileURL != fileURL else { return }
         coordinator.loadTask?.cancel()
         coordinator.loadingFileURL = fileURL
+        coordinator.failureLabel?.removeFromSuperview()
+        coordinator.failureLabel = nil
 
         let spinner = UIActivityIndicatorView(style: .medium)
         spinner.startAnimating()
@@ -353,14 +355,24 @@ struct USDZSceneView: UIViewRepresentable {
         let url = fileURL
         coordinator.loadTask = Task.detached(priority: .userInitiated) {
             guard !Task.isCancelled else { return }
-            let asset = MDLAsset(url: url)
-            asset.loadTextures()
-            let master = SCNScene(mdlAsset: asset)
+            // USDZ는 SceneKit 네이티브 포맷이라 Model I/O 변환 없이 직접 읽는다 (USD 머티리얼·텍스처 보존)
+            let loaded = try? SCNScene(url: url, options: nil)
             await MainActor.run {
-                USDZSceneCache.shared.store(master, for: url)
                 spinner.removeFromSuperview()
-                // 파싱 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (캐시에는 남는다)
-                guard coordinator.loadingFileURL == url, let liveView = coordinator.scnView else { return }
+                // 로드 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (성공 시 캐시에는 남는다)
+                let isCurrent = coordinator.loadingFileURL == url
+                guard let master = loaded else {
+                    // 손상되었거나 읽을 수 없는 파일: 로딩 상태를 풀고 실패 안내를 표시한다
+                    if isCurrent {
+                        coordinator.loadingFileURL = nil
+                        if let liveView = coordinator.scnView {
+                            showLoadFailure(in: liveView, coordinator: coordinator)
+                        }
+                    }
+                    return
+                }
+                USDZSceneCache.shared.store(master, for: url)
+                guard isCurrent, let liveView = coordinator.scnView else { return }
                 coordinator.loadingFileURL = nil
                 apply(master: master, for: url, to: liveView, coordinator: coordinator)
             }
@@ -370,6 +382,8 @@ struct USDZSceneView: UIViewRepresentable {
     /// 캐시된 마스터 씬을 직접 표시하지 않고 노드 트리를 복제해 뷰별 씬을 만든다.
     /// 지오메트리는 공유되어 복제 비용이 적고, 오버레이·카메라 조작이 같은 파일을 쓰는 다른 뷰와 섞이지 않는다.
     private func apply(master: SCNScene, for url: URL, to scnView: SCNView, coordinator: Coordinator) {
+        coordinator.failureLabel?.removeFromSuperview()
+        coordinator.failureLabel = nil
         let scene = SCNScene()
         for child in master.rootNode.childNodes {
             scene.rootNode.addChildNode(child.clone())
@@ -377,6 +391,25 @@ struct USDZSceneView: UIViewRepresentable {
         updateDefectOverlays(in: scene, defects: coordinator.defects)
         scnView.scene = scene
         coordinator.loadedFileURL = url
+    }
+
+    /// 파일을 읽지 못했을 때 뷰 중앙에 안내 문구를 표시한다.
+    private func showLoadFailure(in scnView: SCNView, coordinator: Coordinator) {
+        let label = UILabel()
+        label.text = "3D 모델을 불러오지 못했습니다"
+        label.font = .preferredFont(forTextStyle: .footnote)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        scnView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: scnView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: scnView.centerYAnchor),
+            label.leadingAnchor.constraint(greaterThanOrEqualTo: scnView.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: scnView.trailingAnchor, constant: -16)
+        ])
+        coordinator.failureLabel = label
     }
 
     static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
