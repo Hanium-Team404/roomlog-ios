@@ -49,7 +49,7 @@ struct MoyaNetworkAdapter {
             }
 
             #if DEBUG
-            logResponse(httpResponse, data: data, request: urlRequest)
+            logResponse(statusCode: httpResponse.statusCode, data: data, request: urlRequest)
             #endif
 
             // Moya의 Response 형태로 포장해서 반환
@@ -62,8 +62,12 @@ struct MoyaNetworkAdapter {
             return response
         } catch {
             #if DEBUG
-            print("🔴 [Network] ERROR \(urlRequest.httpMethod ?? "") \(urlRequest.url?.absoluteString ?? "")")
-            print("  → \(error.localizedDescription)")
+            if case NetworkError.httpError(let statusCode, let data) = error {
+                logResponse(statusCode: statusCode, data: data, request: urlRequest)
+            } else {
+                print("🔴 [Network] ERROR \(urlRequest.httpMethod ?? "") \(urlRequest.url?.absoluteString ?? "")")
+                print("  → \(error.localizedDescription)")
+            }
             #endif
             throw error
         }
@@ -108,16 +112,16 @@ extension MoyaNetworkAdapter {
         }
     }
 
-    private func logResponse(_ response: HTTPURLResponse, data: Data, request: URLRequest) {
+    private func logResponse(statusCode: Int, data: Data, request: URLRequest) {
         let method = request.httpMethod ?? "?"
         let url = request.url?.absoluteString ?? "?"
-        let status = response.statusCode
+        let status = statusCode
         let icon = (200..<300).contains(status) ? "🟢" : "🔴"
         print("\(icon) [Network] ← \(status) \(method) \(url)")
 
         // 에러 응답이면 서버 에러 코드 파싱
         if !(200..<300).contains(status) {
-            if let errorInfo = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            if let errorInfo = try? JSONDecoder().decode(APIResponse<EmptyResult>.self, from: data) {
                 let code = errorInfo.error?.code ?? "없음"
                 let message = errorInfo.message ?? ""
                 let serverError = ServerErrorCode(rawValue: code)
@@ -294,17 +298,6 @@ extension MoyaNetworkAdapter {
         parameters: [String: Any]
     ) throws -> URLRequest {
         try URLEncoding.queryString.encode(request, with: parameters)
-    }
-}
-
-// MARK: - Error Response (로깅용)
-
-private struct APIErrorResponse: Codable {
-    let message: String?
-    let error: ErrorBody?
-
-    struct ErrorBody: Codable {
-        let code: String?
     }
 }
 

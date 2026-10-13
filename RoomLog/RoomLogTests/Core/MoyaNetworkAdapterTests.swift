@@ -11,7 +11,7 @@ import Moya
 import Alamofire
 @testable import RoomLog
 
-/// `MoyaNetworkAdapter`의 multipart 업로드 경로 테스트.
+/// `MoyaNetworkAdapter`의 multipart 업로드와 오류 정규화 경로 테스트.
 /// 스캔 zip은 수십~수백 MB라 바디를 메모리에 올리면 jetsam 위험이 있어 임시 파일로 쓰고 파일에서 전송한다.
 struct MoyaNetworkAdapterTests {
 
@@ -61,6 +61,22 @@ struct MoyaNetworkAdapterTests {
         #expect(multipartTempFiles() == bodyFilesBefore)
     }
 
+    @Test
+    func requestDecoded는_HTTP_실패_본문의_서버_코드를_복원한다() async {
+        let body = Data("""
+        {"success":false,"code":404,"message":"대화 세션이 없습니다.","error":{"code":"CHAT_001"}}
+        """.utf8)
+        StubURLProtocol.register(host: baseURL.host()!, statusCode: 404, body: body)
+        let sut = await makeSUT()
+
+        do {
+            _ = try await sut.requestDecoded(PlainTarget(baseURL: baseURL), as: EmptyResult.self)
+            Issue.record("HTTP 404 응답은 RepositoryError를 던져야 한다")
+        } catch {
+            #expect(error == .serverError(code: 404, message: "대화 세션이 없습니다.", errorCode: .chatSessionNotFound))
+        }
+    }
+
     /// 어댑터가 만든 임시 바디 파일 목록 (`.multipart` 확장자)
     private func multipartTempFiles() -> Set<String> {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path)) ?? []
@@ -69,6 +85,15 @@ struct MoyaNetworkAdapterTests {
 }
 
 // MARK: - Test Doubles
+
+private struct PlainTarget: TargetType {
+    let baseURL: URL
+
+    var path: String { "/chat/session" }
+    var method: Moya.Method { .get }
+    var headers: [String: String]? { nil }
+    var task: Moya.Task { .requestPlain }
+}
 
 private struct UploadTarget: TargetType {
     let baseURL: URL

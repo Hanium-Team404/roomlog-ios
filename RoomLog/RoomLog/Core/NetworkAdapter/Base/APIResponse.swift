@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct APIResponse<T: Codable>: Codable {
+nonisolated struct APIResponse<T: Codable>: Codable {
     // MARK: - Property
 
     /// 요청 성공 여부
@@ -31,7 +31,7 @@ struct APIResponse<T: Codable>: Codable {
     }
 }
 
-struct APIErrorBody: Codable {
+nonisolated struct APIErrorBody: Codable, Sendable {
     let code: String?
 }
 
@@ -56,4 +56,4 @@ extension APIResponse {
 }
 
 /// 결과 데이터가 없는 응답에서 사용
-struct EmptyResult: Codable, Sendable, Equatable {}
+nonisolated struct EmptyResult: Codable, Sendable, Equatable {}
