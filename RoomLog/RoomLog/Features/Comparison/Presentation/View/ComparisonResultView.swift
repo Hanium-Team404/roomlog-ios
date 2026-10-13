@@ -118,7 +118,8 @@ private extension ComparisonResultView {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .aspectRatio(3/4, contentMode: .fit)
+        // 세로 3:4는 화면의 60%를 차지해 스크롤 영역이 부족했다. 뷰어 위에서는 카메라 제스처가 드래그를 가져가므로 가로 4:3으로 줄인다
+        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .task {
             await viewModel.downloadModelIfNeeded()
