@@ -20,13 +20,13 @@ final class DefectViewModel {
     // MARK: - State
     private(set) var report: DefectReport?
     private(set) var phase: AnalysisPhase = .loading
-    private(set) var plyLocalURL: URL?
+    private(set) var localModelURL: URL?
     var errorMessage: String?
 
     // MARK: - Provider
     let roomId: Int
     private let provider: DefectUseCaseProvider
-    private let fileCache: PLYFileCacheProtocol
+    private let fileCache: USDZFileCacheProtocol
 
     // MARK: - Local Analysis Tracking
     private static let analysisIdPrefix = "pendingAnalysisId_room_"
@@ -58,7 +58,7 @@ final class DefectViewModel {
     init(
         roomId: Int,
         provider: DefectUseCaseProvider,
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+        fileCache: USDZFileCacheProtocol = USDZFileCache.shared
     ) {
         self.roomId = roomId
         self.provider = provider
@@ -67,14 +67,14 @@ final class DefectViewModel {
 
     // MARK: - Function
 
-    /// 0. PLY 캐시 확인
+    /// 0. USDZ 캐시 확인
     /// 1. 기존 하자 결과 조회 → defects 있으면 바로 표시
     /// 2. savedAnalysisId 있으면 상태 확인 → polling 재개 or 결과 표시
     /// 3. 없으면 POST /analyses → 분석 시작
     func loadOrAnalyze() async {
-        // 0. PLY 캐시 먼저 확인 (불필요한 다운로드 방지)
+        // 0. USDZ 캐시 먼저 확인 (불필요한 다운로드 방지)
         if let cached = await fileCache.cachedFileURL(for: roomId) {
-            plyLocalURL = cached
+            localModelURL = cached
         }
 
         // 1. 기존 하자 결과 조회 → defects가 있으면 바로 표시
@@ -245,20 +245,20 @@ final class DefectViewModel {
         await fetchReport()
     }
 
-    /// file_url이 있으면 PLY 파일 다운로드 → plyLocalURL에 저장.
-    /// PLYFileCache.download가 원격 URL이 이전과 같으면 캐시를 재사용하고, 바뀌었으면 다시 받으므로
+    /// file_url이 있으면 USDZ 파일 다운로드 → localModelURL에 저장.
+    /// USDZFileCache.download가 원격 URL이 이전과 같으면 캐시를 재사용하고, 바뀌었으면 다시 받으므로
     /// 재분석으로 imageURL이 갱신된 경우에도 오래된 파일을 계속 쓰지 않는다.
-    func downloadPLYIfNeeded() async {
+    func downloadModelIfNeeded() async {
         guard let urlString = report?.imageURL,
               let remoteURL = URL(string: urlString) else { return }
 
         do {
-            plyLocalURL = try await fileCache.download(from: remoteURL, roomId: roomId)
+            localModelURL = try await fileCache.download(from: remoteURL, roomId: roomId)
         } catch {
-            if plyLocalURL == nil {
-                plyLocalURL = await fileCache.cachedFileURL(for: roomId)
+            if localModelURL == nil {
+                localModelURL = await fileCache.cachedFileURL(for: roomId)
             }
-            print("[Defect] PLY download failed: \(error)")
+            print("[Defect] Model download failed: \(error)")
         }
     }
 

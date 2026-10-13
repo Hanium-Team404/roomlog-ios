@@ -303,7 +303,7 @@ struct RoomListView: View {
             phase: active.phase,
             onPreview: { fileURL in
                 showProcessingStatus = false
-                pathStore.homePath.append(.home(.plyPreview(
+                pathStore.homePath.append(.home(.scanPreview(
                     fileURL: fileURL,
                     scanId: active.scanId,
                     houseId: active.houseId

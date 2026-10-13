@@ -12,13 +12,13 @@ import XCTest
 final class RoomListViewModelTests: XCTestCase {
 
     private var provider: MockHomeUseCaseProvider!
-    private var fileCache: MockPLYFileCache!
+    private var fileCache: MockUSDZFileCache!
     private var sut: RoomListViewModel!
 
     override func setUp() {
         super.setUp()
         provider = MockHomeUseCaseProvider()
-        fileCache = MockPLYFileCache()
+        fileCache = MockUSDZFileCache()
         sut = RoomListViewModel(
             houseId: 1,
             houseName: "초기 이름",

@@ -1,5 +1,5 @@
 //
-//  PLYFileCache.swift
+//  USDZFileCache.swift
 //  RoomLog
 //
 //  Created by 김도연 on 5/12/26.
@@ -7,21 +7,21 @@
 
 import Foundation
 
-actor PLYFileCache {
+actor USDZFileCache {
 
-    static let shared = PLYFileCache()
+    static let shared = USDZFileCache()
 
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
 
-    /// 테스트에서 임시 디렉터리를 주입할 수 있게 한다. nil이면 기존 Caches/PLYFiles 경로.
+    /// 테스트에서 임시 디렉터리를 주입할 수 있게 한다. nil이면 기존 Caches/USDZFiles 경로.
     /// (`??`의 우변은 autoclosure라 actor init에서 `fileManager`를 잡으면 격리 경고가 나므로 분기로 쓴다)
     init(cacheDirectory: URL? = nil) {
         if let cacheDirectory {
             self.cacheDirectory = cacheDirectory
         } else {
             self.cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("PLYFiles", isDirectory: true)
+                .appendingPathComponent("USDZFiles", isDirectory: true)
         }
     }
 
@@ -33,7 +33,7 @@ actor PLYFileCache {
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
-    /// 서버 URL에서 .ply 파일 다운로드 후 캐시. remoteURL이 이전에 캐시된 것과 같으면 재사용, 다르면 재다운로드.
+    /// 서버 URL에서 .usdz 파일 다운로드 후 캐시. remoteURL이 이전에 캐시된 것과 같으면 재사용, 다르면 재다운로드.
     func download(from remoteURL: URL, roomId: Int) async throws -> URL {
         let destination = fileURL(for: roomId)
         if fileManager.fileExists(atPath: destination.path),
@@ -72,7 +72,7 @@ actor PLYFileCache {
     }
 
     /// 임시 키(oldRoomId, 예: scanId)로 캐시된 파일을 새 roomId로 이전. 재다운로드 없이 그대로 재사용하기 위함.
-    /// .ply/.source 쌍이 온전할 때만 이전하며, 한쪽이라도 실패하면 대상 쌍을 제거해 다음 호출이 재다운로드하도록 한다.
+    /// .usdz/.source 쌍이 온전할 때만 이전하며, 한쪽이라도 실패하면 대상 쌍을 제거해 다음 호출이 재다운로드하도록 한다.
     func rekey(from oldRoomId: Int, to newRoomId: Int) {
         guard oldRoomId != newRoomId else { return }
 
@@ -98,7 +98,7 @@ actor PLYFileCache {
     // MARK: - Private
 
     private func fileURL(for roomId: Int) -> URL {
-        cacheDirectory.appendingPathComponent("room_\(roomId).ply")
+        cacheDirectory.appendingPathComponent("room_\(roomId).usdz")
     }
 
     /// 캐시된 파일이 어느 원격 URL에서 받아온 것인지 기록해두는 사이드카 파일 (캐시 무효화 판단용)

@@ -34,12 +34,12 @@ private let sampleRoom = RoomDetail(
     }
 }
 
-#Preview("PLY 뷰어") {
+#Preview("USDZ 뷰어") {
     NavigationStack {
         RoomDetailView(
             preview: sampleRoom,
-            localPLYURL: URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("preview.ply")
+            localModelURL: URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("preview.usdz")
         )
     }
 }

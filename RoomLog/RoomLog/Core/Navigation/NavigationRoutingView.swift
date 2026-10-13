@@ -61,7 +61,7 @@ private extension NavigationRoutingView {
                     _ = pathStore.homePath.popLast()
                 }
             )
-        case .plyPreview(let fileURL, let scanId, let houseId):
+        case .scanPreview(let fileURL, let scanId, let houseId):
             ScanPreviewView(fileURL: fileURL, scanId: scanId, houseId: houseId)
         case .houseList:
             HouseListView(provider: provider)

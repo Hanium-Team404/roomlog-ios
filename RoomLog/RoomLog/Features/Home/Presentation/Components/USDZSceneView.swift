@@ -1,5 +1,5 @@
 //
-//  PLYSceneView.swift
+//  USDZSceneView.swift
 //  RoomLog
 //
 //  Created by 김도연 on 5/12/26.
@@ -40,10 +40,10 @@ enum CameraDirection: CaseIterable {
 
 // MARK: - Scene Memory Cache
 
-/// 파싱된 SCNScene을 메모리에 캐시해 재진입 시 PLY 재파싱을 피한다.
+/// 파싱된 SCNScene을 메모리에 캐시해 재진입 시 USDZ 재파싱을 피한다.
 /// 파일이 교체되면 수정 시각이 바뀌어 키가 달라지므로 자동으로 새로 파싱된다.
-final class PLYSceneCache {
-    static let shared = PLYSceneCache()
+final class USDZSceneCache {
+    static let shared = USDZSceneCache()
 
     private let cache = NSCache<NSString, SCNScene>()
 
@@ -66,9 +66,9 @@ final class PLYSceneCache {
     }
 }
 
-// MARK: - PLYSceneView
+// MARK: - USDZSceneView
 
-struct PLYSceneView: UIViewRepresentable {
+struct USDZSceneView: UIViewRepresentable {
     let fileURL: URL
     var defects: [DefectReportDetail] = []
     var cameraDirection: Binding<CameraDirection?>?
@@ -326,10 +326,10 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
-    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 PLY를 파싱한 뒤 적용한다.
-    /// PLY 파싱(MDLAsset → SCNScene)은 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
+    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 USDZ를 파싱한 뒤 적용한다.
+    /// USDZ 파싱(MDLAsset → SCNScene)은 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
     private func applySceneIfNeeded(to scnView: SCNView, coordinator: Coordinator) {
-        if let master = PLYSceneCache.shared.scene(for: fileURL) {
+        if let master = USDZSceneCache.shared.scene(for: fileURL) {
             coordinator.loadTask?.cancel()
             coordinator.loadingFileURL = nil
             apply(master: master, for: fileURL, to: scnView, coordinator: coordinator)
@@ -357,7 +357,7 @@ struct PLYSceneView: UIViewRepresentable {
             asset.loadTextures()
             let master = SCNScene(mdlAsset: asset)
             await MainActor.run {
-                PLYSceneCache.shared.store(master, for: url)
+                USDZSceneCache.shared.store(master, for: url)
                 spinner.removeFromSuperview()
                 // 파싱 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (캐시에는 남는다)
                 guard coordinator.loadingFileURL == url, let liveView = coordinator.scnView else { return }
@@ -573,7 +573,7 @@ struct PLYSceneView: UIViewRepresentable {
 
 // MARK: - Camera Direction Bar
 
-struct PLYCameraDirectionBar: View {
+struct CameraDirectionBar: View {
     @Binding var direction: CameraDirection?
     @Binding var resetCamera: Bool
     @State private var selected: CameraDirection?

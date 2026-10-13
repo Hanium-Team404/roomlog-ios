@@ -50,8 +50,8 @@ struct ComparisonResultView: View {
 private extension ComparisonResultView {
     var pollingContent: some View {
         AnalysisLoadingView(message: "AI가 이전/이후 방을 비교하고 있습니다...") {
-            plyToggle
-            plySection(defects: [])
+            modelToggle
+            modelSection(defects: [])
         }
     }
 }
@@ -63,8 +63,8 @@ private extension ComparisonResultView {
         let pathStore = di.resolve(PathStore.self)
         return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                plyToggle
-                plySection(defects: viewModel.currentDefects)
+                modelToggle
+                modelSection(defects: viewModel.currentDefects)
                 summarySection(result: result)
                 defectListSection(result: result, pathStore: pathStore)
             }
@@ -83,24 +83,24 @@ private extension ComparisonResultView {
     }
 }
 
-// MARK: - 3D PLY Viewer
+// MARK: - 3D USDZ Viewer
 
 private extension ComparisonResultView {
-    var plyToggle: some View {
+    var modelToggle: some View {
         HStack(spacing: 0) {
-            ForEach(ComparisonResultViewModel.PLYMode.allCases, id: \.self) { mode in
+            ForEach(ComparisonResultViewModel.ComparisonMode.allCases, id: \.self) { mode in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.plyMode = mode
+                        viewModel.comparisonMode = mode
                     }
                 } label: {
                     Text(mode.rawValue)
                         .font(.medium, 14)
-                        .foregroundStyle(viewModel.plyMode == mode ? .white : Color.neutral800)
+                        .foregroundStyle(viewModel.comparisonMode == mode ? .white : Color.neutral800)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            viewModel.plyMode == mode ? Color.mutedBlue : Color.clear,
+                            viewModel.comparisonMode == mode ? Color.mutedBlue : Color.clear,
                             in: Capsule()
                         )
                 }
@@ -109,10 +109,10 @@ private extension ComparisonResultView {
         .background(Color.blueGray50, in: Capsule())
     }
 
-    func plySection(defects: [DefectReportDetail]) -> some View {
+    func modelSection(defects: [DefectReportDetail]) -> some View {
         Group {
-            if let localURL = viewModel.currentPLYURL {
-                PLYSceneView(fileURL: localURL, defects: defects)
+            if let localURL = viewModel.currentModelURL {
+                USDZSceneView(fileURL: localURL, defects: defects)
             } else {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -121,7 +121,7 @@ private extension ComparisonResultView {
         .aspectRatio(3/4, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .task {
-            await viewModel.downloadPLYIfNeeded()
+            await viewModel.downloadModelIfNeeded()
         }
     }
 }

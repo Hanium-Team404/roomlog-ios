@@ -13,14 +13,14 @@ final class RoomDetailViewModelTests: XCTestCase {
 
     private var provider: MockHomeUseCaseProvider!
     private var scanRepo: MockScanRepository!
-    private var fileCache: MockPLYFileCache!
+    private var fileCache: MockUSDZFileCache!
     private var sut: RoomDetailViewModel!
 
     override func setUp() {
         super.setUp()
         provider = MockHomeUseCaseProvider()
         scanRepo = MockScanRepository()
-        fileCache = MockPLYFileCache()
+        fileCache = MockUSDZFileCache()
         sut = RoomDetailViewModel(
             roomId: 1,
             provider: provider,
@@ -66,24 +66,24 @@ final class RoomDetailViewModelTests: XCTestCase {
 
         await sut.load()
 
-        XCTAssertNil(sut.localPLYURL)
+        XCTAssertNil(sut.localModelURL)
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
         XCTAssertEqual(fileCache.downloadCallCount, 0)
     }
 
     func test_load_캐시_히트시_scanPreview_조회와_다운로드를_하지_않는다() async {
-        let cachedURL = URL(fileURLWithPath: "/tmp/room_1.ply")
+        let cachedURL = URL(fileURLWithPath: "/tmp/room_1.usdz")
         fileCache.cachedResult = cachedURL
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
 
         await sut.load()
 
-        XCTAssertEqual(sut.localPLYURL, cachedURL)
+        XCTAssertEqual(sut.localModelURL, cachedURL)
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
         XCTAssertEqual(fileCache.downloadCallCount, 0)
     }
@@ -95,20 +95,20 @@ final class RoomDetailViewModelTests: XCTestCase {
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
-        scanRepo.getScanPreviewResult = .success("https://example.com/mesh.ply")
+        scanRepo.getScanPreviewResult = .success("https://example.com/mesh.usdz")
 
         await sut.load()
 
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 1)
         XCTAssertEqual(fileCache.downloadCallCount, 1)
-        XCTAssertNotNil(sut.localPLYURL)
+        XCTAssertNotNil(sut.localModelURL)
         XCTAssertNil(sut.errorMessage)
     }
 
     func test_load_fileURL이_있으면_scanPreview를_조회하지_않는다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
@@ -117,13 +117,13 @@ final class RoomDetailViewModelTests: XCTestCase {
 
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
         XCTAssertEqual(fileCache.downloadCallCount, 1)
-        XCTAssertNotNil(sut.localPLYURL)
+        XCTAssertNotNil(sut.localModelURL)
     }
 
     func test_load_다운로드_실패시_errorMessage가_설정되고_isDownloading이_해제된다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            thumbnailURL: nil, fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
@@ -131,7 +131,7 @@ final class RoomDetailViewModelTests: XCTestCase {
 
         await sut.load()
 
-        XCTAssertNil(sut.localPLYURL)
+        XCTAssertNil(sut.localModelURL)
         XCTAssertNotNil(sut.errorMessage)
         XCTAssertFalse(sut.isDownloading)
         XCTAssertFalse(sut.isLoading)

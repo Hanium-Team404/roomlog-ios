@@ -72,7 +72,7 @@ RoomLog/RoomLog/
 │   ├── EnvironmentKey/   — DIEnvironmentKey.swift
 │   └── Fonts/            — 커스텀 폰트
 └── Utilities/
-    ├── FileCache/        — PLYFileCache (actor), PLYFileCacheProtocol (ViewModel 주입용)
+    ├── FileCache/        — USDZFileCache (actor), USDZFileCacheProtocol (ViewModel 주입용)
     ├── Keychain/         — KeychainTokenStore (actor)
     └── PreviewMocks/     — Preview용 Mock 데이터
 ```

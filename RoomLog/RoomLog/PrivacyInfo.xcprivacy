@@ -111,7 +111,7 @@
 				<string>CA92.1</string>
 			</array>
 		</dict>
-		<!-- 앱 컨테이너 안 PLY 캐시 파일의 수정일 확인 (PLYSceneView) -->
+		<!-- 앱 컨테이너 안 USDZ 캐시 파일의 수정일 확인 (USDZSceneView) -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>

@@ -15,6 +15,6 @@ struct AnalysisResult {
     let totalCost: Int
     let totalArea: Float
     let defects: [DefectReportDetail]
-    let plyURL: String?
+    let modelURL: String?
     let createdAt: Date?
 }

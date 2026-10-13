@@ -20,9 +20,9 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 | **인증 (Auth)** | 이메일/비밀번호 기반 회원가입·로그인. Access/Refresh 토큰은 Keychain에 안전하게 저장하고, 401 응답 시 자동으로 갱신·재요청합니다. |
 | **홈 (Home)** | 등록한 집을 자체 **isometric 캔버스**에 시각화. 줌(0.7×~2.0×)·팬·자동 가장자리 스크롤을 지원하며, matchedGeometry 기반 zoom 트랜지션으로 방 목록으로 진입합니다. |
 | **3D 스캔 (Scan)** | LiDAR(ARKit)로 방 내부를 녹화하고, **Depth / Confidence / IMU / Odometry / Video** 5채널 데이터를 동시 인코딩·ZIP 패키징해 서버로 업로드합니다. |
-| **3D 뷰어 (Viewer)** | 서버에서 처리된 PLY 포인트클라우드를 불러와 방 내부를 3D로 둘러봅니다. PLY는 로컬에 캐시되어 재진입 시 즉시 표시됩니다. |
+| **3D 뷰어 (Viewer)** | 서버에서 처리된 USDZ 메시를 불러와 방 내부를 3D로 둘러봅니다. USDZ는 로컬에 캐시되어 재진입 시 즉시 표시됩니다. |
 | **하자 점검 (Defect)** | 스캔 결과에서 추출된 하자 위치를 3D 공간에 태그로 표시. 하자를 탭하면 카메라가 해당 위치로 부드럽게 이동합니다. |
-| **내방비교 (Comparison)** | 입주 전 / 퇴거 후 스캔을 비교해 변경된 영역과 하자 차이를 시각화. 두 시점의 PLY를 토글하며 비교할 수 있습니다. |
+| **내방비교 (Comparison)** | 입주 전 / 퇴거 후 스캔을 비교해 변경된 영역과 하자 차이를 시각화. 두 시점의 USDZ 모델을 토글하며 비교할 수 있습니다. |
 | **수리 견적 (Estimate)** | 백엔드가 추천한 주변 수리업체를 **KakaoMapsSDK** 지도에 POI로 표시하고, SMS로 견적 문의를 전송합니다. |
 
 ## 📸 Screenshots
@@ -42,7 +42,7 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 </td>
   </tr>
   <tr>
-    <td align="center"><b>3D 뷰어 (PLY)</b></td>
+    <td align="center"><b>3D 뷰어 (USDZ)</b></td>
     <td align="center"><b>하자 점검</b></td>
     <td align="center"><b>하자 상세</b></td>
   </tr>
@@ -114,9 +114,9 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 - SwiftUI `Environment(\.di)`로 컨테이너를 전파하고, View는 필요한 타입만 `resolve(_:)`로 꺼냄
 - `UseCaseProvider` 패턴으로 Feature별 UseCase 팩토리를 그룹화
 
-### 5. PLY 파일 캐시 & 비교 결과 영속화
+### 5. USDZ 파일 캐시 & 비교 결과 영속화
 
-- `PLYFileCache` (actor) — `roomId`별 PLY 파일을 캐시 디렉터리에 저장하여 재진입 시 즉시 표시. 원격 URL을 사이드카로 기록해 같은 URL이면 캐시 히트 시 네트워크 요청 없이 반환하고, URL이 바뀌면 다시 받습니다(테스트로 고정). `PLYFileCacheProtocol`로 ViewModel에 주입되어 테스트에서는 Mock으로 대체됩니다.
+- `USDZFileCache` (actor) — `roomId`별 USDZ 파일을 캐시 디렉터리에 저장하여 재진입 시 즉시 표시. 원격 URL을 사이드카로 기록해 같은 URL이면 캐시 히트 시 네트워크 요청 없이 반환하고, URL이 바뀌면 다시 받습니다(테스트로 고정). `USDZFileCacheProtocol`로 ViewModel에 주입되어 테스트에서는 Mock으로 대체됩니다.
 - `ComparisonResultViewModel` — `UserDefaults`에 `(moveInRoomId, moveOutRoomId)` 쌍의 `analysisId`를 영속화하여 폴링 중단 후 재진입에도 결과를 즉시 복원
 
 ## 🛠 기술 스택
@@ -128,7 +128,7 @@ LiDAR 기반 3D 스캔으로 입주 시점의 방을 기록하고, 퇴거 시 �
 - **지도**: [KakaoMapsSDK](https://github.com/kakao-mapsSDK/KakaoMapsSDK-SPM) — Estimate 화면 한정
 - **이미지**: [Nuke / NukeUI](https://github.com/kean/Nuke)
 - **압축**: [ZIPFoundation](https://github.com/weichsel/ZIPFoundation)
-- **저장소**: Keychain (토큰), 자체 FileCache (PLY)
+- **저장소**: Keychain (토큰), 자체 FileCache (USDZ)
 - **CI**: GitHub Actions (`macos-26`, iPhone 17 Pro 시뮬레이터)
 
 ## 🏛 아키텍처
@@ -155,14 +155,14 @@ RoomLog/RoomLog/
 │   └── ScanProcessing/   — ScanProcessingManager, ScanArtifactStore, ScanProcessingState, ScanBackgroundContinuation, ScanCompletionNotifier
 ├── Features/             — Auth · Home · Scan · Viewer · Defect · Comparison · Estimate · Chatbot · MyPage · Splash · Tab
 ├── Resources/            — Assets, Fonts, EnvironmentKey
-└── Utilities/            — FileCache(PLYFileCache, PLYFileCacheProtocol), Keychain, PreviewMocks
+└── Utilities/            — FileCache(USDZFileCache, USDZFileCacheProtocol), Keychain, PreviewMocks
 ```
 
 ## 🧪 테스트
 
 - **102개** — Swift Testing 70 + XCTest 32 (`RoomLogTests/`). Xcode ⌘U 또는 `xcodebuild test`로 실행하며, CI에서도 실행됩니다.
 - 스캔 파이프라인 38개(`ScanProcessingManagerTests` 24 · `ScanArtifactStoreTests` 14) — 재시작 복구, 백그라운드 연장 시작·종료, 완료 알림, 재시도 불가 시 폐기 등 실패 경로를 위주로 검증합니다.
-- ViewModel 테스트는 Mock Repository·Mock PLY 캐시를 주입해 상태 전이와 호출 횟수를 단언하며, 실행 중 네트워크 요청과 실제 캐시 디렉터리 접근이 없습니다.
+- ViewModel 테스트는 Mock Repository·Mock USDZ 캐시를 주입해 상태 전이와 호출 횟수를 단언하며, 실행 중 네트워크 요청과 실제 캐시 디렉터리 접근이 없습니다.
 
 ## 🤖 CI
 
