@@ -46,7 +46,7 @@ final class USDZSceneCache {
     private let cache = NSCache<NSString, SCNScene>()
 
     private init() {
-        // 방 스캔 씬은 개당 수십 MB라 최근 것만 유지 (비교 화면이 동시에 2개 사용)
+        // 방 스캔 씬은 개당 수십~수백 MB라 최근 것만 유지 (비교 화면이 동시에 2개 사용)
         cache.countLimit = 3
     }
 
@@ -61,6 +61,22 @@ final class USDZSceneCache {
 
     func store(_ scene: SCNScene, for url: URL) {
         cache.setObject(scene, forKey: key(for: url))
+    }
+}
+
+// MARK: - Scene Preparation
+
+/// 백그라운드 로드 태스크에서 호출되므로 앱 기본 격리(MainActor)에서 뺀다.
+nonisolated enum USDZScenePreparation {
+
+    /// 로드 직후 마스터 씬에 한 번만 적용한다. 복제된 뷰별 씬은 머티리얼을 공유하므로 그대로 반영된다.
+    ///
+    /// 서버 USDZ는 모든 메시가 `doubleSided = 1`로 내보내져 방 바깥 벽이 시야를 막는다.
+    /// 법선은 방 안쪽을 향하므로 뒷면 컬링을 켜면 PLY 때처럼 바깥에서도 내부가 보인다.
+    static func prepare(_ scene: SCNScene) {
+        scene.rootNode.enumerateHierarchy { node, _ in
+            node.geometry?.materials.forEach { $0.isDoubleSided = false }
+        }
     }
 }
 
@@ -373,6 +389,7 @@ struct USDZSceneView: UIViewRepresentable {
             guard !Task.isCancelled else { return }
             // USDZ는 SceneKit 네이티브 포맷이라 Model I/O 변환 없이 직접 읽는다 (USD 머티리얼·텍스처 보존)
             let loaded = try? SCNScene(url: url, options: nil)
+            if let loaded { USDZScenePreparation.prepare(loaded) }
             await MainActor.run {
                 spinner.removeFromSuperview()
                 // 로드 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (성공 시 캐시에는 남는다)
