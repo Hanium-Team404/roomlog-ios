@@ -207,7 +207,6 @@ struct USDZSceneView: UIViewRepresentable {
             let centerX = (minBound.x + maxBound.x) / 2
             let centerY = (minBound.y + maxBound.y) / 2
             let centerZ = (minBound.z + maxBound.z) / 2
-            let center = SCNVector3(centerX, centerY, centerZ)
 
             let sizeX = maxBound.x - minBound.x
             let sizeY = maxBound.y - minBound.y
@@ -215,21 +214,38 @@ struct USDZSceneView: UIViewRepresentable {
             let maxSize = max(sizeX, max(sizeY, sizeZ))
             let dist = maxSize * 1.2
 
+            // 회전은 look(at:)이 아니라 방향별 오일러 각으로 직접 준다.
+            // 정확히 뒤에서 look(at:)을 부르면 기본 전방(-Z)과 정반대라 회전이 정의되지 않아
+            // SceneKit이 영 쿼터니언을 돌려주고 카메라가 방 반대쪽을 보게 된다.
             let position: SCNVector3
+            let eulerAngles: SCNVector3
+            let halfPi = Float.pi / 2
             switch direction {
-            case .front:  position = SCNVector3(centerX, centerY, centerZ + dist)
-            case .back:   position = SCNVector3(centerX, centerY, centerZ - dist)
-            case .left:   position = SCNVector3(centerX - dist, centerY, centerZ)
-            case .right:  position = SCNVector3(centerX + dist, centerY, centerZ)
-            case .top:    position = SCNVector3(centerX, centerY + dist, centerZ)
-            case .bottom: position = SCNVector3(centerX, centerY - dist, centerZ)
+            case .front:
+                position = SCNVector3(centerX, centerY, centerZ + dist)
+                eulerAngles = SCNVector3(0, 0, 0)
+            case .back:
+                position = SCNVector3(centerX, centerY, centerZ - dist)
+                eulerAngles = SCNVector3(0, Float.pi, 0)
+            case .left:
+                position = SCNVector3(centerX - dist, centerY, centerZ)
+                eulerAngles = SCNVector3(0, -halfPi, 0)
+            case .right:
+                position = SCNVector3(centerX + dist, centerY, centerZ)
+                eulerAngles = SCNVector3(0, halfPi, 0)
+            case .top:
+                position = SCNVector3(centerX, centerY + dist, centerZ)
+                eulerAngles = SCNVector3(-halfPi, 0, 0)
+            case .bottom:
+                position = SCNVector3(centerX, centerY - dist, centerZ)
+                eulerAngles = SCNVector3(halfPi, 0, 0)
             }
 
             SCNTransaction.begin()
             SCNTransaction.animationDuration = 0.6
             SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             cameraNode.position = position
-            cameraNode.look(at: center)
+            cameraNode.eulerAngles = eulerAngles
             SCNTransaction.commit()
         }
 
