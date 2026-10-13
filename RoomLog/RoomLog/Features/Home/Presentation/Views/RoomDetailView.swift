@@ -18,9 +18,9 @@ struct RoomDetailView: View {
     }
 
     #if DEBUG
-    init(preview roomDetail: RoomDetail?, localPLYURL: URL? = nil, errorMessage: String? = nil) {
+    init(preview roomDetail: RoomDetail?, localModelURL: URL? = nil, errorMessage: String? = nil) {
         self._viewModel = .init(
-            wrappedValue: RoomDetailViewModel(preview: roomDetail, localPLYURL: localPLYURL, errorMessage: errorMessage)
+            wrappedValue: RoomDetailViewModel(preview: roomDetail, localModelURL: localModelURL, errorMessage: errorMessage)
         )
     }
     #endif
@@ -33,8 +33,8 @@ struct RoomDetailView: View {
                 errorView(message: errorMessage)
             } else if viewModel.isDownloading {
                 ProgressView("3D 파일을 다운로드하는 중...")
-            } else if let plyURL = viewModel.localPLYURL {
-                PLYSceneView(fileURL: plyURL)
+            } else if let modelURL = viewModel.localModelURL {
+                USDZSceneView(fileURL: modelURL)
                     .ignoresSafeArea(edges: .bottom)
             } else {
                 emptyView

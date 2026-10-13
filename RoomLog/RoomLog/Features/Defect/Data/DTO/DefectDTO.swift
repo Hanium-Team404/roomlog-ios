@@ -171,14 +171,14 @@ struct AnalysisResultResponseDTO: Codable {
     let defects: [DefectDetailDTO]
     let analysisId: Int
     let roomId: Int
-    let plyURL: String?
+    let modelURL: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
         case status, summary, defects
         case analysisId = "analysis_id"
         case roomId = "room_id"
-        case plyURL = "ply_url"
+        case modelURL = "ply_url"
         case createdAt = "created_at"
     }
 
@@ -193,7 +193,7 @@ struct AnalysisResultResponseDTO: Codable {
             totalCost: summary.totalCost,
             totalArea: totalArea,
             defects: domainDefects,
-            plyURL: plyURL,
+            modelURL: modelURL,
             createdAt: createdAt.flatMap { Date.fromServerDateTime($0) }
         )
     }

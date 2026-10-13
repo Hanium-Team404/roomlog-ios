@@ -14,13 +14,13 @@ final class RoomDetailViewModel {
 
     private let provider: HomeUseCaseProvider
     private let scanRepository: ScanRepositoryProtocol
-    private let fileCache: PLYFileCacheProtocol
+    private let fileCache: USDZFileCacheProtocol
     private var isPreview: Bool = false
 
     // MARK: - State
 
     private(set) var roomDetail: RoomDetail?
-    private(set) var localPLYURL: URL?
+    private(set) var localModelURL: URL?
     private(set) var isLoading: Bool = false
     private(set) var isDownloading: Bool = false
     private(set) var errorMessage: String?
@@ -34,7 +34,7 @@ final class RoomDetailViewModel {
         roomId: Int,
         provider: HomeUseCaseProvider,
         scanRepository: ScanRepositoryProtocol,
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+        fileCache: USDZFileCacheProtocol = USDZFileCache.shared
     ) {
         self.roomId = roomId
         self.provider = provider
@@ -43,13 +43,13 @@ final class RoomDetailViewModel {
     }
 
     #if DEBUG
-    init(preview roomDetail: RoomDetail?, localPLYURL: URL? = nil, errorMessage: String? = nil) {
+    init(preview roomDetail: RoomDetail?, localModelURL: URL? = nil, errorMessage: String? = nil) {
         self.roomId = roomDetail?.id ?? 0
         self.provider = MockHomeUseCaseProvider()
         self.scanRepository = MockScanRepository()
-        self.fileCache = PLYFileCache.shared
+        self.fileCache = USDZFileCache.shared
         self.roomDetail = roomDetail
-        self.localPLYURL = localPLYURL
+        self.localModelURL = localModelURL
         self.errorMessage = errorMessage
         self.isPreview = true
     }
@@ -67,19 +67,15 @@ final class RoomDetailViewModel {
             let detail = try await provider.makeGetRoomDetailUseCase().execute(roomId: roomId)
             roomDetail = detail
 
-            // 캐시 확인
-            if let cached = await fileCache.cachedFileURL(for: roomId) {
-                localPLYURL = cached
-            } else {
-                // fileURL 결정: roomDetail에 있으면 사용, 없으면 scan preview로 조회
-                let fileURLString: String? = try await resolveFileURL(from: detail)
+            // fileURL 결정: roomDetail에 있으면 사용, 없으면 scan preview로 조회
+            let fileURLString: String? = try await resolveFileURL(from: detail)
 
-                if let urlString = fileURLString, let remoteURL = URL(string: urlString) {
-                    isDownloading = true
-                    let localURL = try await fileCache.download(from: remoteURL, roomId: roomId)
-                    localPLYURL = localURL
-                    isDownloading = false
-                }
+            if let urlString = fileURLString, let remoteURL = URL(string: urlString) {
+                isDownloading = true
+                // download가 캐시의 원본 URL과 비교해 같으면 네트워크 없이 캐시를, 바뀌었으면 새 파일을 돌려준다.
+                // 실패 시 옛 캐시로 대체하지 않는다 (바뀐 모델 대신 옛 모델을 보여주면 안 되므로 에러로 노출)
+                localModelURL = try await fileCache.download(from: remoteURL, roomId: roomId)
+                isDownloading = false
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -103,7 +99,6 @@ final class RoomDetailViewModel {
             name: name,
             moveInDate: moveInDate,
             moveOutDate: moveOutDate,
-            thumbnailURL: detail.thumbnailURL,
             fileURL: detail.fileURL,
             createdAt: detail.createdAt,
             latestScan: detail.latestScan

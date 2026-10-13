@@ -1,5 +1,5 @@
 //
-//  PLYSceneView.swift
+//  USDZSceneView.swift
 //  RoomLog
 //
 //  Created by 김도연 on 5/12/26.
@@ -7,8 +7,6 @@
 
 import SwiftUI
 import SceneKit
-import ModelIO
-import SceneKit.ModelIO
 
 // MARK: - Camera Direction
 
@@ -40,15 +38,15 @@ enum CameraDirection: CaseIterable {
 
 // MARK: - Scene Memory Cache
 
-/// 파싱된 SCNScene을 메모리에 캐시해 재진입 시 PLY 재파싱을 피한다.
+/// 파싱된 SCNScene을 메모리에 캐시해 재진입 시 USDZ 재파싱을 피한다.
 /// 파일이 교체되면 수정 시각이 바뀌어 키가 달라지므로 자동으로 새로 파싱된다.
-final class PLYSceneCache {
-    static let shared = PLYSceneCache()
+final class USDZSceneCache {
+    static let shared = USDZSceneCache()
 
     private let cache = NSCache<NSString, SCNScene>()
 
     private init() {
-        // 방 스캔 씬은 개당 수십 MB라 최근 것만 유지 (비교 화면이 동시에 2개 사용)
+        // 방 스캔 씬은 개당 수십~수백 MB라 최근 것만 유지 (비교 화면이 동시에 2개 사용)
         cache.countLimit = 3
     }
 
@@ -66,9 +64,25 @@ final class PLYSceneCache {
     }
 }
 
-// MARK: - PLYSceneView
+// MARK: - Scene Preparation
 
-struct PLYSceneView: UIViewRepresentable {
+/// 백그라운드 로드 태스크에서 호출되므로 앱 기본 격리(MainActor)에서 뺀다.
+nonisolated enum USDZScenePreparation {
+
+    /// 로드 직후 마스터 씬에 한 번만 적용한다. 복제된 뷰별 씬은 머티리얼을 공유하므로 그대로 반영된다.
+    ///
+    /// 서버 USDZ는 모든 메시가 `doubleSided = 1`로 내보내져 방 바깥 벽이 시야를 막는다.
+    /// 법선은 방 안쪽을 향하므로 뒷면 컬링을 켜면 PLY 때처럼 바깥에서도 내부가 보인다.
+    static func prepare(_ scene: SCNScene) {
+        scene.rootNode.enumerateHierarchy { node, _ in
+            node.geometry?.materials.forEach { $0.isDoubleSided = false }
+        }
+    }
+}
+
+// MARK: - USDZSceneView
+
+struct USDZSceneView: UIViewRepresentable {
     let fileURL: URL
     var defects: [DefectReportDetail] = []
     var cameraDirection: Binding<CameraDirection?>?
@@ -84,6 +98,10 @@ struct PLYSceneView: UIViewRepresentable {
         var loadedFileURL: URL?
         var loadingFileURL: URL?
         var loadTask: Task<Void, Never>?
+        /// 파일을 읽지 못했을 때 띄운 안내 라벨. 다음 로드가 시작되거나 씬이 적용되면 제거한다
+        var failureLabel: UILabel?
+        /// 로드에 실패한 URL. 같은 URL은 뷰가 갱신돼도 다시 시도하지 않는다 (URL이 바뀌거나 뷰가 재생성되면 재시도)
+        var failedFileURL: URL?
 
         /// Handles a tap on the SceneKit view and, if a defect overlay was tapped, animates the camera to that defect's center.
         /// - Parameters:
@@ -207,7 +225,6 @@ struct PLYSceneView: UIViewRepresentable {
             let centerX = (minBound.x + maxBound.x) / 2
             let centerY = (minBound.y + maxBound.y) / 2
             let centerZ = (minBound.z + maxBound.z) / 2
-            let center = SCNVector3(centerX, centerY, centerZ)
 
             let sizeX = maxBound.x - minBound.x
             let sizeY = maxBound.y - minBound.y
@@ -215,21 +232,38 @@ struct PLYSceneView: UIViewRepresentable {
             let maxSize = max(sizeX, max(sizeY, sizeZ))
             let dist = maxSize * 1.2
 
+            // 회전은 look(at:)이 아니라 방향별 오일러 각으로 직접 준다.
+            // 정확히 뒤에서 look(at:)을 부르면 기본 전방(-Z)과 정반대라 회전이 정의되지 않아
+            // SceneKit이 영 쿼터니언을 돌려주고 카메라가 방 반대쪽을 보게 된다.
             let position: SCNVector3
+            let eulerAngles: SCNVector3
+            let halfPi = Float.pi / 2
             switch direction {
-            case .front:  position = SCNVector3(centerX, centerY, centerZ + dist)
-            case .back:   position = SCNVector3(centerX, centerY, centerZ - dist)
-            case .left:   position = SCNVector3(centerX - dist, centerY, centerZ)
-            case .right:  position = SCNVector3(centerX + dist, centerY, centerZ)
-            case .top:    position = SCNVector3(centerX, centerY + dist, centerZ)
-            case .bottom: position = SCNVector3(centerX, centerY - dist, centerZ)
+            case .front:
+                position = SCNVector3(centerX, centerY, centerZ + dist)
+                eulerAngles = SCNVector3(0, 0, 0)
+            case .back:
+                position = SCNVector3(centerX, centerY, centerZ - dist)
+                eulerAngles = SCNVector3(0, Float.pi, 0)
+            case .left:
+                position = SCNVector3(centerX - dist, centerY, centerZ)
+                eulerAngles = SCNVector3(0, -halfPi, 0)
+            case .right:
+                position = SCNVector3(centerX + dist, centerY, centerZ)
+                eulerAngles = SCNVector3(0, halfPi, 0)
+            case .top:
+                position = SCNVector3(centerX, centerY + dist, centerZ)
+                eulerAngles = SCNVector3(-halfPi, 0, 0)
+            case .bottom:
+                position = SCNVector3(centerX, centerY - dist, centerZ)
+                eulerAngles = SCNVector3(halfPi, 0, 0)
             }
 
             SCNTransaction.begin()
             SCNTransaction.animationDuration = 0.6
             SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             cameraNode.position = position
-            cameraNode.look(at: center)
+            cameraNode.eulerAngles = eulerAngles
             SCNTransaction.commit()
         }
 
@@ -326,20 +360,23 @@ struct PLYSceneView: UIViewRepresentable {
         }
     }
 
-    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 PLY를 파싱한 뒤 적용한다.
-    /// PLY 파싱(MDLAsset → SCNScene)은 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
+    /// 메모리 캐시에 씬이 있으면 즉시 적용하고, 없으면 백그라운드에서 USDZ를 로드한 뒤 적용한다.
+    /// USDZ 로드(`SCNScene(url:)`)는 파일이 크면 수 초가 걸리므로 메인 스레드에서 실행하지 않는다.
     private func applySceneIfNeeded(to scnView: SCNView, coordinator: Coordinator) {
-        if let master = PLYSceneCache.shared.scene(for: fileURL) {
+        if let master = USDZSceneCache.shared.scene(for: fileURL) {
             coordinator.loadTask?.cancel()
             coordinator.loadingFileURL = nil
             apply(master: master, for: fileURL, to: scnView, coordinator: coordinator)
             return
         }
 
-        // 같은 URL을 이미 파싱 중이면 완료를 기다리고, 다른 URL이면 기존 작업을 취소하고 새로 시작
-        guard coordinator.loadingFileURL != fileURL else { return }
+        // 같은 URL을 이미 로드 중이거나 방금 실패했으면 그대로 두고, 다른 URL이면 기존 작업을 취소하고 새로 시작
+        guard coordinator.loadingFileURL != fileURL, coordinator.failedFileURL != fileURL else { return }
         coordinator.loadTask?.cancel()
         coordinator.loadingFileURL = fileURL
+        coordinator.failedFileURL = nil
+        coordinator.failureLabel?.removeFromSuperview()
+        coordinator.failureLabel = nil
 
         let spinner = UIActivityIndicatorView(style: .medium)
         spinner.startAnimating()
@@ -353,14 +390,29 @@ struct PLYSceneView: UIViewRepresentable {
         let url = fileURL
         coordinator.loadTask = Task.detached(priority: .userInitiated) {
             guard !Task.isCancelled else { return }
-            let asset = MDLAsset(url: url)
-            asset.loadTextures()
-            let master = SCNScene(mdlAsset: asset)
+            // USDZ는 SceneKit 네이티브 포맷이라 Model I/O 변환 없이 직접 읽는다 (USD 머티리얼·텍스처 보존)
+            let loaded = try? SCNScene(url: url, options: nil)
+            if let loaded { USDZScenePreparation.prepare(loaded) }
             await MainActor.run {
-                PLYSceneCache.shared.store(master, for: url)
                 spinner.removeFromSuperview()
-                // 파싱 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (캐시에는 남는다)
-                guard coordinator.loadingFileURL == url, let liveView = coordinator.scnView else { return }
+                // 로드 중 다른 URL로 바뀌었거나 뷰가 사라졌으면 적용하지 않는다 (성공 시 캐시에는 남는다)
+                let isCurrent = coordinator.loadingFileURL == url
+                guard let master = loaded else {
+                    // 손상되었거나 읽을 수 없는 파일: 로딩 상태를 풀고 실패 안내를 표시한다.
+                    // 이전 URL의 씬이 남아 있으면 다른 방 모델이 현재 결과처럼 보이므로 함께 비운다
+                    if isCurrent {
+                        coordinator.loadingFileURL = nil
+                        coordinator.failedFileURL = url
+                        coordinator.loadedFileURL = nil
+                        if let liveView = coordinator.scnView {
+                            liveView.scene = nil
+                            showLoadFailure(in: liveView, coordinator: coordinator)
+                        }
+                    }
+                    return
+                }
+                USDZSceneCache.shared.store(master, for: url)
+                guard isCurrent, let liveView = coordinator.scnView else { return }
                 coordinator.loadingFileURL = nil
                 apply(master: master, for: url, to: liveView, coordinator: coordinator)
             }
@@ -370,6 +422,9 @@ struct PLYSceneView: UIViewRepresentable {
     /// 캐시된 마스터 씬을 직접 표시하지 않고 노드 트리를 복제해 뷰별 씬을 만든다.
     /// 지오메트리는 공유되어 복제 비용이 적고, 오버레이·카메라 조작이 같은 파일을 쓰는 다른 뷰와 섞이지 않는다.
     private func apply(master: SCNScene, for url: URL, to scnView: SCNView, coordinator: Coordinator) {
+        coordinator.failureLabel?.removeFromSuperview()
+        coordinator.failureLabel = nil
+        coordinator.failedFileURL = nil
         let scene = SCNScene()
         for child in master.rootNode.childNodes {
             scene.rootNode.addChildNode(child.clone())
@@ -377,6 +432,25 @@ struct PLYSceneView: UIViewRepresentable {
         updateDefectOverlays(in: scene, defects: coordinator.defects)
         scnView.scene = scene
         coordinator.loadedFileURL = url
+    }
+
+    /// 파일을 읽지 못했을 때 뷰 중앙에 안내 문구를 표시한다.
+    private func showLoadFailure(in scnView: SCNView, coordinator: Coordinator) {
+        let label = UILabel()
+        label.text = "3D 모델을 불러오지 못했습니다"
+        label.font = .preferredFont(forTextStyle: .footnote)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        scnView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: scnView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: scnView.centerYAnchor),
+            label.leadingAnchor.constraint(greaterThanOrEqualTo: scnView.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: scnView.trailingAnchor, constant: -16)
+        ])
+        coordinator.failureLabel = label
     }
 
     static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
@@ -573,7 +647,7 @@ struct PLYSceneView: UIViewRepresentable {
 
 // MARK: - Camera Direction Bar
 
-struct PLYCameraDirectionBar: View {
+struct CameraDirectionBar: View {
     @Binding var direction: CameraDirection?
     @Binding var resetCamera: Bool
     @State private var selected: CameraDirection?

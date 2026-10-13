@@ -13,14 +13,14 @@ final class RoomDetailViewModelTests: XCTestCase {
 
     private var provider: MockHomeUseCaseProvider!
     private var scanRepo: MockScanRepository!
-    private var fileCache: MockPLYFileCache!
+    private var fileCache: MockUSDZFileCache!
     private var sut: RoomDetailViewModel!
 
     override func setUp() {
         super.setUp()
         provider = MockHomeUseCaseProvider()
         scanRepo = MockScanRepository()
-        fileCache = MockPLYFileCache()
+        fileCache = MockUSDZFileCache()
         sut = RoomDetailViewModel(
             roomId: 1,
             provider: provider,
@@ -34,7 +34,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_성공시_roomDetail이_설정된다() async {
         let detail = RoomDetail(
             id: 1, name: "거실", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
 
@@ -60,55 +60,74 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_load_fileURL이_nil이고_latestScan이_없으면_다운로드하지_않는다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
 
         await sut.load()
 
-        XCTAssertNil(sut.localPLYURL)
+        XCTAssertNil(sut.localModelURL)
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
         XCTAssertEqual(fileCache.downloadCallCount, 0)
     }
 
-    func test_load_캐시_히트시_scanPreview_조회와_다운로드를_하지_않는다() async {
-        let cachedURL = URL(fileURLWithPath: "/tmp/room_1.ply")
-        fileCache.cachedResult = cachedURL
+    /// 캐시가 있어도 download를 거쳐 원격 URL 변경 여부를 확인한다 (같으면 캐시 안에서 네트워크 없이 반환)
+    func test_load_캐시가_있어도_download로_URL_변경을_확인한다() async {
+        fileCache.cachedResult = URL(fileURLWithPath: "/tmp/room_1.usdz")
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
 
         await sut.load()
 
-        XCTAssertEqual(sut.localPLYURL, cachedURL)
+        XCTAssertEqual(fileCache.downloadCallCount, 1)
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
-        XCTAssertEqual(fileCache.downloadCallCount, 0)
+        XCTAssertNotNil(sut.localModelURL)
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    /// 바뀐 모델을 못 받았을 때 옛 캐시로 대체하면 새 결과를 옛 메시 위에 그리게 되므로 에러로 노출한다
+    func test_load_다운로드_실패시_캐시가_있어도_캐시로_대체하지_않는다() async {
+        fileCache.cachedResult = URL(fileURLWithPath: "/tmp/room_1.usdz")
+        fileCache.downloadResult = .failure(URLError(.notConnectedToInternet))
+        let detail = RoomDetail(
+            id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
+            latestScan: nil
+        )
+        provider.getRoomDetailResult = .success(detail)
+
+        await sut.load()
+
+        XCTAssertNil(sut.localModelURL)
+        XCTAssertNotNil(sut.errorMessage)
+        XCTAssertFalse(sut.isDownloading)
     }
 
     func test_load_fileURL이_nil이고_latestScan이_있으면_scanPreview를_조회한다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(),
+            fileURL: nil, createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
-        scanRepo.getScanPreviewResult = .success("https://example.com/mesh.ply")
+        scanRepo.getScanPreviewResult = .success("https://example.com/mesh.usdz")
 
         await sut.load()
 
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 1)
         XCTAssertEqual(fileCache.downloadCallCount, 1)
-        XCTAssertNotNil(sut.localPLYURL)
+        XCTAssertNotNil(sut.localModelURL)
         XCTAssertNil(sut.errorMessage)
     }
 
     func test_load_fileURL이_있으면_scanPreview를_조회하지_않는다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: ScanDetail(scanId: 99, status: "COMPLETED", createdAt: Date())
         )
         provider.getRoomDetailResult = .success(detail)
@@ -117,13 +136,13 @@ final class RoomDetailViewModelTests: XCTestCase {
 
         XCTAssertEqual(scanRepo.getScanPreviewCallCount, 0)
         XCTAssertEqual(fileCache.downloadCallCount, 1)
-        XCTAssertNotNil(sut.localPLYURL)
+        XCTAssertNotNil(sut.localModelURL)
     }
 
     func test_load_다운로드_실패시_errorMessage가_설정되고_isDownloading이_해제된다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: "https://example.com/direct.ply", createdAt: Date(),
+            fileURL: "https://example.com/direct.usdz", createdAt: Date(),
             latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
@@ -131,7 +150,7 @@ final class RoomDetailViewModelTests: XCTestCase {
 
         await sut.load()
 
-        XCTAssertNil(sut.localPLYURL)
+        XCTAssertNil(sut.localModelURL)
         XCTAssertNotNil(sut.errorMessage)
         XCTAssertFalse(sut.isDownloading)
         XCTAssertFalse(sut.isLoading)
@@ -142,7 +161,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_updateRoom_성공시_roomDetail이_갱신된다() async throws {
         let detail = RoomDetail(
             id: 1, name: "원래 이름", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
         await sut.load()
@@ -166,7 +185,7 @@ final class RoomDetailViewModelTests: XCTestCase {
     func test_updateRoom_실패시_에러를_던진다() async {
         let detail = RoomDetail(
             id: 1, name: "방", moveInDate: nil, moveOutDate: nil,
-            thumbnailURL: nil, fileURL: nil, createdAt: Date(), latestScan: nil
+            fileURL: nil, createdAt: Date(), latestScan: nil
         )
         provider.getRoomDetailResult = .success(detail)
         await sut.load()

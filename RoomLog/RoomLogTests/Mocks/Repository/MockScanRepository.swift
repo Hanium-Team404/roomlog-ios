@@ -22,7 +22,7 @@ final class MockScanRepository: ScanRepositoryProtocol {
 
     var uploadScanResult: Result<ScanResult, RepositoryError> = .success(ScanResult(scanId: 1, status: "COMPLETED"))
     var getScanStatusResult: Result<String, RepositoryError> = .success("COMPLETED")
-    var getScanPreviewResult: Result<String, RepositoryError> = .success("https://example.com/preview.ply")
+    var getScanPreviewResult: Result<String, RepositoryError> = .success("https://example.com/preview.usdz")
     var cancelScanResult: Result<Void, RepositoryError> = .success(())
 
     // MARK: - ScanRepositoryProtocol

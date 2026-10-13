@@ -13,7 +13,7 @@ final class RoomListViewModel {
     // MARK: - Provider
 
     private let provider: HomeUseCaseProvider
-    private let fileCache: PLYFileCacheProtocol
+    private let fileCache: USDZFileCacheProtocol
 
     // MARK: - State
 
@@ -32,7 +32,7 @@ final class RoomListViewModel {
         houseId: Int,
         houseName: String,
         provider: HomeUseCaseProvider,
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+        fileCache: USDZFileCacheProtocol = USDZFileCache.shared
     ) {
         self.houseId = houseId
         self.houseName = houseName

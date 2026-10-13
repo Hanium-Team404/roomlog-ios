@@ -132,35 +132,37 @@ struct DefectView: View {
 
 
 
-// MARK: - Section 1: 3D PLY 뷰어 + 마커
+// MARK: - Section 1: 3D USDZ 뷰어 + 마커
 
 private extension DefectView {
     /// Renders the image / 3D model area for a defect report, showing a 3D scene, loading indicator, or placeholder as appropriate.
     /// 
     /// The view shows, in order of preference:
-    /// - a local PLY 3D scene with an overlaid camera-direction bar when a local PLY URL is available,
-    /// - a full-size loading indicator when an image URL exists but the PLY is not yet available,
+    /// - a local USDZ 3D scene with an overlaid camera-direction bar when a local 모델 URL is available,
+    /// - a full-size loading indicator when an image URL exists but the USDZ is not yet available,
     /// - a placeholder otherwise.
-    /// It also initiates a background check/download of the PLY asset when the view appears.
+    /// It also initiates a background check/download of the USDZ asset when the view appears.
     /// - Parameter report: The defect report whose image/defect data drive the displayed content.
-    /// - Returns: A view containing the image or 3D scene area, clipped to a rounded rectangle and constrained to a 3:4 aspect ratio.
+    /// - Returns: A view containing the image or 3D scene area, clipped to a rounded rectangle and constrained to a 4:3 aspect ratio.
     @ViewBuilder
     func imageSection(report: DefectReport) -> some View {
         Group {
-            if let localURL = viewModel.plyLocalURL {
-                PLYSceneView(
+            if let localURL = viewModel.localModelURL {
+                USDZSceneView(
                     fileURL: localURL,
                     defects: report.defects,
                     cameraDirection: $cameraDirection,
                     resetCamera: $resetCamera
                 )
                 .overlay(alignment: .bottom) {
-                    PLYCameraDirectionBar(
+                    CameraDirectionBar(
                         direction: $cameraDirection,
                         resetCamera: $resetCamera
                     )
                     .padding(.bottom, 10)
                 }
+            } else if viewModel.isModelDownloadFailed {
+                ModelLoadFailurePlaceholder()
             } else if report.imageURL != nil {
                 ProgressView("3D 모델 로딩 중...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -168,10 +170,11 @@ private extension DefectView {
                 imagePlaceholder
             }
         }
-        .aspectRatio(3/4, contentMode: .fit)
+        // 세로 3:4는 화면의 60%를 차지해 스크롤 영역이 부족했다. 뷰어 위에서는 카메라 제스처가 드래그를 가져가므로 가로 4:3으로 줄인다
+        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .task(id: report.imageURL) {
-            await viewModel.downloadPLYIfNeeded()
+            await viewModel.downloadModelIfNeeded()
         }
     }
 

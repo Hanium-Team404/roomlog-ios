@@ -1,5 +1,5 @@
 //
-//  MockPLYFileCache.swift
+//  MockUSDZFileCache.swift
 //  RoomLogTests
 //
 //  Created by Doyeon Kim on 9/29/26.
@@ -10,7 +10,7 @@ import Foundation
 
 /// 테스트 타깃은 기본 격리 설정이 없어 `Sendable` 요구를 채우기 위해 `@MainActor`로 격리한다.
 @MainActor
-final class MockPLYFileCache: PLYFileCacheProtocol {
+final class MockUSDZFileCache: USDZFileCacheProtocol {
 
     // MARK: - Call Tracking
 
@@ -24,10 +24,10 @@ final class MockPLYFileCache: PLYFileCacheProtocol {
     /// nil이면 캐시 미스
     var cachedResult: URL?
     var downloadResult: Result<URL, Error> = .success(
-        FileManager.default.temporaryDirectory.appendingPathComponent("mock.ply")
+        FileManager.default.temporaryDirectory.appendingPathComponent("mock.usdz")
     )
 
-    // MARK: - PLYFileCacheProtocol
+    // MARK: - USDZFileCacheProtocol
     // 요구사항이 nonisolated protocol에서 오면 witness도 nonisolated로 추론되므로
     // 클래스 격리를 명시해 상태 변경을 MainActor 안에서 수행한다 (async 요구사항이라 hop 허용).
 

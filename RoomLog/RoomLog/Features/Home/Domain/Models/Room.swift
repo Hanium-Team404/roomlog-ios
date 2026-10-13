@@ -29,7 +29,6 @@ struct RoomDetail: Identifiable {
     let name: String
     let moveInDate: Date?
     let moveOutDate: Date?
-    let thumbnailURL: String?
     let fileURL: String?
     let createdAt: Date
     let latestScan: ScanDetail?

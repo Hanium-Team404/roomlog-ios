@@ -67,7 +67,7 @@ final class MockDefectRepository: DefectRepositoryProtocol {
                 DefectReportDetail(id: 1, analysisID: 1, imageURL: nil, type: .crack, severity: .high, description: "벽면 균열", repairCost: 60000, defectArea: 0.3, location: "거실 벽", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: []),
                 DefectReportDetail(id: 2, analysisID: 1, imageURL: nil, type: .stain, severity: .medium, description: "천장 얼룩", repairCost: 40000, defectArea: 0.2, location: "천장", discoveredDate: nil, memo: nil, x: nil, y: nil, z: nil, region3d: [])
             ],
-            plyURL: nil,
+            modelURL: nil,
             createdAt: Date()
         )
     }

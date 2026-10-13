@@ -20,7 +20,7 @@ final class ScanProcessingManager {
     // MARK: - Dependencies
 
     private var scanRepository: ScanRepositoryProtocol?
-    private let fileCache: PLYFileCacheProtocol
+    private let fileCache: USDZFileCacheProtocol
     private let pollConfig: PollConfig
     private let artifactStore: ScanArtifactStore
     private let backgroundContinuation: ScanBackgroundContinuing
@@ -36,7 +36,7 @@ final class ScanProcessingManager {
     init(
         pollConfig: PollConfig = PollConfig(),
         artifactStore: ScanArtifactStore = ScanArtifactStore(),
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared,
+        fileCache: USDZFileCacheProtocol = USDZFileCache.shared,
         backgroundContinuation: ScanBackgroundContinuing? = nil,
         completionNotifier: ScanCompletionNotifying? = nil
     ) {

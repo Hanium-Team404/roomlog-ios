@@ -13,7 +13,6 @@ private let sampleRoom = RoomDetail(
     name: "거실",
     moveInDate: nil,
     moveOutDate: nil,
-    thumbnailURL: nil,
     fileURL: nil,
     createdAt: Date(),
     latestScan: ScanDetail(scanId: 1, status: "COMPLETED", createdAt: Date())
@@ -34,12 +33,12 @@ private let sampleRoom = RoomDetail(
     }
 }
 
-#Preview("PLY 뷰어") {
+#Preview("USDZ 뷰어") {
     NavigationStack {
         RoomDetailView(
             preview: sampleRoom,
-            localPLYURL: URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("preview.ply")
+            localModelURL: URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("preview.usdz")
         )
     }
 }

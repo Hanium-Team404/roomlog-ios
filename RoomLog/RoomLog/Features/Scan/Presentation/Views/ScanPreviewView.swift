@@ -12,7 +12,7 @@ struct ScanPreviewView: View {
     let fileURL: URL
     let scanId: Int
     let houseId: Int
-    private let fileCache: PLYFileCacheProtocol
+    private let fileCache: USDZFileCacheProtocol
 
     @Environment(\.di) private var di
     @State private var showSaveAlert: Bool = false
@@ -24,10 +24,10 @@ struct ScanPreviewView: View {
     #if DEBUG
     init(preview: Bool) {
         self.fileURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("preview.ply")
+            .appendingPathComponent("preview.usdz")
         self.scanId = 1
         self.houseId = 1
-        self.fileCache = PLYFileCache.shared
+        self.fileCache = USDZFileCache.shared
     }
     #endif
 
@@ -35,7 +35,7 @@ struct ScanPreviewView: View {
         fileURL: URL,
         scanId: Int,
         houseId: Int,
-        fileCache: PLYFileCacheProtocol = PLYFileCache.shared
+        fileCache: USDZFileCacheProtocol = USDZFileCache.shared
     ) {
         self.fileURL = fileURL
         self.scanId = scanId
@@ -57,7 +57,7 @@ struct ScanPreviewView: View {
 
     var body: some View {
         ZStack {
-            PLYSceneView(fileURL: fileURL)
+            USDZSceneView(fileURL: fileURL)
                 .ignoresSafeArea(edges: .bottom)
 
             if isSaving {

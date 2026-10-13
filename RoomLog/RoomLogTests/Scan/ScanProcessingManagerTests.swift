@@ -13,7 +13,7 @@ import Foundation
 final class ScanProcessingManagerTests {
 
     private let mockRepo: MockScanRepository
-    private let mockCache: MockPLYFileCache
+    private let mockCache: MockUSDZFileCache
     private let mockContinuation: MockScanBackgroundContinuation
     private let mockNotifier: MockScanCompletionNotifier
     /// 테스트마다 고유한 suite·디렉토리를 사용해 호스트 앱 오염과 병렬 실행 간 간섭을 차단
@@ -29,7 +29,7 @@ final class ScanProcessingManagerTests {
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
         mockRepo = MockScanRepository()
-        mockCache = MockPLYFileCache()
+        mockCache = MockUSDZFileCache()
         mockContinuation = MockScanBackgroundContinuation()
         mockNotifier = MockScanCompletionNotifier()
         store = ScanArtifactStore(
@@ -120,7 +120,7 @@ final class ScanProcessingManagerTests {
         sut.setActiveScan(
             ScanProcessingManager.ActiveScan(
                 scanId: 1, houseId: 1,
-                phase: .completed(fileURL: URL(fileURLWithPath: "/tmp/test.ply"))
+                phase: .completed(fileURL: URL(fileURLWithPath: "/tmp/test.usdz"))
             )
         )
 
@@ -310,7 +310,7 @@ final class ScanProcessingManagerTests {
 
     @Test func 폴링_COMPLETED후_프리뷰_다운로드가_끝나면_completed가_된다() async throws {
         mockRepo.getScanStatusResult = .success("COMPLETED")
-        let localURL = tempDirectory.appendingPathComponent("room_7.ply")
+        let localURL = tempDirectory.appendingPathComponent("room_7.usdz")
         mockCache.downloadResult = .success(localURL)
 
         sut.resumePolling(scanId: 7, houseId: 1)

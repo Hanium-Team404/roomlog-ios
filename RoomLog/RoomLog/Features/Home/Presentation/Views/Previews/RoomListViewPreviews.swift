@@ -47,7 +47,7 @@ import SwiftUI
 
 #Preview("스캔 완료") {
     let manager = ScanProcessingManager()
-    let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("preview.ply")
+    let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("preview.usdz")
     return NavigationStack {
         RoomListView(
             houseId: 1,
