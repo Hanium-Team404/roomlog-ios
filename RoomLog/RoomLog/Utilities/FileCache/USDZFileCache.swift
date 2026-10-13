@@ -20,8 +20,10 @@ actor USDZFileCache {
         if let cacheDirectory {
             self.cacheDirectory = cacheDirectory
         } else {
-            self.cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("USDZFiles", isDirectory: true)
+            let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            self.cacheDirectory = caches.appendingPathComponent("USDZFiles", isDirectory: true)
+            // PLY 시절 캐시(Caches/PLYFiles)는 더 이상 읽지 않으므로 남아 있으면 정리한다
+            try? fileManager.removeItem(at: caches.appendingPathComponent("PLYFiles", isDirectory: true))
         }
     }
 
