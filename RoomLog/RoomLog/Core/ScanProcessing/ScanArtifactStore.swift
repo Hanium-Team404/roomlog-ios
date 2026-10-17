@@ -56,7 +56,7 @@ nonisolated struct ScanArtifactStore {
     // MARK: - 캡처 데이터셋
 
     /// 촬영 데이터셋 디렉토리 발급. 데이터셋은 zip 완성 즉시 삭제되므로
-    /// 재실행 시점에 남아 있는 것은 전부 고아다 — `sweepOrphans`가 통째로 청소한다.
+    /// 재실행 시점에 남아 있는 것은 전부 잔여 파일이다 — `sweepOrphans`가 통째로 청소한다.
     func makeDatasetDirectory() throws -> URL {
         ensureDirectory(datasetsDirectory)
         let url = datasetsDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -65,10 +65,22 @@ nonisolated struct ScanArtifactStore {
         return url
     }
 
+    /// 데이터셋 삭제를 메인 밖에서 수행한다. 1분 스캔 기준 파일이 수천 개라
+    /// 메인 액터에서 동기로 지우면 카메라 프레임이 끊길 수 있다.
+    @concurrent
+    func removeDataset(_ url: URL) async {
+        discardDataset(url)
+    }
+
     /// 다 쓴(zip 완성) 또는 버려진(변환 없이 종료) 데이터셋 삭제
     func discardDataset(_ url: URL) {
-        try? FileManager.default.removeItem(at: url)
-        log("데이터셋 삭제 \(url.lastPathComponent.prefix(8)) → 현재 \(contents(of: datasetsDirectory).count)개")
+        do {
+            try FileManager.default.removeItem(at: url)
+            log("데이터셋 삭제 \(url.lastPathComponent.prefix(8)) → 현재 \(contents(of: datasetsDirectory).count)개")
+        } catch {
+            // 삭제 실패를 삼키면 폴더가 남는 원인을 추적할 수 없으므로 남긴다
+            log("데이터셋 삭제 실패 \(url.lastPathComponent.prefix(8)): \(error.localizedDescription)")
+        }
     }
 
     // MARK: - 단계 기록
@@ -121,8 +133,8 @@ nonisolated struct ScanArtifactStore {
         }
     }
 
-    /// 재실행 시점의 고아 청소.
-    /// - 기록에 없는 zip: 압축 중 크래시 파편, 단계 전환 후 잔여물
+    /// 재실행 시점의 잔여 파일 청소.
+    /// - 기록에 없는 zip: 압축 중 크래시 파편, 단계 전환 후 남은 것
     /// - 데이터셋 전부: 압축 중 종료·변환 없이 버려진 것
     /// - 구버전이 `Documents`에 남긴 데이터셋
     func sweepOrphans() {
@@ -133,7 +145,7 @@ nonisolated struct ScanArtifactStore {
         for item in orphanZips + datasets + legacyDatasets {
             try? FileManager.default.removeItem(at: item)
         }
-        log("고아 청소 — zip \(orphanZips.count)개, 데이터셋 \(datasets.count)개, 구버전 Documents \(legacyDatasets.count)개")
+        log("잔여 파일 청소 — zip \(orphanZips.count)개, 데이터셋 \(datasets.count)개, 구버전 Documents \(legacyDatasets.count)개")
     }
 
     // MARK: - Private

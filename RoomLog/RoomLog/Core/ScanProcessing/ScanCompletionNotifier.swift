@@ -15,6 +15,8 @@ protocol ScanCompletionNotifying {
     func requestAuthorization()
     /// - Parameter houseId: 알림을 누르면 이 집의 스캔 상태 시트로 이동한다
     func notify(title: String, body: String, houseId: Int)
+    /// 이미 전달된 스캔 완료 알림을 알림센터에서 지운다
+    func removeDelivered()
 }
 
 final class ScanCompletionNotifier: ScanCompletionNotifying {
@@ -48,6 +50,14 @@ final class ScanCompletionNotifier: ScanCompletionNotifying {
                 log("완료 알림 등록 실패: \(error)")
             }
         }
+    }
+
+    /// 식별자 기준으로 이 알림만 지운다 — 앱의 다른 알림은 건드리지 않는다.
+    /// `notify()`의 등록이 아직 끝나지 않은 순간에 불려도 남지 않도록 대기 중인 요청까지 함께 지운다
+    func removeDelivered() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 
     private func log(_ message: @autoclosure () -> String) {

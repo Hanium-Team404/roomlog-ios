@@ -128,12 +128,14 @@ final class ScanViewModel: NSObject {
         discardEncoder()
     }
 
-    /// 변환 없이 버리는 인코더의 데이터셋을 지운다.
+    /// 변환 없이 버리는 인코더를 매니저에 넘겨 폐기한다 (wrapUp 후 데이터셋 삭제).
     /// 변환에 넘긴 인코더는 `startConversion`에서 이미 nil이라 대상이 아니다.
+    /// 뷰가 사라진 뒤에도 폐기는 끝나야 하므로 self 대신 매니저만 캡처한다.
     private func discardEncoder() {
         guard let encoder else { return }
-        processingManager.discardDataset(encoder.datasetDirectoryURL)
         self.encoder = nil
+        let processingManager = processingManager
+        Task { await processingManager.discard(encoder) }
     }
 
     // MARK: - Recording

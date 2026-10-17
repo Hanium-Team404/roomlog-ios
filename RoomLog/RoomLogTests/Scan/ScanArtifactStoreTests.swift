@@ -157,6 +157,24 @@ final class ScanArtifactStoreTests {
         #expect(values.isExcludedFromBackup == true)
     }
 
+    @Test func discardDataset은_데이터셋_디렉토리를_지운다() throws {
+        let dataset = try sut.makeDatasetDirectory()
+        try Data("frame".utf8).write(to: dataset.appendingPathComponent("odometry.csv"))
+
+        sut.discardDataset(dataset)
+
+        #expect(!FileManager.default.fileExists(atPath: dataset.path))
+    }
+
+    @Test func removeDataset은_데이터셋_디렉토리를_지운다() async throws {
+        let dataset = try sut.makeDatasetDirectory()
+        try Data("frame".utf8).write(to: dataset.appendingPathComponent("odometry.csv"))
+
+        await sut.removeDataset(dataset)
+
+        #expect(!FileManager.default.fileExists(atPath: dataset.path))
+    }
+
     @Test func sweepOrphans는_남은_데이터셋을_전부_지운다() throws {
         let dataset = try sut.makeDatasetDirectory()
         try Data("frame".utf8).write(to: dataset.appendingPathComponent("odometry.csv"))

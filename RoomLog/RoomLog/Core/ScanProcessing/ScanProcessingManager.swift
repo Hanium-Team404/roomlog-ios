@@ -90,9 +90,23 @@ final class ScanProcessingManager {
         try artifactStore.makeDatasetDirectory()
     }
 
-    /// 변환 없이 버려지는 데이터셋 삭제 (다시 촬영·화면 이탈)
+    /// 변환 없이 버려지는 데이터셋 삭제 (인코더 생성 실패 등 인코더가 없는 경우)
     func discardDataset(_ url: URL) {
         artifactStore.discardDataset(url)
+    }
+
+    /// 변환 없이 버리는 인코더 폐기 (다시 촬영·화면 이탈).
+    /// 인코더는 생성 즉시 rgb.mp4를 열어 두고(AVAssetWriter) 녹화 중이던 인코딩 Task가
+    /// 삭제 직후에도 폴더를 다시 만들며 쓰므로, `wrapUp()`으로 전부 닫은 뒤에 지워야 폴더가 되살아나지 않는다.
+    /// 삭제는 메인 밖(`removeDataset`)에서 수행한다.
+    func discard(_ encoder: DatasetEncoder) async {
+        await encoder.wrapUp()
+        await artifactStore.removeDataset(encoder.datasetDirectoryURL)
+    }
+
+    /// 스캔 완료 알림을 알림센터에서 지운다. 미리보기 진입처럼 알림이 역할을 다한 시점에 부른다
+    func clearCompletionNotification() {
+        completionNotifier.removeDelivered()
     }
 
     // MARK: - 종료
