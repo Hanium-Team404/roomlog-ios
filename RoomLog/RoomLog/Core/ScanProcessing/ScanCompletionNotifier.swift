@@ -52,9 +52,12 @@ final class ScanCompletionNotifier: ScanCompletionNotifying {
         }
     }
 
-    /// 식별자 기준으로 이 알림만 지운다 — 앱의 다른 알림은 건드리지 않는다
+    /// 식별자 기준으로 이 알림만 지운다 — 앱의 다른 알림은 건드리지 않는다.
+    /// `notify()`의 등록이 아직 끝나지 않은 순간에 불려도 남지 않도록 대기 중인 요청까지 함께 지운다
     func removeDelivered() {
-        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 
     private func log(_ message: @autoclosure () -> String) {
