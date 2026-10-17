@@ -20,6 +20,7 @@ final class MockScanCompletionNotifier: ScanCompletionNotifying {
     // MARK: - Call Tracking
 
     private(set) var notifications: [SentNotification] = []
+    private(set) var removeDeliveredCallCount = 0
 
     // MARK: - ScanCompletionNotifying
 
@@ -27,5 +28,9 @@ final class MockScanCompletionNotifier: ScanCompletionNotifying {
 
     func notify(title: String, body: String, houseId: Int) {
         notifications.append(SentNotification(title: title, body: body, houseId: houseId))
+    }
+
+    func removeDelivered() {
+        removeDeliveredCallCount += 1
     }
 }

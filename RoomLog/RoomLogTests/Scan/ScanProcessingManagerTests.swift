@@ -86,6 +86,14 @@ final class ScanProcessingManagerTests {
         sut.clear()
     }
 
+    // MARK: - clearCompletionNotification
+
+    @Test func clearCompletionNotification은_노티파이어의_전달된_알림을_지운다() {
+        sut.clearCompletionNotification()
+
+        #expect(mockNotifier.removeDeliveredCallCount == 1)
+    }
+
     // MARK: - cancel
 
     @Test func cancel_호출시_activeScan이_nil이_된다() {

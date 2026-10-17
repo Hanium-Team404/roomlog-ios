@@ -104,6 +104,11 @@ final class ScanProcessingManager {
         await artifactStore.removeDataset(encoder.datasetDirectoryURL)
     }
 
+    /// 스캔 완료 알림을 알림센터에서 지운다. 미리보기 진입처럼 알림이 역할을 다한 시점에 부른다
+    func clearCompletionNotification() {
+        completionNotifier.removeDelivered()
+    }
+
     // MARK: - 종료
 
     /// 진행 중인 스캔 취소. 서버 스캔이 있으면 취소 요청 Task를 돌려준다 —

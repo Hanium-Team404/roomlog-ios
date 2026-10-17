@@ -71,6 +71,8 @@ struct ScanPreviewView: View {
         .navigationTitle("3D 미리보기")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        // 미리보기까지 왔으면 완료 알림은 알림센터에서 지운다
+        .task { processingManager.clearCompletionNotification() }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("다시 스캔", systemImage: "arrow.counterclockwise") {
