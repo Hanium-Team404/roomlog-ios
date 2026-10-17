@@ -70,34 +70,20 @@ struct ScanView: View {
         ZStack {
             ARViewContainer(session: viewModel.session)
                 .ignoresSafeArea()
-
-            if viewModel.showDepthWarning {
-                VStack(spacing: 8) {
-                    Image(systemName: "hand.raised.fill")
-                        .font(.title2)
-                    Text("조금 더 떨어져주세요")
-                        .font(.semibold, 15)
+            
+            Group {
+                if showsGuide {
+                    ScanStatusBanner(systemImage: "move.3d", text: "녹화 버튼을 눌러 스캔을 시작하세요")
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .glassEffect(.regular, in: .capsule)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.showDepthWarning)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 0.3), value: showsGuide)
 
-            if viewModel.showSessionError {
-                VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.title2)
-                    Text("카메라 오류가 발생해 다시 시작하는 중입니다")
-                        .font(.semibold, 15)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .glassEffect(.regular, in: .capsule)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.showSessionError)
-            }
+            banners
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
 
             VStack(spacing: 20) {
                 Spacer()
@@ -106,6 +92,27 @@ struct ScanView: View {
             }
             .padding(.bottom, 52)
         }
+    }
+
+    private var showsGuide: Bool {
+        viewModel.phase == .idle && !viewModel.showSessionError
+    }
+
+    // MARK: - Banners
+
+    /// 거리 경고·세션 오류 배너. 화면 중앙에 표시되며 안내보다 위 레이어에 그려진다
+    @ViewBuilder
+    private var banners: some View {
+        VStack(spacing: 12) {
+            if viewModel.showDepthWarning {
+                ScanStatusBanner(systemImage: "hand.raised.fill", text: "조금 더 떨어져주세요")
+            }
+            if viewModel.showSessionError {
+                ScanStatusBanner(systemImage: "exclamationmark.triangle.fill", text: "카메라 오류가 발생해 다시 시작하는 중입니다")
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.showDepthWarning)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.showSessionError)
     }
 
     // MARK: - Status Badge
