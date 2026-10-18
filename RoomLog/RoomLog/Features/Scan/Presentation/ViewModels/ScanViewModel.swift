@@ -145,8 +145,11 @@ final class ScanViewModel: NSObject {
         guard encoder != nil else { return }
         startIMU()
         recordingSeconds = 0
+        
         recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.recordingSeconds += 1
+            MainActor.assumeIsolated {
+                self?.recordingSeconds += 1
+            }
         }
         phase = .recording
     }
@@ -189,12 +192,15 @@ final class ScanViewModel: NSObject {
         motionManager.accelerometerUpdateInterval = 1.0 / 100.0
         motionManager.gyroUpdateInterval = 1.0 / 100.0
 
-        // 인코더를 캡처해 콜백에서 MainActor 격리 프로퍼티를 건드리지 않는다 (전용 큐 ↔ 메인 경합 방지)
-        motionManager.startAccelerometerUpdates(to: imuQueue) { data, _ in
+        // 인코더를 캡처해 콜백에서 MainActor 격리 프로퍼티를 건드리지 않는다 (전용 큐 ↔ 메인 경합 방지).
+        // CoreMotion 핸들러 타입은 Sendable 표시가 없어 그냥 쓰면 클로저가 MainActor 격리를 물려받고,
+        // Swift 6 모드는 그 클로저가 imuQueue에서 불리는 순간 런타임 격리 검사로 크래시한다.
+        // @Sendable을 명시해 격리 상속을 끊는다 (DatasetEncoder는 @unchecked Sendable).
+        motionManager.startAccelerometerUpdates(to: imuQueue) { @Sendable data, _ in
             guard let data else { return }
             encoder.addRawAccelerometer(data: data)
         }
-        motionManager.startGyroUpdates(to: imuQueue) { data, _ in
+        motionManager.startGyroUpdates(to: imuQueue) { @Sendable data, _ in
             guard let data else { return }
             encoder.addRawGyroscope(data: data)
         }
