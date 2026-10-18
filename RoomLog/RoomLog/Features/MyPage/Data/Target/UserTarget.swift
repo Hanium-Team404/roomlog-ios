@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum UserTarget {
+nonisolated enum UserTarget {
     case getUser
     case updateUser(request: UpdateUserRequestDTO)
     case deleteUser

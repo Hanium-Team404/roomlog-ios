@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum EstimateTarget {
+nonisolated enum EstimateTarget {
     case getRepairShops(analysisId: Int, type: String?, radius: String?, sort: String?)
     case getRepairShopsByRoom(roomId: Int, type: String?, radius: String?, sort: String?)
     case previewEstimate(request: EstimatePreviewRequestDTO)

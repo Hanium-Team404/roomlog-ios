@@ -93,8 +93,9 @@ enum RepositoryError: Error, LocalizedError, Sendable, Equatable {
 
 // MARK: - HTTP 상태 코드 재시도 규칙
 
-/// `RepositoryError`·`NetworkError`가 공유하는 단일 규칙
-enum HTTPStatus {
+/// `RepositoryError`·`NetworkError`가 공유하는 단일 규칙.
+/// 에러 타입은 nonisolated라 여기도 격리에서 제외한다
+nonisolated enum HTTPStatus {
     /// 잠시 뒤 같은 요청을 다시 보내면 성공할 수 있는 상태 코드
     static func isRetryable(_ code: Int) -> Bool {
         code >= 500 || code == 408 || code == 429

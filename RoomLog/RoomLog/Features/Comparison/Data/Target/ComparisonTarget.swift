@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum ComparisonTarget {
+nonisolated enum ComparisonTarget {
     case getComparisonHistories(houseId: Int)
 }
 

@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum DefectTarget {
+nonisolated enum DefectTarget {
     case getDefectRoomData
     case getDefectReport(roomId: Int)
     case getDefectDetail(defectId: Int)

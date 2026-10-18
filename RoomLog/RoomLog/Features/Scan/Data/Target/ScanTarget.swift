@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum ScanTarget {
+nonisolated enum ScanTarget {
     case uploadScan(houseId: Int, fileURL: URL)
     case getScanStatus(scanId: Int)
     case getScanPreview(scanId: Int)

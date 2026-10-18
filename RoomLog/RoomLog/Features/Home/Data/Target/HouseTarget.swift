@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum HouseTarget {
+nonisolated enum HouseTarget {
     case getHouses
     case createHouse(request: CreateHouseRequestDTO)
     case updateHouse(houseId: Int, request: UpdateHouseRequestDTO)

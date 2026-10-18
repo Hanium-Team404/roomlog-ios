@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum AuthTarget {
+nonisolated enum AuthTarget {
     case login(request: LoginRequestDTO)
     case signup(request: SignUpRequestDTO)
 }
