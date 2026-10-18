@@ -10,8 +10,13 @@ import Foundation
 @Observable
 final class LoginViewModel {
     // MARK: - Input
-    var email: String = ""
-    var password: String = ""
+    // 입력을 고치기 시작하면 직전 실패 안내는 더 이상 유효하지 않으므로 지운다
+    var email: String = "" {
+        didSet { if email != oldValue { errorMessage = nil } }
+    }
+    var password: String = "" {
+        didSet { if password != oldValue { errorMessage = nil } }
+    }
 
     // MARK: - State
     private(set) var isLoading: Bool = false
@@ -58,7 +63,9 @@ final class LoginViewModel {
             #if DEBUG
             print("❌ [Login] error: \(error)")
             #endif
-            errorMessage = error.localizedDescription
+            // 자격 증명 오류(AUTH_001)·연결 실패·서버 오류 문구는 Core/Error의 코드별 테이블이 구분한다.
+            // 토큰 저장 실패 등 Repository 밖 오류가 섞일 수 있어 한 번 더 정규화한다
+            errorMessage = RepositoryError.normalize(error).userMessage
         }
 
         isLoading = false

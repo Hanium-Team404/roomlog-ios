@@ -49,15 +49,25 @@ private extension SignUpView {
 
     func inputFields(_ viewModel: SignUpViewModel) -> some View {
         VStack(spacing: 16) {
-            TextField("이메일", text: Bindable(viewModel).email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
-                .padding(.vertical, 16)
-                .padding(.horizontal, 20)
-                .background(.neutral50, in: Capsule())
-                .font(.medium, 16)
+            VStack(alignment: .leading, spacing: 6) {
+                TextField("이메일", text: Bindable(viewModel).email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
+                    .background(.neutral50, in: Capsule())
+                    .font(.medium, 16)
+
+                // 형식 오류·중복 이메일은 해당 필드 아래에서 바로 안내한다
+                if let emailError = viewModel.emailError {
+                    Text(emailError)
+                        .foregroundStyle(.red)
+                        .font(.regular, 12)
+                        .padding(.horizontal, 20)
+                }
+            }
 
             SecureField("비밀번호", text: Bindable(viewModel).password)
                 .textContentType(.newPassword)

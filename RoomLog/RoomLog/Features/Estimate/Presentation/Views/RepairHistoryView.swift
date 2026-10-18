@@ -11,7 +11,9 @@ struct RepairHistoryView: View {
     @Environment(\.di) var di
     @State private var viewModel: RepairHistoryViewModel
     @State private var selectedEstimate: Estimate?
-    @State private var showDetail = false
+    /// 수리 완료 저장에 성공했을 때만 켜진다. 시트가 열린 채로 목록 갱신 실패 알림을 띄우면
+    /// 보이지 않으므로, 갱신은 시트가 닫힌 뒤에 실행한다
+    @State private var refreshAfterDismiss = false
 
     init(roomId: Int, provider: EstimateUseCaseProvider) {
         self._viewModel = .init(
@@ -42,19 +44,23 @@ struct RepairHistoryView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        .sheet(isPresented: $showDetail) {
+        // isPresented + 옵셔널 조합은 첫 표시 시점에 selectedEstimate가 nil로 평가돼 빈 시트가 뜨므로 item 기반으로 연다
+        .sheet(item: $selectedEstimate) {
             viewModel.clearDetail()
-            selectedEstimate = nil
-        } content: {
-            if let estimate = selectedEstimate {
-                EstimateDetailSheet(
-                    estimate: estimate,
-                    detail: viewModel.selectedDetail,
-                    isLoadingDetail: viewModel.isLoadingDetail
-                ) { repairCost, note in
-                    await viewModel.completeRepair(estimateId: estimate.id, repairCost: repairCost, note: note)
-                    showDetail = false
-                }
+            if refreshAfterDismiss {
+                refreshAfterDismiss = false
+                Task { await viewModel.fetchEstimates() }
+            }
+        } content: { estimate in
+            EstimateDetailSheet(
+                estimate: estimate,
+                detail: viewModel.selectedDetail,
+                isLoadingDetail: viewModel.isLoadingDetail
+            ) { repairCost, note in
+                try await viewModel.completeRepair(estimateId: estimate.id, repairCost: repairCost, note: note)
+                // 저장에 성공했을 때만 닫는다. 실패하면 시트가 입력값을 유지한 채 안내한다
+                refreshAfterDismiss = true
+                selectedEstimate = nil
             }
         }
         .overlay(alignment: .top) {
@@ -81,7 +87,6 @@ struct RepairHistoryView: View {
                     RepairHistoryCard(estimate: estimate)
                         .onTapGesture {
                             selectedEstimate = estimate
-                            showDetail = true
                             Task { await viewModel.fetchEstimateDetail(estimateId: estimate.id) }
                         }
                 }
@@ -106,13 +111,15 @@ private struct EstimateDetailSheet: View {
     let estimate: Estimate
     let detail: EstimateDetail?
     let isLoadingDetail: Bool
-    let onComplete: (Int, String?) async -> Void
+    /// 저장 성공 시 부모가 시트를 닫는다. 실패는 throw로 돌려받아 시트 안에서 안내한다
+    let onComplete: (Int, String?) async throws -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @State private var repairCostText = ""
     @State private var note = ""
     @State private var isCompleting = false
     @State private var showPriceError = false
+    @State private var isShowingSaveError = false
+    @State private var saveErrorMessage = ""
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -122,113 +129,136 @@ private struct EstimateDetailSheet: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            // 문의 날짜
-            if let createdAt = detail?.createdAt ?? estimate.createdAt {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.blueGray500)
-                    Text(Self.dateFormatter.string(from: createdAt))
-                        .font(.medium, 14)
-                        .foregroundStyle(Color.blueGray500)
-                }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                detailContent
             }
-
-            Text("문의 내용")
-                .font(.semibold, 18)
-                .foregroundStyle(Color.neutral800)
-
-            if isLoadingDetail {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: 100)
-            } else {
-                ScrollView {
-                    Text(detail?.message ?? estimate.message ?? "문자 전송 내역이 없습니다.")
-                        .font(.regular, 15)
-                        .foregroundStyle(Color.neutral600)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                }
-                .frame(maxHeight: 160)
-                .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 12))
-            }
-
-            // 업체 정보
-            VStack(alignment: .leading, spacing: 6) {
-                Text(detail?.providerName ?? estimate.providerName)
-                    .font(.semibold, 16)
-                    .foregroundStyle(Color.neutral800)
-                if let phone = detail?.providerPhone ?? estimate.providerPhone, !phone.isEmpty {
-                    Text(phone)
-                        .font(.regular, 14)
-                        .foregroundStyle(Color.blueGray500)
-                }
-                if let address = detail?.providerAddress ?? estimate.providerAddress, !address.isEmpty {
-                    Text(address)
-                        .font(.regular, 14)
-                        .foregroundStyle(Color.blueGray500)
-                }
-            }
-
+            .padding(24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom) {
             if estimate.displayStatus == .inProgress {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("수리 비용 (원)")
-                        .font(.medium, 14)
-                        .foregroundStyle(Color.neutral600)
-                    TextField("수리 비용을 입력하세요", text: $repairCostText)
-                        .keyboardType(.numberPad)
-                        .padding(12)
-                        .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
-                    if showPriceError {
-                        Text("수리 비용을 입력해주세요.")
-                            .font(.regular, 13)
-                            .foregroundStyle(Color.red)
-                    }
-
-                    Text("메모")
-                        .font(.medium, 14)
-                        .foregroundStyle(Color.neutral600)
-                    TextField("메모를 입력하세요 (선택)", text: $note)
-                        .padding(12)
-                        .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
-                }
-            }
-
-            Spacer()
-
-            if estimate.displayStatus == .inProgress {
-                Button {
-                    guard let cost = Int(repairCostText), cost > 0 else {
-                        showPriceError = true
-                        return
-                    }
-                    showPriceError = false
-                    isCompleting = true
-                    Task {
-                        await onComplete(cost, note.isEmpty ? nil : note)
-                        isCompleting = false
-                        dismiss()
-                    }
-                } label: {
-                    Group {
-                        if isCompleting {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("수리 완료")
-                                .font(.semibold, 17)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.mutedBlue, in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white)
-                }
-                .disabled(isCompleting)
+                completeButton
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(.bar)
             }
         }
-        .padding(24)
         .presentationDetents([.medium, .large])
+        // 저장 중에 닫히면 성공 여부를 알 수 없으므로 막는다
+        .interactiveDismissDisabled(isCompleting)
+        .alert("수리 완료 저장 실패", isPresented: $isShowingSaveError) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(saveErrorMessage)
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        // 문의 날짜
+        if let createdAt = detail?.createdAt ?? estimate.createdAt {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.blueGray500)
+                Text(Self.dateFormatter.string(from: createdAt))
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.blueGray500)
+            }
+        }
+
+        Text("문의 내용")
+            .font(.semibold, 18)
+            .foregroundStyle(Color.neutral800)
+
+        if isLoadingDetail {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: 100)
+        } else {
+            Text(detail?.message ?? estimate.message ?? "문자 전송 내역이 없습니다.")
+                .font(.regular, 15)
+                .foregroundStyle(Color.neutral600)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 12))
+        }
+
+        // 업체 정보
+        VStack(alignment: .leading, spacing: 6) {
+            Text(detail?.providerName ?? estimate.providerName)
+                .font(.semibold, 16)
+                .foregroundStyle(Color.neutral800)
+            if let phone = detail?.providerPhone ?? estimate.providerPhone, !phone.isEmpty {
+                Text(phone)
+                    .font(.regular, 14)
+                    .foregroundStyle(Color.blueGray500)
+            }
+            if let address = detail?.providerAddress ?? estimate.providerAddress, !address.isEmpty {
+                Text(address)
+                    .font(.regular, 14)
+                    .foregroundStyle(Color.blueGray500)
+            }
+        }
+
+        if estimate.displayStatus == .inProgress {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("수리 비용 (원)")
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.neutral600)
+                TextField("수리 비용을 입력하세요", text: $repairCostText)
+                    .keyboardType(.numberPad)
+                    .padding(12)
+                    .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
+                if showPriceError {
+                    Text("수리 비용을 입력해주세요.")
+                        .font(.regular, 13)
+                        .foregroundStyle(Color.red)
+                }
+
+                Text("메모")
+                    .font(.medium, 14)
+                    .foregroundStyle(Color.neutral600)
+                TextField("메모를 입력하세요 (선택)", text: $note)
+                    .padding(12)
+                    .background(Color.blueGray50, in: RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    private var completeButton: some View {
+        Button {
+            guard let cost = Int(repairCostText), cost > 0 else {
+                showPriceError = true
+                return
+            }
+            showPriceError = false
+            isCompleting = true
+            Task {
+                defer { isCompleting = false }
+                do {
+                    try await onComplete(cost, note.isEmpty ? nil : note)
+                } catch {
+                    // 입력한 비용·메모는 그대로 두고 다시 시도할 수 있게 한다
+                    saveErrorMessage = RepositoryError.normalize(error).userMessage
+                    isShowingSaveError = true
+                }
+            }
+        } label: {
+            Group {
+                if isCompleting {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("수리 완료")
+                        .font(.semibold, 17)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color.mutedBlue, in: RoundedRectangle(cornerRadius: 12))
+            .foregroundStyle(.white)
+        }
+        .disabled(isCompleting)
     }
 }
 

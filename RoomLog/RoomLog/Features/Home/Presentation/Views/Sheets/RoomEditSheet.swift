@@ -20,12 +20,20 @@ struct RoomEditSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+    /// 시트를 연 시점의 값. 변경 여부 판단 기준이므로 `roomDetail`의 nil 날짜를 채운 기본값까지 포함한다
+    private let initialMoveInDate: Date
+    private let initialMoveOutDate: Date
+
     init(roomDetail: RoomDetail, onSave: @escaping @MainActor (String, Date, Date?) async throws -> Void) {
         self.roomDetail = roomDetail
         self.onSave = onSave
+        let moveInDate = roomDetail.moveInDate ?? Date()
+        let moveOutDate = roomDetail.moveOutDate ?? Date()
+        self.initialMoveInDate = moveInDate
+        self.initialMoveOutDate = moveOutDate
         self._name = State(initialValue: roomDetail.name)
-        self._moveInDate = State(initialValue: roomDetail.moveInDate ?? Date())
-        self._moveOutDate = State(initialValue: roomDetail.moveOutDate ?? Date())
+        self._moveInDate = State(initialValue: moveInDate)
+        self._moveOutDate = State(initialValue: moveOutDate)
         self._hasMoveOutDate = State(initialValue: roomDetail.moveOutDate != nil)
     }
 
@@ -33,11 +41,21 @@ struct RoomEditSheet: View {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    /// 날짜는 일 단위로만 편집하므로 같은 날이면 변경으로 보지 않는다
+    private var hasChanges: Bool {
+        let calendar = Calendar.current
+        if name != roomDetail.name { return true }
+        if !calendar.isDate(moveInDate, inSameDayAs: initialMoveInDate) { return true }
+        if hasMoveOutDate != (roomDetail.moveOutDate != nil) { return true }
+        return hasMoveOutDate && !calendar.isDate(moveOutDate, inSameDayAs: initialMoveOutDate)
+    }
+
     var body: some View {
         EditSheetContainer(
             title: "방 정보 수정",
             isSaving: isSaving,
             isValid: isValid,
+            hasChanges: hasChanges,
             onSave: { save() }
         ) {
             HStack {

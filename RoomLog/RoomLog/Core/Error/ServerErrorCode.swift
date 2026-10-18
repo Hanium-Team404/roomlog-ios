@@ -99,7 +99,7 @@ enum ServerErrorCode: String, Sendable {
         case .commonForbidden: return "접근 권한이 없습니다."
         case .commonNotFound: return "요청한 데이터를 찾을 수 없습니다."
         case .commonServerError: return "서버 내부 오류가 발생했습니다."
-        case .authInvalidCredentials: return "이메일 또는 비밀번호가 올바르지 않습니다."
+        case .authInvalidCredentials: return "이메일 또는 비밀번호를 확인해 주세요."
         case .authDuplicateEmail: return "이미 가입된 이메일입니다."
         case .authUserNotFound: return "사용자를 찾을 수 없습니다."
         case .authInvalidToken: return "만료되었거나 유효하지 않은 토큰입니다."
