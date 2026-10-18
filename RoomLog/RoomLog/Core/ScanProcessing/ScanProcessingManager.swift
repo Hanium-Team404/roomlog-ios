@@ -281,9 +281,10 @@ final class ScanProcessingManager {
             }.value
             try Task.checkCancellation()
         } catch {
-            // 구성 실패·취소·압축 실패 공통: 파편과 대용량 데이터셋을 즉시 정리한다
+            // 구성 실패·취소·압축 실패 공통: 파편과 대용량 데이터셋을 즉시 정리한다.
+            // 데이터셋은 파일이 수천 개라 메인에서 동기로 지우면 UI가 멈추므로 백그라운드 경로를 쓴다
             artifactStore.discard(zipURL)
-            artifactStore.discardDataset(datasetDir)
+            await artifactStore.removeDataset(datasetDir)
             if error is CancellationError || error is ScanFailure { throw error }
             #if DEBUG
             print("[ScanProcessing] 압축 실패: \(error)")
@@ -294,7 +295,9 @@ final class ScanProcessingManager {
         // zip 완성 — 여기서부터는 앱이 죽어도 업로드 재시도로 복구할 수 있다.
         // 재시도·복구는 zip만 쓰므로 원본 데이터셋은 바로 지워 디스크 이중 점유를 없앤다
         artifactStore.save(.uploadReady(zipFileName: zipURL.lastPathComponent, houseId: houseId))
-        artifactStore.discardDataset(datasetDir)
+        await artifactStore.removeDataset(datasetDir)
+        // 삭제 중 취소됐다면 업로드로 넘어가지 않는다 — 기록·zip 폐기는 취소 주체(reset)가 맡는다
+        try Task.checkCancellation()
 
         // 3. 업로드부터는 재시도 경로와 공유한다
         advance(to: .uploading)
