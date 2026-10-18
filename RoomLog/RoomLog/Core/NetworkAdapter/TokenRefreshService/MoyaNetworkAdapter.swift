@@ -212,7 +212,7 @@ extension MoyaNetworkAdapter {
             request.timeoutInterval = Self.uploadTimeoutInterval
 
         case .downloadDestination, .downloadParameters:
-            throw MoyaAdapterError.unsupportedTask(target.task)
+            throw MoyaAdapterError.unsupportedTask(String(describing: target.task))
         }
 
         return (request, body)
@@ -285,26 +285,63 @@ extension MoyaNetworkAdapter {
         return (bodyURL, boundary)
     }
 
+    /// Alamofire `Parameters`가 `[String: any Sendable]`로 바뀌어 Moya의 `[String: Any]`를 그대로 넘길 수 없다.
+    /// 프로젝트가 쓰는 인코딩은 JSON 바디와 URL 쿼리 두 가지뿐이므로 어댑터가 직접 인코딩한다
     private func encodeParameters(
         _ request: URLRequest,
         parameters: [String: Any],
         encoding: ParameterEncoding
     ) throws -> URLRequest {
-        try encoding.encode(request, with: parameters)
+        switch encoding {
+        case is JSONEncoding:
+            var request = request
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+            if request.value(forHTTPHeaderField: "Content-Type") == nil {
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            }
+            return request
+        case let urlEncoding as URLEncoding:
+            // 쿼리 스트링으로 가는 경우만 지원한다. 폼 바디(`httpBody`)는 프로젝트에서 쓰지 않는다
+            let encodesInURL: Bool = switch urlEncoding.destination {
+            case .queryString: true
+            case .methodDependent: ["GET", "HEAD", "DELETE"].contains(request.httpMethod ?? "GET")
+            case .httpBody: false
+            }
+            guard encodesInURL else {
+                throw MoyaAdapterError.unsupportedEncoding("URLEncoding(\(urlEncoding.destination))")
+            }
+            return try encodeURLParameters(request, parameters: parameters)
+        default:
+            throw MoyaAdapterError.unsupportedEncoding(String(describing: type(of: encoding)))
+        }
     }
 
+    /// 키를 정렬해 쿼리 스트링에 덧붙인다 (Alamofire `URLEncoding`과 같은 순서)
     private func encodeURLParameters(
         _ request: URLRequest,
         parameters: [String: Any]
     ) throws -> URLRequest {
-        try URLEncoding.queryString.encode(request, with: parameters)
+        guard let url = request.url,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw MoyaAdapterError.invalidURL
+        }
+        let items = parameters
+            .sorted { $0.key < $1.key }
+            .map { URLQueryItem(name: $0.key, value: "\($0.value)") }
+        components.queryItems = (components.queryItems ?? []) + items
+        var request = request
+        request.url = components.url
+        return request
     }
 }
 
 // MARK: - MoyaAdapterError
 
 enum MoyaAdapterError: Error {
-    case unsupportedTask(Moya.Task)
+    /// 지원하지 않는 Moya Task. `Moya.Task`는 Sendable이 아니라 설명 문자열만 담는다
+    case unsupportedTask(String)
+    case unsupportedEncoding(String)
+    case invalidURL
     case streamReadFailed
     case multipartBodyWriteFailed
 }
