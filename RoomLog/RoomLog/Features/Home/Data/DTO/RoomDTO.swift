@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Request DTO
 
-struct CreateRoomRequestDTO: Encodable {
+nonisolated struct CreateRoomRequestDTO: Encodable {
     let name: String
     let scanId: Int
 
@@ -19,7 +19,7 @@ struct CreateRoomRequestDTO: Encodable {
     }
 }
 
-struct UpdateRoomRequestDTO: Encodable {
+nonisolated struct UpdateRoomRequestDTO: Encodable {
     let name: String
     let moveInDate: String
     let moveOutDate: String?

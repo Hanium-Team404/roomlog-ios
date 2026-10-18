@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Request DTO
 
-struct UpdateUserRequestDTO: Encodable {
+nonisolated struct UpdateUserRequestDTO: Encodable {
     let nickname: String
 }
 

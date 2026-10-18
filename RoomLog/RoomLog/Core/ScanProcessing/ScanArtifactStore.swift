@@ -12,7 +12,8 @@ import Foundation
 /// 기록에는 파일명만 저장한다: 앱 컨테이너 경로는 업데이트·복원 시 바뀔 수 있으므로 절대경로는 금물.
 ///
 /// init 기본 인자로 쓰이므로 nonisolated — UserDefaults·FileManager는 스레드 안전하다.
-nonisolated struct ScanArtifactStore {
+/// `removeDataset`이 `@concurrent`라 메인 액터에서 넘겨 쓰려면 Sendable이어야 한다.
+nonisolated struct ScanArtifactStore: Sendable {
 
     /// 디스크에 저장되는 진행 단계.
     enum PersistedStage: Codable, Equatable {
@@ -30,7 +31,8 @@ nonisolated struct ScanArtifactStore {
 
     private static let stageKey = "ScanArtifact_stage"
 
-    private let userDefaults: UserDefaults
+    /// nonisolated(unsafe) : UserDefaults는 Sendable 선언이 없지만 Apple 문서상 스레드 안전하기 때문에 이 프로퍼티만 검사에서 제외한다
+    nonisolated(unsafe) private let userDefaults: UserDefaults
     private let directory: URL
     private let datasetsDirectory: URL
     private let legacyDatasetsDirectory: URL

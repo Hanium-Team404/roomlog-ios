@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum EstimateTarget {
+nonisolated enum EstimateTarget {
     case getRepairShops(analysisId: Int, type: String?, radius: String?, sort: String?)
     case getRepairShopsByRoom(roomId: Int, type: String?, radius: String?, sort: String?)
     case previewEstimate(request: EstimatePreviewRequestDTO)
@@ -19,7 +19,7 @@ enum EstimateTarget {
     case completeRepair(estimateId: Int, request: CompleteRepairRequestDTO)
 }
 
-extension EstimateTarget: BaseTargetType {
+nonisolated extension EstimateTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getRepairShops(let analysisId, _, _, _):

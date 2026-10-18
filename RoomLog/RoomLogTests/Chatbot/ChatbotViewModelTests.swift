@@ -55,7 +55,8 @@ final class ChatbotViewModelTests {
         sut = ChatbotViewModel(provider: provider, userDefaults: userDefaults)
     }
 
-    deinit {
+    // deinit은 기본적으로 격리 밖에서 돌아 MainActor 프로퍼티(UserDefaults)에 접근할 수 없다 — 액터 위에서 실행한다
+    isolated deinit {
         userDefaults.removePersistentDomain(forName: suiteName)
     }
 

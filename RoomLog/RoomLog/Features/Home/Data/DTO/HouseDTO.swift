@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Request DTO
 
-struct CreateHouseRequestDTO: Encodable {
+nonisolated struct CreateHouseRequestDTO: Encodable {
     let name: String
     let address: String
     let houseColor: String
@@ -23,7 +23,7 @@ struct CreateHouseRequestDTO: Encodable {
     }
 }
 
-struct UpdateHouseRequestDTO: Encodable {
+nonisolated struct UpdateHouseRequestDTO: Encodable {
     let name: String
     let address: String
     let houseColor: String

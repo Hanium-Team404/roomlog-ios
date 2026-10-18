@@ -162,30 +162,38 @@ struct HouseMapView: View {
 
     private func startAutoScroll(houseId: Int) {
         stopAutoScroll()
+        
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
-            guard let housePos = viewModel.positions[houseId] else { return }
-            let visible = scrollProxy.visibleRect
-            guard visible.width > 0 else { return }
-
-            let margin = Layout.edgeScrollMargin
-            let maxSpeed = Layout.edgeScrollMaxSpeed
-
-            func edgeRatio(_ distance: CGFloat) -> CGFloat {
-                guard distance < margin else { return 0 }
-                return (1 - distance / margin)
+            MainActor.assumeIsolated {
+                autoScrollTick(houseId: houseId)
             }
+        }
+    }
 
-            let leftDist = housePos.x - visible.minX
-            let rightDist = visible.maxX - housePos.x
-            let topDist = housePos.y - visible.minY
-            let bottomDist = visible.maxY - housePos.y
+    /// 드래그 중인 집이 화면 가장자리에 가까울수록 그 방향으로 빠르게 스크롤한다
+    private func autoScrollTick(houseId: Int) {
+        guard let housePos = viewModel.positions[houseId] else { return }
+        let visible = scrollProxy.visibleRect
+        guard visible.width > 0 else { return }
 
-            let dx = -edgeRatio(leftDist) * maxSpeed + edgeRatio(rightDist) * maxSpeed
-            let dy = -edgeRatio(topDist) * maxSpeed + edgeRatio(bottomDist) * maxSpeed
+        let margin = Layout.edgeScrollMargin
+        let maxSpeed = Layout.edgeScrollMaxSpeed
 
-            if abs(dx) > 0.1 || abs(dy) > 0.1 {
-                scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
-            }
+        func edgeRatio(_ distance: CGFloat) -> CGFloat {
+            guard distance < margin else { return 0 }
+            return (1 - distance / margin)
+        }
+
+        let leftDist = housePos.x - visible.minX
+        let rightDist = visible.maxX - housePos.x
+        let topDist = housePos.y - visible.minY
+        let bottomDist = visible.maxY - housePos.y
+
+        let dx = -edgeRatio(leftDist) * maxSpeed + edgeRatio(rightDist) * maxSpeed
+        let dy = -edgeRatio(topDist) * maxSpeed + edgeRatio(bottomDist) * maxSpeed
+
+        if abs(dx) > 0.1 || abs(dy) > 0.1 {
+            scrollProxy.adjustOffset(by: CGVector(dx: dx, dy: dy))
         }
     }
 

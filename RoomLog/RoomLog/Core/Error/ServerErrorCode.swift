@@ -7,7 +7,8 @@
 
 import Foundation
 
-enum ServerErrorCode: String, Sendable {
+/// 순수 값 타입이고 nonisolated인 `RepositoryError`에서 쓰므로 격리에서 제외한다
+nonisolated enum ServerErrorCode: String, Sendable {
     // MARK: - Common
     case commonBadRequest = "COMMON_400"
     case commonUnauthorized = "COMMON_401"

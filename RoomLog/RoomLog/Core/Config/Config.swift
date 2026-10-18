@@ -7,23 +7,23 @@
 
 import Foundation
 
-enum Config {
-    private static let infoDictionary: [String: Any] = {
+nonisolated enum Config {
+    private static func infoValue(_ key: String) -> String? {
         guard let dict = Bundle.main.infoDictionary else {
             fatalError("Plist cannot be found")
         }
-        return dict
-    }()
-    
+        return dict[key] as? String
+    }
+
     static let baseURL: String = {
-        guard let baseURL = Config.infoDictionary["BASE_URL"] as? String else {
+        guard let baseURL = infoValue("BASE_URL") else {
             fatalError("BaseURL not found")
         }
         return baseURL
     }()
 
     static let kakaoNativeAppKey: String = {
-        guard let raw = Config.infoDictionary["KAKAO_NATIVE_APP_KEY"] as? String else {
+        guard let raw = infoValue("KAKAO_NATIVE_APP_KEY") else {
             fatalError("KAKAO_NATIVE_APP_KEY not found")
         }
         let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)

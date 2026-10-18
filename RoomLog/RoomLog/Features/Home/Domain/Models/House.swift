@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct House: Hashable, Identifiable {
+nonisolated struct House: Hashable, Identifiable {
     var id: Int { houseId }
     let houseId: Int
     let name: String

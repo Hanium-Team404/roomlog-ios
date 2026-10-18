@@ -9,13 +9,13 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum RoomTarget {
+nonisolated enum RoomTarget {
     case getRoomDetail(roomId: Int)
     case updateRoom(roomId: Int, request: UpdateRoomRequestDTO)
     case deleteRoom(roomId: Int)
 }
 
-extension RoomTarget: BaseTargetType {
+nonisolated extension RoomTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getRoomDetail(let roomId),

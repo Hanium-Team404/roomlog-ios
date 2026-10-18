@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum DefectTarget {
+nonisolated enum DefectTarget {
     case getDefectRoomData
     case getDefectReport(roomId: Int)
     case getDefectDetail(defectId: Int)
@@ -19,7 +19,7 @@ enum DefectTarget {
     case getSelfRepair(defectId: Int)
 }
 
-extension DefectTarget: BaseTargetType {
+nonisolated extension DefectTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getDefectRoomData:

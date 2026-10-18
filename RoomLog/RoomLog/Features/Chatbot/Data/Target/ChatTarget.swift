@@ -9,7 +9,7 @@ import Foundation
 import Moya
 internal import Alamofire
 
-enum ChatTarget {
+nonisolated enum ChatTarget {
     case startSession
     case sendMessage(sessionId: Int, message: String, guide: String?, defectId: Int?)
     case getMessages(sessionId: Int)
@@ -17,7 +17,7 @@ enum ChatTarget {
     case getMainHouseDefects
 }
 
-extension ChatTarget: BaseTargetType {
+nonisolated extension ChatTarget: BaseTargetType {
     var path: String {
         switch self {
         case .startSession:

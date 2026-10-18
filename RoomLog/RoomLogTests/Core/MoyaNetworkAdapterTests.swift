@@ -13,12 +13,12 @@ import Alamofire
 
 /// `MoyaNetworkAdapter`의 multipart 업로드와 오류 정규화 경로 테스트.
 /// 스캔 zip은 수십~수백 MB라 바디를 메모리에 올리면 jetsam 위험이 있어 임시 파일로 쓰고 파일에서 전송한다.
+/// 어댑터는 앱 타겟 기본 격리(MainActor)이고 `Moya.Response`가 Sendable이 아니라 스위트도 MainActor에서 돈다
+@MainActor
 struct MoyaNetworkAdapterTests {
 
     private let baseURL = URL(string: "https://\(UUID().uuidString).roomlog.test")!
 
-    /// 어댑터는 앱 타겟 기본 격리(MainActor)라 여기서 만든다
-    @MainActor
     private func makeSUT() -> MoyaNetworkAdapter {
         let client = NetworkClient(
             session: StubURLProtocol.makeSession(),
@@ -38,7 +38,7 @@ struct MoyaNetworkAdapterTests {
         defer { try? FileManager.default.removeItem(at: fileURL) }
         let bodyFilesBefore = multipartTempFiles()
 
-        let sut = await makeSUT()
+        let sut = makeSUT()
         let response = try await sut.request(UploadTarget(baseURL: baseURL, fileURL: fileURL))
 
         #expect(response.statusCode == 200)
@@ -67,7 +67,7 @@ struct MoyaNetworkAdapterTests {
         {"success":false,"code":404,"message":"대화 세션이 없습니다.","error":{"code":"CHAT_001"}}
         """.utf8)
         StubURLProtocol.register(host: baseURL.host()!, statusCode: 404, body: body)
-        let sut = await makeSUT()
+        let sut = makeSUT()
 
         do {
             _ = try await sut.requestDecoded(PlainTarget(baseURL: baseURL), as: EmptyResult.self)

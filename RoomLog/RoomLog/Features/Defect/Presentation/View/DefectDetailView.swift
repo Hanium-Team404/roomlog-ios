@@ -71,7 +71,8 @@ private extension DefectDetailView {
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         private let scrollsToSelfRepair: Bool
 
-        private static let contentCoordinateSpace = "defectDetailContent"
+        // onGeometryChange의 측정 클로저가 @Sendable이라 격리된 상수를 읽을 수 없다. 문자열 상수라 격리가 필요 없다
+        private nonisolated static let contentCoordinateSpace = "defectDetailContent"
         /// push 전환이 끝난 뒤 스크롤을 시작해야 이동이 보인다. 전환 중에 움직이면 두 애니메이션이 겹쳐 튀어 보인다
         private static let scrollDelay: Duration = .milliseconds(450)
         /// 스크롤 도착 시 자가 수리 카드 위에 남길 여백
