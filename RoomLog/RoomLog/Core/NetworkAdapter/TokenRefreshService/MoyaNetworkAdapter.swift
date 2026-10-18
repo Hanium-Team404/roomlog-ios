@@ -316,7 +316,8 @@ extension MoyaNetworkAdapter {
         }
     }
 
-    /// 키를 정렬해 쿼리 스트링에 덧붙인다 (Alamofire `URLEncoding`과 같은 순서)
+    /// 키를 정렬해 쿼리 스트링에 덧붙인다. 순서·퍼센트 인코딩 규칙은 Alamofire `URLEncoding`과 같다.
+    /// `URLQueryItem`은 `+` 같은 하위 구분자를 그대로 두므로 쓰지 않고, 기존 쿼리는 인코딩 표현을 보존한 채 뒤에 잇는다
     private func encodeURLParameters(
         _ request: URLRequest,
         parameters: [String: Any]
@@ -325,13 +326,27 @@ extension MoyaNetworkAdapter {
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw MoyaAdapterError.invalidURL
         }
-        let items = parameters
+        let encodedQuery = parameters
             .sorted { $0.key < $1.key }
-            .map { URLQueryItem(name: $0.key, value: "\($0.value)") }
-        components.queryItems = (components.queryItems ?? []) + items
+            .map { "\(Self.escape($0.key))=\(Self.escape("\($0.value)"))" }
+            .joined(separator: "&")
+        let existingQuery = components.percentEncodedQuery ?? ""
+        components.percentEncodedQuery = existingQuery.isEmpty ? encodedQuery : "\(existingQuery)&\(encodedQuery)"
         var request = request
         request.url = components.url
         return request
+    }
+
+    /// RFC 3986 일반 구분자(`:#[]@`)와 하위 구분자(`!$&'()*+,;=`)를 모두 퍼센트 인코딩한다.
+    /// Alamofire `URLEncoding.escape`와 동일한 허용 집합이라 서버가 받는 쿼리가 이전과 같다
+    private static let queryAllowedCharacters: CharacterSet = {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: ":#[]@!$&'()*+,;=")
+        return allowed
+    }()
+
+    private static func escape(_ string: String) -> String {
+        string.addingPercentEncoding(withAllowedCharacters: queryAllowedCharacters) ?? string
     }
 }
 

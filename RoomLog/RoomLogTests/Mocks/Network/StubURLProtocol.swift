@@ -20,6 +20,8 @@ final class StubURLProtocol: URLProtocol {
     struct RecordedRequest: Sendable {
         let method: String?
         let path: String
+        /// 퍼센트 인코딩된 그대로의 쿼리 스트링 (`?` 제외). 인코딩 규칙 검증용
+        let query: String?
         let contentType: String?
         let authorization: String?
         let body: Data
@@ -65,6 +67,7 @@ final class StubURLProtocol: URLProtocol {
         let recorded = RecordedRequest(
             method: request.httpMethod,
             path: url.path(),
+            query: url.query(percentEncoded: true),
             contentType: request.value(forHTTPHeaderField: "Content-Type"),
             authorization: request.value(forHTTPHeaderField: "Authorization"),
             body: Self.readBody(of: request)

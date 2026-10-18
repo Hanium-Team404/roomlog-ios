@@ -77,6 +77,23 @@ struct MoyaNetworkAdapterTests {
         }
     }
 
+    /// Alamofire 인코더를 직접 구현으로 대체했으므로, 서버가 받는 쿼리가 이전과 같은지(키 정렬·하위 구분자 퍼센트 인코딩) 고정한다
+    @Test
+    func 쿼리_파라미터는_키_정렬과_Alamofire와_같은_퍼센트_인코딩으로_붙는다() async throws {
+        let host = baseURL.host()!
+        StubURLProtocol.register(host: host, statusCode: 200, body: Data("{}".utf8))
+        let sut = makeSUT()
+
+        _ = try await sut.request(QueryTarget(
+            baseURL: baseURL,
+            parameters: ["sort": "a+b c", "type": "x&y=z", "radius": 1000]
+        ))
+
+        let request = try #require(StubURLProtocol.lastRequest(host: host))
+        #expect(request.path == "/repair-shops")
+        #expect(request.query == "radius=1000&sort=a%2Bb%20c&type=x%26y%3Dz")
+    }
+
     /// 어댑터가 만든 임시 바디 파일 목록 (`.multipart` 확장자)
     private func multipartTempFiles() -> Set<String> {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: FileManager.default.temporaryDirectory.path)) ?? []
@@ -93,6 +110,16 @@ private struct PlainTarget: TargetType {
     var method: Moya.Method { .get }
     var headers: [String: String]? { nil }
     var task: Moya.Task { .requestPlain }
+}
+
+private struct QueryTarget: TargetType {
+    let baseURL: URL
+    let parameters: [String: Any]
+
+    var path: String { "/repair-shops" }
+    var method: Moya.Method { .get }
+    var headers: [String: String]? { nil }
+    var task: Moya.Task { .requestParameters(parameters: parameters, encoding: URLEncoding.queryString) }
 }
 
 private struct UploadTarget: TargetType {
