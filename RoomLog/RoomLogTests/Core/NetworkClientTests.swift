@@ -76,6 +76,35 @@ struct NetworkClientTests {
         #expect(requests.allSatisfy { $0.body == payload })
         #expect(requests.map(\.authorization) == ["Bearer old-at", "Bearer new-at"])
     }
+
+    /// 로그인처럼 토큰 없이 보낸 요청의 401은 자격 증명 거부다.
+    /// 갱신으로 돌리면 refresh token이 없어 `unauthorized`로 바뀌고 서버가 보낸 에러 코드가 사라진다
+    @Test(.bug("https://github.com/Hanium-Team404/roomlog-ios/issues/227"))
+    func 인증_불필요_요청의_401은_갱신_없이_본문을_보존한다() async throws {
+        let host = baseURL.host()!
+        let tokenStore = InMemoryTokenStore(accessToken: nil, refreshToken: nil)
+        let refreshService = GatedRefreshService(immediate: TokenPair(accessToken: "new-at", refreshToken: "new-rt"))
+        let sut = NetworkClient(session: StubURLProtocol.makeSession(), tokenStore: tokenStore, refreshService: refreshService)
+
+        let body = Data(#"{"isSuccess":false,"error":{"code":"AUTH_001"}}"#.utf8)
+        StubURLProtocol.register(host: host, statusCode: 401, body: body)
+        var request = URLRequest(url: baseURL.appending(path: "/auth/login"))
+        request.httpMethod = "POST"
+
+        do {
+            _ = try await sut.request(request)
+            Issue.record("401 응답은 오류로 전달돼야 한다")
+        } catch NetworkError.httpError(let statusCode, let data) {
+            #expect(statusCode == 401)
+            #expect(data == body, "서버 본문이 그대로 보존돼야 한다")
+        } catch {
+            Issue.record("예상과 다른 오류: \(error)")
+        }
+
+        let requests = StubURLProtocol.requests(host: host)
+        #expect(requests.count == 1, "토큰 갱신 후 재시도가 없어야 한다")
+        #expect(requests.first?.authorization == nil)
+    }
 }
 
 // MARK: - Test Doubles

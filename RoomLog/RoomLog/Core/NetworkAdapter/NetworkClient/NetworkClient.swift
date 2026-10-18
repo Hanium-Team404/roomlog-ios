@@ -87,10 +87,9 @@ extension NetworkClient {
         var authenticatedRequest = urlRequest
 
         // 인증 필요 여부 확인
-        if authPolicy.requireAuthentication(urlRequest) {
-            if let token = await tokenStore.getAccessToken() {
-                authenticatedRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            }
+        let requiresAuthentication = authPolicy.requireAuthentication(urlRequest)
+        if requiresAuthentication, let token = await tokenStore.getAccessToken() {
+            authenticatedRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
         // 네트워크 요청 실행 (바디 파일이 있으면 파일에서 스트리밍 전송)
@@ -105,8 +104,10 @@ extension NetworkClient {
             throw NetworkError.invalidResponse
         }
 
-        // 401 에러 응답 처리
-        if authPolicy.isUnauthorizedResponse(httpResponse) {
+        // 401 → 토큰 갱신은 토큰을 실어 보낸 요청에만 해당한다.
+        // 로그인처럼 인증 없이 보낸 요청의 401은 자격 증명 거부이므로 갱신으로 돌리지 않고
+        // 서버 본문(에러 코드)을 보존한 채 아래 일반 HTTP 오류로 넘긴다
+        if requiresAuthentication, authPolicy.isUnauthorizedResponse(httpResponse) {
             guard retryCount < maxRetryCount else {
                 throw NetworkError.unauthorized
             }

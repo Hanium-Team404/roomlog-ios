@@ -23,25 +23,14 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     // MARK: - Function
-    func login(
-        body: LoginRequestDTO
-    ) async throws -> AuthUser {
-        let response = try await adapter.request(AuthTarget.login(request: body))
-        do {
-            let dto = try decoder.decode(APIResponse<LoginResponseDTO>.self, from: response.data)
-            return try dto.unwrap().toDomain()
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
+    // 실패는 requestDecoded에서 전부 RepositoryError로 정규화되므로 호출자는 userMessage만 쓰면 된다
+    func login(body: LoginRequestDTO) async throws -> AuthUser {
+        let dto: LoginResponseDTO = try await adapter.requestDecoded(AuthTarget.login(request: body), decoder: decoder)
+        return dto.toDomain()
     }
 
     func signUp(body: SignUpRequestDTO) async throws -> SignedUpUser {
-        let response = try await adapter.request(AuthTarget.signup(request: body))
-        do {
-            let dto = try decoder.decode(APIResponse<SignUpResponseDTO>.self, from: response.data)
-            return try dto.unwrap().toDomain()
-        } catch let error as DecodingError {
-            throw RepositoryError.decodingError(detail: String(describing: error))
-        }
+        let dto: SignUpResponseDTO = try await adapter.requestDecoded(AuthTarget.signup(request: body), decoder: decoder)
+        return dto.toDomain()
     }
 }
