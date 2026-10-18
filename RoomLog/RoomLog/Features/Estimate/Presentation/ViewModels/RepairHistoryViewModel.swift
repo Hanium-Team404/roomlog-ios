@@ -53,18 +53,10 @@ final class RepairHistoryViewModel {
         selectedDetail = nil
     }
 
-    func completeRepair(estimateId: Int, repairCost: Int, note: String?) async {
-        do {
-            try await provider.makeCompleteRepairUseCase().execute(estimateId: estimateId, repairCost: repairCost, note: note)
-            showSuccessToast = true
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-        do {
-            estimates = try await provider.makeGetEstimatesUseCase().execute(roomId: roomId)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+    /// 저장 실패는 호출한 시트가 입력값을 유지한 채 안내해야 하므로 삼키지 않고 던진다.
+    /// 목록 갱신은 시트가 닫힌 뒤 `fetchEstimates()`로 따로 수행한다
+    func completeRepair(estimateId: Int, repairCost: Int, note: String?) async throws {
+        try await provider.makeCompleteRepairUseCase().execute(estimateId: estimateId, repairCost: repairCost, note: note)
+        showSuccessToast = true
     }
 }
