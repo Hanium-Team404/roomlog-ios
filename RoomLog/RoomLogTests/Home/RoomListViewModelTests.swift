@@ -5,18 +5,18 @@
 //  Created by 김도연 on 5/31/26.
 //
 
-import XCTest
+import Foundation
+import Testing
 @testable import RoomLog
 
 @MainActor
-final class RoomListViewModelTests: XCTestCase {
+struct RoomListViewModelTests {
 
-    private var provider: MockHomeUseCaseProvider!
-    private var fileCache: MockUSDZFileCache!
-    private var sut: RoomListViewModel!
+    private let provider: MockHomeUseCaseProvider
+    private let fileCache: MockUSDZFileCache
+    private let sut: RoomListViewModel
 
-    override func setUp() {
-        super.setUp()
+    init() {
         provider = MockHomeUseCaseProvider()
         fileCache = MockUSDZFileCache()
         sut = RoomListViewModel(
@@ -29,7 +29,8 @@ final class RoomListViewModelTests: XCTestCase {
 
     // MARK: - fetchRooms
 
-    func test_fetchRooms_성공시_rooms와_houseName이_설정된다() async {
+    @Test
+    func fetchRooms_성공시_rooms와_houseName이_설정된다() async {
         let rooms = [
             RoomSummary(id: 1, name: "거실", thumbnailURL: nil, latestScan: nil, recentScanDate: nil, latestScanStatus: nil),
             RoomSummary(id: 2, name: "안방", thumbnailURL: nil, latestScan: nil, recentScanDate: nil, latestScanStatus: nil)
@@ -40,25 +41,27 @@ final class RoomListViewModelTests: XCTestCase {
 
         await sut.fetchRooms()
 
-        XCTAssertEqual(sut.rooms.count, 2)
-        XCTAssertEqual(sut.houseName, "서버 집 이름")
-        XCTAssertFalse(sut.isLoading)
-        XCTAssertNil(sut.errorMessage)
+        #expect(sut.rooms.count == 2)
+        #expect(sut.houseName == "서버 집 이름")
+        #expect(sut.isLoading == false)
+        #expect(sut.errorMessage == nil)
     }
 
-    func test_fetchRooms_실패시_errorMessage가_설정된다() async {
+    @Test
+    func fetchRooms_실패시_errorMessage가_설정된다() async {
         provider.getHouseRoomsResult = .failure(NSError(domain: "test", code: -1, userInfo: [NSLocalizedDescriptionKey: "조회 실패"]))
 
         await sut.fetchRooms()
 
-        XCTAssertTrue(sut.rooms.isEmpty)
-        XCTAssertEqual(sut.errorMessage, "조회 실패")
-        XCTAssertFalse(sut.isLoading)
+        #expect(sut.rooms.isEmpty)
+        #expect(sut.errorMessage == "조회 실패")
+        #expect(sut.isLoading == false)
     }
 
     // MARK: - deleteRoom
 
-    func test_deleteRoom_성공시_목록에서_제거된다() async {
+    @Test
+    func deleteRoom_성공시_목록에서_제거된다() async {
         let room = RoomSummary(id: 10, name: "삭제할 방", thumbnailURL: nil, latestScan: nil, recentScanDate: nil, latestScanStatus: nil)
         provider.getHouseRoomsResult = .success(
             HouseRooms(rooms: [room], houseId: 1, houseName: "집", totalCount: 1)
@@ -67,12 +70,13 @@ final class RoomListViewModelTests: XCTestCase {
 
         await sut.deleteRoom(room)
 
-        XCTAssertTrue(sut.rooms.isEmpty)
-        XCTAssertNil(sut.errorMessage)
-        XCTAssertEqual(fileCache.removeCacheCallCount, 1)
+        #expect(sut.rooms.isEmpty)
+        #expect(sut.errorMessage == nil)
+        #expect(fileCache.removeCacheCallCount == 1)
     }
 
-    func test_deleteRoom_실패시_errorMessage가_설정되고_목록은_유지된다() async {
+    @Test
+    func deleteRoom_실패시_errorMessage가_설정되고_목록은_유지된다() async {
         let room = RoomSummary(id: 10, name: "방", thumbnailURL: nil, latestScan: nil, recentScanDate: nil, latestScanStatus: nil)
         provider.getHouseRoomsResult = .success(
             HouseRooms(rooms: [room], houseId: 1, houseName: "집", totalCount: 1)
@@ -82,8 +86,8 @@ final class RoomListViewModelTests: XCTestCase {
 
         await sut.deleteRoom(room)
 
-        XCTAssertEqual(sut.rooms.count, 1)
-        XCTAssertEqual(sut.errorMessage, "삭제 권한 없음")
-        XCTAssertEqual(fileCache.removeCacheCallCount, 0)
+        #expect(sut.rooms.count == 1)
+        #expect(sut.errorMessage == "삭제 권한 없음")
+        #expect(fileCache.removeCacheCallCount == 0)
     }
 }
