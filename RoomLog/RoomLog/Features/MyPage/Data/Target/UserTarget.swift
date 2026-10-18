@@ -15,7 +15,7 @@ nonisolated enum UserTarget {
     case deleteUser
 }
 
-extension UserTarget: BaseTargetType {
+nonisolated extension UserTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getUser, .updateUser, .deleteUser:

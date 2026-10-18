@@ -15,7 +15,7 @@ nonisolated enum RoomTarget {
     case deleteRoom(roomId: Int)
 }
 
-extension RoomTarget: BaseTargetType {
+nonisolated extension RoomTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getRoomDetail(let roomId),

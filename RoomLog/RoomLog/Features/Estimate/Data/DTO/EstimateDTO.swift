@@ -175,7 +175,7 @@ struct EstimateDefectDTO: Codable {
 
 // MARK: - Estimate Preview
 
-struct EstimatePreviewRequestDTO: Encodable {
+nonisolated struct EstimatePreviewRequestDTO: Encodable {
     let message: String
     let analysisId: Int
     let providerExternalId: String
@@ -323,7 +323,7 @@ struct CompleteRepairResponseDTO: Codable {
     }
 }
 
-struct CompleteRepairRequestDTO: Encodable {
+nonisolated struct CompleteRepairRequestDTO: Encodable {
     let repairCost: Int
     let note: String?
 
@@ -335,7 +335,7 @@ struct CompleteRepairRequestDTO: Encodable {
 
 // MARK: - Create Estimate
 
-struct CreateEstimateRequestDTO: Encodable {
+nonisolated struct CreateEstimateRequestDTO: Encodable {
     let message: String
     let roomId: Int
     let analysisId: Int?

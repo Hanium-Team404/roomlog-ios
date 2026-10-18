@@ -19,7 +19,7 @@ nonisolated enum EstimateTarget {
     case completeRepair(estimateId: Int, request: CompleteRepairRequestDTO)
 }
 
-extension EstimateTarget: BaseTargetType {
+nonisolated extension EstimateTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getRepairShops(let analysisId, _, _, _):

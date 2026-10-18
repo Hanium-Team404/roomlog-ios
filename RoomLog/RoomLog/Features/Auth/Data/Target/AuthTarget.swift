@@ -14,7 +14,7 @@ nonisolated enum AuthTarget {
     case signup(request: SignUpRequestDTO)
 }
 
-extension AuthTarget: BaseTargetType {
+nonisolated extension AuthTarget: BaseTargetType {
     var path: String {
         switch self {
         case .login:

@@ -19,7 +19,7 @@ nonisolated enum HouseTarget {
     case createRoom(houseId: Int, request: CreateRoomRequestDTO)
 }
 
-extension HouseTarget: BaseTargetType {
+nonisolated extension HouseTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getHouses, .createHouse:

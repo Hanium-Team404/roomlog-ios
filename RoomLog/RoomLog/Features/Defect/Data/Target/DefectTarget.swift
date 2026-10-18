@@ -19,7 +19,7 @@ nonisolated enum DefectTarget {
     case getSelfRepair(defectId: Int)
 }
 
-extension DefectTarget: BaseTargetType {
+nonisolated extension DefectTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getDefectRoomData:

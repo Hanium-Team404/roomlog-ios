@@ -16,7 +16,7 @@ nonisolated enum ScanTarget {
     case cancelScan(scanId: Int)
 }
 
-extension ScanTarget: BaseTargetType {
+nonisolated extension ScanTarget: BaseTargetType {
     var path: String {
         switch self {
         case .uploadScan:

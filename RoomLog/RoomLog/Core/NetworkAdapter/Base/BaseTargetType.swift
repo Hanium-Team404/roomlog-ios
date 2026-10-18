@@ -10,9 +10,7 @@ import Moya
 
 protocol BaseTargetType: TargetType {}
 
-extension BaseTargetType {
-    
-    /// 서버 BaseURL
+nonisolated extension BaseTargetType {
     var baseURL: URL {
         guard let url = URL(string: Config.baseURL) else {
             fatalError("Invalid BASE_URL in Config")

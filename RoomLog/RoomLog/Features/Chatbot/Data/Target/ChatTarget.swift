@@ -17,7 +17,7 @@ nonisolated enum ChatTarget {
     case getMainHouseDefects
 }
 
-extension ChatTarget: BaseTargetType {
+nonisolated extension ChatTarget: BaseTargetType {
     var path: String {
         switch self {
         case .startSession:

@@ -13,7 +13,7 @@ nonisolated enum ComparisonTarget {
     case getComparisonHistories(houseId: Int)
 }
 
-extension ComparisonTarget: BaseTargetType {
+nonisolated extension ComparisonTarget: BaseTargetType {
     var path: String {
         switch self {
         case .getComparisonHistories:
