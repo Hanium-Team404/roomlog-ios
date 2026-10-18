@@ -7,8 +7,6 @@
 
 import Foundation
 
-/// 순수 값 모델. 직접 선언한 init이 기본 격리(MainActor)를 받으면 테스트 Mock의 기본값처럼
-/// nonisolated 문맥에서 만들 수 없으므로(Xcode 26.6 기준 에러) 색상 enum과 같이 격리에서 제외한다
 nonisolated struct House: Hashable, Identifiable {
     var id: Int { houseId }
     let houseId: Int
