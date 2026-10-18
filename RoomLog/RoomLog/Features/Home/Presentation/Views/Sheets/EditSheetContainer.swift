@@ -14,13 +14,16 @@ struct EditSheetContainer<Content: View>: View {
     var saveButtonTitle: String = "저장"
     let isSaving: Bool
     let isValid: Bool
+    var hasChanges: Bool = false
     let onSave: () -> Void
     @ViewBuilder let content: () -> Content
 
     /// 내비게이션 바 + 드래그 인디케이터가 차지하는 높이
     private static var chromeHeight: CGFloat { 60 }
 
+    @Environment(\.dismiss) private var dismiss
     @State private var contentHeight: CGFloat = 0
+    @State private var showDiscardConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -43,6 +46,25 @@ struct EditSheetContainer<Content: View>: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") {
+                        if hasChanges {
+                            showDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .disabled(isSaving)
+                    // 다이얼로그는 띄우는 버튼에 붙여야 글래스 전환이 그 위치에서 시작한다
+                    .confirmationDialog(
+                        "변경 내용을 저장하지 않고 닫을까요?",
+                        isPresented: $showDiscardConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("변경 내용 폐기", role: .destructive) { dismiss() }
+                        Button("계속 수정", role: .cancel) {}
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         onSave()
@@ -63,6 +85,7 @@ struct EditSheetContainer<Content: View>: View {
         }
         .presentationDetents([.height(contentHeight + Self.chromeHeight)])
         .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(hasChanges)
     }
 }
 
