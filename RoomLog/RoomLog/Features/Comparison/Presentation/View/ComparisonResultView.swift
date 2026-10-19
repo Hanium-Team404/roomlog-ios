@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ComparisonResultView: View {
     @Environment(\.di) var di
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel: ComparisonResultViewModel
 
     init(moveInRoomId: Int, moveOutRoomId: Int, analysisID: Int? = nil, provider: DefectUseCaseProvider) {
@@ -68,7 +69,7 @@ private extension ComparisonResultView {
             defectListSection(result: result, pathStore: pathStore)
         }
         return GeometryReader { geometry in
-            if geometry.size.width > geometry.size.height {
+            if sizeClass == .regular && geometry.size.width > geometry.size.height {
                 HStack(alignment: .top, spacing: 20) {
                     VStack(spacing: 20) {
                         modelToggle

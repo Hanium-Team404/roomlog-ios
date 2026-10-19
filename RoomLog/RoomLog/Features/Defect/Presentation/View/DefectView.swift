@@ -9,6 +9,7 @@ import SwiftUI
 
 struct DefectView: View {
     @Environment(\.di) var di
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel: DefectViewModel
     @State private var cameraDirection: CameraDirection?
     @State private var resetCamera = false
@@ -74,7 +75,7 @@ struct DefectView: View {
             )
         }
         GeometryReader { geometry in
-            if geometry.size.width > geometry.size.height {
+            if sizeClass == .regular && geometry.size.width > geometry.size.height {
                 HStack(alignment: .top, spacing: 20) {
                     imageSection(report: report)
                         .padding(.leading, 16)
