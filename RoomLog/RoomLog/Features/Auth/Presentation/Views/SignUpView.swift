@@ -13,16 +13,17 @@ struct SignUpView: View {
     @State private var viewModel: SignUpViewModel?
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            titleSection
-            if let viewModel {
-                inputFields(viewModel)
-                errorMessage(viewModel)
-                signUpButton(viewModel)
+        ScrollView {
+            VStack(spacing: 0) {
+                titleSection
+                if let viewModel {
+                    inputFields(viewModel)
+                    signUpButton(viewModel)
+                }
             }
-            Spacer()
         }
+        .defaultScrollAnchor(.center, for: .alignment)
+        .scrollBounceBehavior(.basedOnSize)
         .onAppear {
             if viewModel == nil {
                 let provider = di.resolve(AuthUseCaseProvider.self)
@@ -62,10 +63,7 @@ private extension SignUpView {
 
                 // 형식 오류·중복 이메일은 해당 필드 아래에서 바로 안내한다
                 if let emailError = viewModel.emailError {
-                    Text(emailError)
-                        .foregroundStyle(.red)
-                        .font(.regular, 12)
-                        .padding(.horizontal, 20)
+                    InlineErrorText(message: emailError)
                 }
             }
 
@@ -83,20 +81,13 @@ private extension SignUpView {
                 .padding(.horizontal, 20)
                 .background(.neutral50, in: Capsule())
                 .font(.medium, 16)
+
+            if let errorMessage = viewModel.errorMessage {
+                InlineErrorText(message: errorMessage)
+            }
         }
         // CTA 버튼의 좌우 여백(16)과 폭을 맞춘다
         .padding(.horizontal, 16)
-    }
-
-    @ViewBuilder
-    func errorMessage(_ viewModel: SignUpViewModel) -> some View {
-        if let errorMessage = viewModel.errorMessage {
-            Text(errorMessage)
-                .foregroundStyle(.red)
-                .font(.regular, 14)
-                .padding(.top, 12)
-                .padding(.horizontal, 24)
-        }
     }
 
     func signUpButton(_ viewModel: SignUpViewModel) -> some View {

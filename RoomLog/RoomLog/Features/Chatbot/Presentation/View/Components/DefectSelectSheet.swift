@@ -22,6 +22,7 @@ struct DefectSelectSheet: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("닫기") { dismiss() }
+                            .tint(.primary)
                     }
                 }
         }
@@ -68,7 +69,6 @@ struct DefectSelectSheet: View {
                 }
                 .padding(16)
             }
-            .scrollIndicators(.hidden)
         }
     }
 }

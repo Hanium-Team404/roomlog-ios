@@ -28,13 +28,13 @@ struct RepairShopListView: View {
         .navigationTitle("추천 업체 보기")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.fetchShops() }
-        .overlay {
-            if viewModel.showConfirmation {
-                inquiryAlertOverlay
-                    .transition(.opacity)
-            }
+        .alert(viewModel.messageTitle, isPresented: $viewModel.showConfirmation) {
+            Button("취소", role: .cancel) {}
+            Button("전송") { Task { await viewModel.confirmSend() } }
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            Text(viewModel.messageBody)
         }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.showConfirmation)
         .sheet(isPresented: $viewModel.showSMSComposer) {
             if let shop = viewModel.selectedShop, SMSComposeView.canSendText {
                 SMSComposeView(
@@ -169,80 +169,22 @@ private extension RepairShopListView {
     }
 }
 
-// MARK: - Inquiry Alert
-private extension RepairShopListView {
-    var inquiryAlertOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
-                .onTapGesture { viewModel.cancelInquiry() }
-
-            VStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(viewModel.messageTitle)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
-                    Text(viewModel.messageBody)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.blueGray600)
-                        .lineSpacing(4)
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-                .padding(.horizontal, 8)
-
-                VStack(spacing: 10) {
-                    Button {
-                        Task { await viewModel.confirmSend() }
-                    } label: {
-                        Text(viewModel.isSubmitting ? "전송 중..." : "전송하기")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(Color.mutedBlue, in: Capsule())
-                    }
-                    .disabled(viewModel.isSubmitting)
-
-                    Button {
-                        viewModel.cancelInquiry()
-                    } label: {
-                        Text("취소하기")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color(red: 1.0, green: 0.22, blue: 0.235))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                    }
-                }
-            }
-            .padding(14)
-            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 34))
-            .shadow(color: .black.opacity(0.12), radius: 40, y: 8)
-            .padding(.horizontal, 40)
-        }
-    }
-}
-
 // MARK: - Bottom Button
 
 private extension RepairShopListView {
     var bottomButton: some View {
-        Button {
+        BottomCTAButton {
             viewModel.requestInquiry()
         } label: {
-            Text("문자 문의하기")
-                .font(.semibold, 17)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(
-                    viewModel.selectedShop != nil ? Color.mutedBlue : Color.blueGray300,
-                    in: Capsule()
-                )
+            if viewModel.isSubmitting {
+                ProgressView()
+                    .tint(.white)
+            } else {
+                Text("문자 문의하기")
+                    .font(.semibold, 16)
+            }
         }
         .disabled(viewModel.selectedShop == nil || viewModel.isSubmitting)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 32)
     }
 }
 

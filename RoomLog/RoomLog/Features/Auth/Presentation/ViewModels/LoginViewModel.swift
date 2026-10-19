@@ -12,7 +12,12 @@ final class LoginViewModel {
     // MARK: - Input
     // 입력을 고치기 시작하면 직전 실패 안내는 더 이상 유효하지 않으므로 지운다
     var email: String = "" {
-        didSet { if email != oldValue { errorMessage = nil } }
+        didSet {
+            guard email != oldValue else { return }
+            emailError = nil
+            errorMessage = nil
+            scheduleEmailValidation()
+        }
     }
     var password: String = "" {
         didSet { if password != oldValue { errorMessage = nil } }
@@ -20,14 +25,18 @@ final class LoginViewModel {
 
     // MARK: - State
     private(set) var isLoading: Bool = false
+    private(set) var emailError: String?
     private(set) var errorMessage: String?
     /// 로그인 성공한 계정. 값이 생기면 뷰가 메인으로 전환한다
     private(set) var loggedInUserId: Int?
-    /// 이메일·비밀번호가 모두 입력됐는지. 로그인 버튼 활성화 기준
+    /// 이메일 형식이 맞고 비밀번호가 입력됐는지. 로그인 버튼 활성화 기준
     var canSubmit: Bool {
-        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        SignUpViewModel.isValidEmail(email.trimmingCharacters(in: .whitespacesAndNewlines))
             && !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+
+    @ObservationIgnored private(set) var emailValidationTask: Task<Void, Never>?
+    private static let validationDebounce: Duration = .milliseconds(300)
 
     private let loginUseCase: LoginUseCaseProtocol
 
@@ -44,7 +53,7 @@ final class LoginViewModel {
         let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedEmail.isEmpty, !trimmedPassword.isEmpty else {
-            errorMessage = "이메일과 비밀번호를 입력해주세요."
+            errorMessage = "이메일과 비밀번호를 입력해 주세요."
             return
         }
         
@@ -69,5 +78,22 @@ final class LoginViewModel {
         }
 
         isLoading = false
+    }
+
+    // MARK: - Validation
+
+    private func scheduleEmailValidation() {
+        emailValidationTask?.cancel()
+        emailValidationTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.validationDebounce)
+            guard !Task.isCancelled else { return }
+            self?.validateEmailFormat()
+        }
+    }
+
+    func validateEmailFormat() {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedEmail.isEmpty, !SignUpViewModel.isValidEmail(trimmedEmail) else { return }
+        emailError = "올바른 이메일 형식을 입력해 주세요."
     }
 }

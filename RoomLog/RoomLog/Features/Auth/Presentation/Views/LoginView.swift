@@ -22,21 +22,21 @@ struct LoginView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Spacer()
-                logoSection
-                inputFields
-                errorMessage
-                loginButton
-                signUpLink
-                Spacer()
+            ScrollView {
+                VStack(spacing: 0) {
+                    logoSection
+                    inputFields
+                    loginButton
+                    signUpLink
+                }
             }
+            .defaultScrollAnchor(.center, for: .alignment)
+            .scrollBounceBehavior(.basedOnSize)
         }
         .onChange(of: viewModel.loggedInUserId) { _, userId in
             guard let userId else { return }
             router.completeLogin(userId: userId)
         }
-        .ignoresSafeArea()
     }
 }
 
@@ -53,15 +53,21 @@ private extension LoginView {
 
     var inputFields: some View {
         VStack(spacing: 16) {
-            TextField("이메일", text: $viewModel.email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
-                .padding(.vertical, 16)
-                .padding(.horizontal, 20)
-                .background(.neutral50, in: Capsule())
-                .font(.medium, 16)
+            VStack(alignment: .leading, spacing: 6) {
+                TextField("이메일", text: $viewModel.email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
+                    .background(.neutral50, in: Capsule())
+                    .font(.medium, 16)
+
+                if let emailError = viewModel.emailError {
+                    InlineErrorText(message: emailError)
+                }
+            }
 
             SecureField("비밀번호", text: $viewModel.password)
                 .textContentType(.password)
@@ -69,20 +75,13 @@ private extension LoginView {
                 .padding(.horizontal, 20)
                 .background(.neutral50, in: Capsule())
                 .font(.medium, 16)
+
+            if let errorMessage = viewModel.errorMessage {
+                InlineErrorText(message: errorMessage)
+            }
         }
         // CTA 버튼의 좌우 여백(16)과 폭을 맞춘다
         .padding(.horizontal, 16)
-    }
-
-    @ViewBuilder
-    var errorMessage: some View {
-        if let errorMessage = viewModel.errorMessage {
-            Text(errorMessage)
-                .foregroundStyle(.red)
-                .font(.regular, 14)
-                .padding(.top, 12)
-                .padding(.horizontal, 24)
-        }
     }
 
     var loginButton: some View {

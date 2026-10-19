@@ -99,8 +99,4 @@ final class RepairShopListViewModel {
             showConfirmation = false
         }
     }
-
-    func cancelInquiry() {
-        showConfirmation = false
-    }
 }

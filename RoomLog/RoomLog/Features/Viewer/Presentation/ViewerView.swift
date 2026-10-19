@@ -14,16 +14,17 @@ struct ViewerView: View {
 
     var body: some View {
         let pathStore = di.resolve(PathStore.self)
-        ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                menuCards(pathStore: pathStore)
-                recentSection(pathStore: pathStore)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 32) {
+                    menuCards(pathStore: pathStore, isLandscape: geometry.size.width > geometry.size.height)
+                    recentSection(pathStore: pathStore)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 24)
         }
-        .scrollIndicators(.hidden)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -74,6 +75,8 @@ private extension ViewerView {
             HStack(spacing: 4) {
                 Text(viewModel?.selectedHouse != nil ? "\(viewModel!.selectedHouseDisplayName)" : "집 선택")
                     .font(.medium, 16)
+                    .lineLimit(1)
+                    .frame(maxWidth: 80)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 10, weight: .medium))
             }
@@ -85,10 +88,19 @@ private extension ViewerView {
 // MARK: - Menu Cards
 
 private extension ViewerView {
-    func menuCards(pathStore: PathStore) -> some View {
-        VStack(spacing: 20) {
-            defectCard(pathStore: pathStore)
-            compareCard(pathStore: pathStore)
+    func menuCards(pathStore: PathStore, isLandscape: Bool) -> some View {
+        Group {
+            if isLandscape {
+                HStack(alignment: .top, spacing: 20) {
+                    defectCard(pathStore: pathStore)
+                    compareCard(pathStore: pathStore)
+                }
+            } else {
+                VStack(spacing: 20) {
+                    defectCard(pathStore: pathStore)
+                    compareCard(pathStore: pathStore)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
     }

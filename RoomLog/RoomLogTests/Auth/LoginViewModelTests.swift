@@ -96,4 +96,30 @@ struct LoginViewModelTests {
         #expect(sut.loggedInUserId == 1)
         #expect(sut.errorMessage == nil)
     }
+
+    // MARK: - 이메일 형식 (회원가입과 같은 규칙)
+
+    @Test("이메일 형식이 틀리면 로그인 버튼이 비활성화되고 필드 아래에 안내한다")
+    func invalidEmail_disablesSubmitAndShowsFieldError() async {
+        let sut = makeSUT(result: .success(Self.user))
+
+        sut.email = "dy@test"
+        await sut.emailValidationTask?.value
+
+        #expect(sut.canSubmit == false)
+        #expect(sut.emailError == "올바른 이메일 형식을 입력해 주세요.")
+    }
+
+    @Test("이메일을 고치면 형식 안내가 바로 사라진다")
+    func editingEmail_clearsFieldError() async throws {
+        let sut = makeSUT(result: .success(Self.user))
+        sut.email = "dy@test"
+        await sut.emailValidationTask?.value
+        try #require(sut.emailError != nil)
+
+        sut.email = "dy@test.com"
+
+        #expect(sut.emailError == nil)
+        #expect(sut.canSubmit)
+    }
 }

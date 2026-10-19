@@ -30,7 +30,6 @@ struct MyPageView: View {
             .padding(.top, 12)
             .padding(.bottom, 40)
         }
-        .scrollIndicators(.hidden)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Image("Logo")
@@ -71,7 +70,7 @@ struct MyPageView: View {
             Text("탈퇴하면 모든 데이터가 삭제되며\n복구할 수 없습니다.")
         }
         .alert("오류", isPresented: $viewModel.showError) {
-            Button("확인") {}
+            Button("확인", role: .cancel) {}
         } message: {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
@@ -224,17 +223,15 @@ private extension MyPageView {
 
             Divider().padding(.horizontal, 16)
 
-            Button {
+            Button(role: .destructive) {
                 viewModel.showDeleteAccountConfirm = true
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "person.slash")
                         .font(.system(size: 16))
-                        .foregroundStyle(.red.opacity(0.7))
                         .frame(width: 24)
                     Text("회원 탈퇴")
                         .font(.medium, 16)
-                        .foregroundStyle(.red.opacity(0.7))
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -244,6 +241,7 @@ private extension MyPageView {
                 .padding(.vertical, 16)
                 .contentShape(Rectangle())
             }
+            .tint(.red)
         }
         .background(.white, in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.08), radius: 8, y: 2)

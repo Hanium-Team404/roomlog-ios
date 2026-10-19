@@ -39,7 +39,6 @@ struct ChatMessageList: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .scrollIndicators(.hidden)
         .defaultScrollAnchor(.bottom)
         .scrollDismissesKeyboard(.interactively)
         .animation(.easeInOut(duration: 0.2), value: messages)
