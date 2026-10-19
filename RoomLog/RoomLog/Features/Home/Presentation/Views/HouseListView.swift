@@ -88,16 +88,16 @@ struct HouseListView: View {
                     Button(Strings.doneButton) {
                         withAnimation { viewModel.isEditing.toggle() }
                     }
-                    .foregroundStyle(.mutedBlue)
+                    .tint(.primary)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.houses.isEmpty {
                     if viewModel.isEditing {
-                        Button(Strings.deleteButton) {
+                        Button(Strings.deleteButton, role: .destructive) {
                             viewModel.showDeleteConfirm = true
                         }
-                        .foregroundStyle(.red)
+                        .tint(.red)
                         .disabled(viewModel.selectedHouseId == nil)
                     } else {
                         Button(Strings.editButton) {

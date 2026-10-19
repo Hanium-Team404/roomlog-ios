@@ -78,6 +78,7 @@ struct ScanPreviewView: View {
                 Button("다시 스캔", systemImage: "arrow.counterclockwise") {
                     showRescanAlert = true
                 }
+                .tint(.red)
                 .disabled(isSaving)
             }
             ToolbarItem(placement: .topBarTrailing) {

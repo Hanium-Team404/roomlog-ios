@@ -55,6 +55,7 @@ struct EditSheetContainer<Content: View>: View {
                         }
                     }
                     .disabled(isSaving)
+                    .tint(.primary)
                     // 다이얼로그는 띄우는 버튼에 붙여야 글래스 전환이 그 위치에서 시작한다
                     .confirmationDialog(
                         "변경 내용을 저장하지 않고 닫을까요?",
@@ -84,8 +85,8 @@ struct EditSheetContainer<Content: View>: View {
             }
         }
         .presentationDetents([.height(contentHeight + Self.chromeHeight)])
-        .presentationDragIndicator(.visible)
         .presentationSizing(.form)
+        .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(hasChanges || isSaving)
     }
 }

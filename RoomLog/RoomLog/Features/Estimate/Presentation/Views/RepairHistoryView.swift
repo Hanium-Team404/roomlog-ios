@@ -139,13 +139,10 @@ private struct EstimateDetailSheet: View {
         .safeAreaInset(edge: .bottom) {
             if estimate.displayStatus == .inProgress {
                 completeButton
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(.bar)
-        .presentationSizing(.form)
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationSizing(.form)
         // 저장 중에 닫히면 성공 여부를 알 수 없으므로 막는다
         .interactiveDismissDisabled(isCompleting)
         .alert("수리 완료 저장 실패", isPresented: $isShowingSaveError) {
@@ -228,7 +225,7 @@ private struct EstimateDetailSheet: View {
     }
 
     private var completeButton: some View {
-        Button {
+        BottomCTAButton {
             guard let cost = Int(repairCostText), cost > 0 else {
                 showPriceError = true
                 return
@@ -246,18 +243,12 @@ private struct EstimateDetailSheet: View {
                 }
             }
         } label: {
-            Group {
-                if isCompleting {
-                    ProgressView().tint(.white)
-                } else {
-                    Text("수리 완료")
-                        .font(.semibold, 17)
-                }
+            if isCompleting {
+                ProgressView().tint(.white)
+            } else {
+                Text("수리 완료")
+                    .font(.semibold, 16)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color.mutedBlue, in: RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(.white)
         }
         .disabled(isCompleting)
     }

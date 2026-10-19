@@ -55,7 +55,6 @@ struct RoomListView: View {
 
     var body: some View {
         content(viewModel: viewModel)
-            .tint(.accent)
             .navigationBarTitleDisplayMode(.inline)
             .task { await viewModel.fetchRooms() }
             .onAppear { openRequestedScanStatus() }
@@ -101,6 +100,7 @@ struct RoomListView: View {
                         Text(viewModel.isEditing ? Strings.doneButton : Strings.editButton)
                             .font(.medium, 16)
                     }
+                    .tint(viewModel.isEditing ? Color.primary : Color.accentColor)
                 }
             }
         }
@@ -153,12 +153,12 @@ struct RoomListView: View {
     private func roomRow(room: RoomSummary, isEditing: Bool, onDelete: @escaping () -> Void) -> some View {
         if isEditing {
             roomRowContent(room: room) {
-                Button(action: onDelete) {
+                Button(role: .destructive, action: onDelete) {
                     Label("삭제", systemImage: "trash")
                         .labelStyle(.iconOnly)
-                        .foregroundStyle(.red)
                         .frame(minWidth: 44, minHeight: 44)
                 }
+                .tint(.red)
             }
         } else {
             Button {
