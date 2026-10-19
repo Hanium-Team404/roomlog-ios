@@ -52,6 +52,7 @@ private extension ComparisonResultView {
         AnalysisLoadingView(message: "AI가 이전/이후 방을 비교하고 있습니다...") {
             modelToggle
             modelSection(defects: [])
+                .aspectRatio(4/3, contentMode: .fit)
         }
     }
 }
@@ -61,16 +62,41 @@ private extension ComparisonResultView {
 private extension ComparisonResultView {
     func completedContent(result: AnalysisResult) -> some View {
         let pathStore = di.resolve(PathStore.self)
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                modelToggle
-                modelSection(defects: viewModel.currentDefects)
-                summarySection(result: result)
-                defectListSection(result: result, pathStore: pathStore)
+        let model = modelSection(defects: viewModel.currentDefects)
+        let details = VStack(alignment: .leading, spacing: 20) {
+            summarySection(result: result)
+            defectListSection(result: result, pathStore: pathStore)
+        }
+        return GeometryReader { geometry in
+            if geometry.size.width > geometry.size.height {
+                HStack(alignment: .top, spacing: 20) {
+                    VStack(spacing: 20) {
+                        modelToggle
+                        model
+                    }
+                    .padding(.leading, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ScrollView {
+                        details
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 16)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 8)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        modelToggle
+                        model
+                            .aspectRatio(4/3, contentMode: .fit)
+                        details
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
             BottomCTAButton {
@@ -120,8 +146,6 @@ private extension ComparisonResultView {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        // 세로 3:4는 화면의 60%를 차지해 스크롤 영역이 부족했다. 뷰어 위에서는 카메라 제스처가 드래그를 가져가므로 가로 4:3으로 줄인다
-        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .task {
             await viewModel.downloadModelIfNeeded()

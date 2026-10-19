@@ -75,10 +75,6 @@ final class ViewerViewModel {
     }
 
     var selectedHouseDisplayName: String {
-        guard let name = selectedHouse?.name else { return "집 선택" }
-        if name.count > 4 {
-            return String(name.prefix(4)) + "..."
-        }
-        return name
+        selectedHouse?.name ?? "집 선택"
     }
 }

@@ -58,26 +58,47 @@ struct DefectView: View {
     @ViewBuilder
     private func content(report: DefectReport) -> some View {
         let pathStore = di.resolve(PathStore.self)
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                imageSection(report: report)
-                summarySection(report: report)
-                defectListSection(
-                    defects: report.defects,
-                    onViewAll: {
-                        pathStore.defectPath.append(.defect(.defectAllList(
-                            roomName: report.room.title,
-                            defects: report.defects
-                        )))
-                    },
-                    onTap: { defect in
-                        pathStore.defectPath.append(.defect(.defectDetail(defectId: defect.id)))
+        let details = VStack(alignment: .leading, spacing: 20) {
+            summarySection(report: report)
+            defectListSection(
+                defects: report.defects,
+                onViewAll: {
+                    pathStore.defectPath.append(.defect(.defectAllList(
+                        roomName: report.room.title,
+                        defects: report.defects
+                    )))
+                },
+                onTap: { defect in
+                    pathStore.defectPath.append(.defect(.defectDetail(defectId: defect.id)))
+                }
+            )
+        }
+        GeometryReader { geometry in
+            if geometry.size.width > geometry.size.height {
+                HStack(alignment: .top, spacing: 20) {
+                    imageSection(report: report)
+                        .padding(.leading, 16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ScrollView {
+                        details
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 16)
                     }
-                )
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 8)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        imageSection(report: report)
+                            .aspectRatio(4/3, contentMode: .fit)
+                        details
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
             bottomButton
@@ -100,6 +121,7 @@ struct DefectView: View {
     private func pollingContent(report: DefectReport) -> some View {
         AnalysisLoadingView(message: "AI가 하자를 분석하고 있습니다...") {
             imageSection(report: report)
+                .aspectRatio(4/3, contentMode: .fit)
         }
     }
 
@@ -143,7 +165,7 @@ private extension DefectView {
     /// - a placeholder otherwise.
     /// It also initiates a background check/download of the USDZ asset when the view appears.
     /// - Parameter report: The defect report whose image/defect data drive the displayed content.
-    /// - Returns: A view containing the image or 3D scene area, clipped to a rounded rectangle and constrained to a 4:3 aspect ratio.
+    /// - Returns: A view containing the image or 3D scene area, clipped to a rounded rectangle.
     @ViewBuilder
     func imageSection(report: DefectReport) -> some View {
         Group {
@@ -170,8 +192,6 @@ private extension DefectView {
                 imagePlaceholder
             }
         }
-        // 세로 3:4는 화면의 60%를 차지해 스크롤 영역이 부족했다. 뷰어 위에서는 카메라 제스처가 드래그를 가져가므로 가로 4:3으로 줄인다
-        .aspectRatio(4/3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .task(id: report.imageURL) {
             await viewModel.downloadModelIfNeeded()
