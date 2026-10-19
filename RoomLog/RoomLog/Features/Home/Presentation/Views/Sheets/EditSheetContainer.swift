@@ -85,6 +85,7 @@ struct EditSheetContainer<Content: View>: View {
         }
         .presentationDetents([.height(contentHeight + Self.chromeHeight)])
         .presentationDragIndicator(.visible)
+        .presentationSizing(.form)
         .interactiveDismissDisabled(hasChanges || isSaving)
     }
 }

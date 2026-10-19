@@ -58,60 +58,39 @@ struct RoomEditSheet: View {
             hasChanges: hasChanges,
             onSave: { save() }
         ) {
-            HStack {
-                Text("방 이름")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                TextField("예: 거실, 안방", text: $name)
-                    .font(.medium, 16)
-                    .multilineTextAlignment(.trailing)
-            }
-            .padding()
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 16) {
+                CapsuleFieldRow(title: "방 이름") {
+                    TextField("예: 거실, 안방", text: $name)
+                        .font(.medium, 16)
+                        .multilineTextAlignment(.trailing)
+                }
 
-            // 입주일
-            HStack {
-                Text("입주일")
-                    .font(.medium, 14)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                DatePicker("", selection: $moveInDate, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-            }
-            .padding()
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+                CapsuleFieldRow(title: "입주일") {
+                    DatePicker("", selection: $moveInDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
 
-            // 퇴거일
-            VStack(spacing: 12) {
-                HStack {
-                    Text("퇴거일")
-                        .font(.medium, 14)
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                CapsuleFieldRow(title: "퇴거일") {
                     Toggle("", isOn: $hasMoveOutDate.animation(.easeInOut(duration: 0.2)))
                         .labelsHidden()
                         .tint(.accent)
                 }
 
                 if hasMoveOutDate {
-                    HStack {
-                        Spacer()
+                    CapsuleFieldRow(title: "퇴거 날짜") {
                         DatePicker("", selection: $moveOutDate, in: moveInDate..., displayedComponents: .date)
                             .datePickerStyle(.compact)
                             .labelsHidden()
-                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-            }
-            .padding()
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
 
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.regular, 13)
-                    .foregroundStyle(.red)
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.regular, 13)
+                        .foregroundStyle(.red)
+                }
             }
         }
     }

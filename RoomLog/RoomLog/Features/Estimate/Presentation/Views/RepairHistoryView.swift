@@ -142,6 +142,7 @@ private struct EstimateDetailSheet: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(.bar)
+        .presentationSizing(.form)
             }
         }
         .presentationDetents([.medium, .large])

@@ -35,7 +35,9 @@ struct ScanStatusSheet: View {
                 Text("진행 중인 스캔을 취소하시겠어요?\n스캔 데이터가 삭제됩니다.")
             }
         }
+        .frame(idealHeight: 360)
         .presentationDetents([.height(360)])
+        .presentationSizing(.form.fitted(horizontal: false, vertical: true))
     }
 
     // MARK: - Icon

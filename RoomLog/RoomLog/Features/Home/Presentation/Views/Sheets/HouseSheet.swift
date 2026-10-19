@@ -124,18 +124,11 @@ struct HouseSheet: View {
     }
 
     private func capsuleField(title: String, placeholder: String, text: Binding<String>) -> some View {
-        HStack {
-            Text(title)
-                .font(.medium, 14)
-                .foregroundStyle(.secondary)
-            Spacer()
+        CapsuleFieldRow(title: title) {
             TextField(placeholder, text: text)
                 .font(.medium, 16)
                 .multilineTextAlignment(.trailing)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 15)
-        .background(Capsule().fill(Color(.systemGray6)))
     }
 
     private func save() {
